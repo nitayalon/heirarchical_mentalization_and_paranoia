@@ -27,5 +27,5 @@ class EAT:
     def trial(subject, agent, seed):
         offer = agent.act(seed)
         response = subject.act(seed, offer)
-        return np.array([offer, response, subject.posterior_mu])
+        return np.array([offer, response, subject.posterior_mu_par])
 

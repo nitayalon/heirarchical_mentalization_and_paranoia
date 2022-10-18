@@ -8,9 +8,10 @@ class ToMZeroSubject(Subject):
         super().__init__(preference, endowment, softmax_temp)
         self.prior_weights = prior_weights
         self.prior_mu = 0.0
-        self.prior_sigma = 1.0
-        self.posterior_mu = 0.0
-        self.posterior_sigma = 1.0
+        self.kappa = 2.0
+        self.posterior_mu_par = 0.0
+        self.posterior_sigma_par = 1.0
+        self.sigma_par = 1.0
         self.low = -6.5
         self.support = 13
         self.posterior_beliefs = prior_weights
@@ -45,14 +46,14 @@ class ToMZeroSubject(Subject):
         return likelihood
 
     def intentional_agent_likelihood(self):
-        likelihood = norm(self.posterior_mu, np.sqrt(1.0)).logpdf(self.observations).sum()
-        variance_ratio_coefficient = self.prior_sigma + self.posterior_sigma / len(self.observations)
+        likelihood = norm(self.posterior_mu_par, self.sigma_par).logpdf(self.observations).sum()
+        variance_ratio_coefficient = self.kappa + len(self.observations)
         # TODO(Nitay) - name parameters to match paper
-        updated_mean = self.prior_sigma / variance_ratio_coefficient * self.prior_mu + \
-                       self.posterior_sigma / variance_ratio_coefficient * np.mean(self.observations)
-        updated_variance = 1 / (1 / self.prior_sigma + len(self.observations) / self.prior_sigma)
-        self.posterior_mu = updated_mean
-        self.posterior_sigma = updated_variance
+        updated_mean = self.kappa / variance_ratio_coefficient * self.prior_mu + \
+                       len(self.observations) / variance_ratio_coefficient * np.mean(self.observations)
+        updated_variance = 1 / (1 / self.kappa + len(self.observations) / 1.0)
+        self.posterior_mu_par = updated_mean
+        self.posterior_sigma_par = updated_variance
         return likelihood
 
     def act(self, seed, offer):
