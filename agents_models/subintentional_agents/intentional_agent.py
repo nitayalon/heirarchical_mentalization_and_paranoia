@@ -8,8 +8,8 @@ class IntentionalAgent(Agent):
 
     def act(self, seed):
         random_number_generator = np.random.default_rng(seed)
-        offer = random_number_generator.normal(loc=self.preference)
-        transformed_offer = 1 / (1+np.exp(-offer))
+        offer = random_number_generator.normal(loc=self.preference, scale=1.0)
+        transformed_offer = 1 / (1 + np.exp(-offer))
         return transformed_offer
 
 
