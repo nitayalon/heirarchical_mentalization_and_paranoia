@@ -1,7 +1,6 @@
 from eat_environment import *
 from agents_models.subintentional_agents.intentional_agent import *
-from agents_models.subintentional_agents.random_agent import *
-from agents_models.intentional_agents.tom_zero_subjects import *
+from agents_models.intentional_agents.tom_zero_agents.tom_zero_subjects import *
 
 if __name__ == "__main__":
     eat_task_simulator = EAT(100, 6431, 1.0)
