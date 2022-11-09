@@ -1,18 +1,16 @@
-source('simulations/tom_zero_irl_ilustration_methods.R')
-set.seed(6431)
+source('Alon_PolicyFunc.R')
 
+set.seed(6431)
 thresholds <- c(0.2, 0.5, 0.9) # we can use this as a span of both agent and subject for multiple simulation
 # the above can also be specified seperately.
 
-
 # This illustrates the ToM(-1) IA agent's policy --------------------------
-
 actions <- seq(0.0, 1.0, 0.01)
 trials  <- 25
 
-history_sum <- tom_minus_one(agent_thresholds = thresholds, subject_thresholds = thresholds,
+history_sum <- ToM_minus_one(agent_thresholds = thresholds, subject_thresholds = thresholds,
                              actions, trials,
-                             plot = T)
+                             plot = 0)
 
 ggplot(history_sum, aes(x = trial, y = offers, color = factor(agent_threshold)))+
   geom_line() +
@@ -36,49 +34,9 @@ history   <- history_sum %>% filter(agent_threshold == thresholds[3], subject_th
 posterior <- inverse_rl(history, actions, agent_thresholds = thresholds)
 posterior %>%
   pivot_longer(cols = !c(trial), names_to = "Type", values_to = "Probability") %>%
-  ggplot(aes(x = trial, y = Probability, colour = Type)) +
-  geom_point() +
-  geom_line() +
-  labs(y = 'p(Type)')+
-  theme_bw()
+    ggplot(aes(x = trial, y = Probability, colour = Type)) +
+    geom_point() +
+    geom_line() +
+    labs(y = 'p(Type)')+
+    theme_bw()
 
-## This corresponds to the minimal amount the subject has to get
-opponents_threshold = 0.51
-history <- data.frame(low = 0, high = 1)
-reward = c()
-offers <- c()
-## This corresponds to the minimal amount the agent has to get
-persona <- thresholds[2]
-
-for (i in 2:40)
-{
-  low = history[i-1, ]$low
-  high = history[i-1, ]$high
-  offer <- policy(low, high, persona)
-  offers <- c(offers, offer$action)
-  if((1 - offer$action) > opponents_threshold) 
-  {
-    reward = c(reward, offer$action)
-    low = offer$action
-  }
-  if((1-offer$action) <= opponents_threshold)
-  {
-    reward = c(reward, 0)
-    high = offer$action
-  }
-  history[i, ] = c(low, high)
-}
-plot(offers, type='b')
-abline(h = persona, col = "blue")
-plot(reward)
-
-
-# This illustrates the ToM(0) inference over a grid  ----------------------
-
-posterior <- inverse_rl(history, offers)
-posterior %>% 
-  pivot_longer(cols = !c(trial), names_to = "Type", values_to = "Probability") %>% 
-ggplot(aes(x = trial, y = Probability, colour = Type)) + 
-  geom_point() + 
-  geom_line() + 
-  theme_bw()
