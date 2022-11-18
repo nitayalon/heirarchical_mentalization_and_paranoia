@@ -1,5 +1,5 @@
 import pandas as pd
-from agents_models.agent import *
+from agents_models.abstract_agents import *
 
 
 class EAT:
@@ -11,7 +11,7 @@ class EAT:
         self.trail_results = []
         self.subject_posterior_beliefs = []
 
-    def simulate_task(self, subject: Subject, agent: Agent):
+    def simulate_task(self, subject: Subject, agent: SubIntentionalAgent):
         seed = self.seed
         for trial in range(self.n_trails):
             trial_results = self.trial(subject, agent, seed)
