@@ -2,7 +2,7 @@ from agents_models.abstract_agents import *
 import numpy as np
 
 
-class RandomSubIntentionalAgent(SubIntentionalAgent):
+class RandomSubIntentionalModel(SubIntentionalModel):
 
     def forward(self, action=None, observation=None):
         pass
@@ -13,7 +13,7 @@ class RandomSubIntentionalAgent(SubIntentionalAgent):
         return offer
 
 
-class IntentionalSubIntentionalAgent(SubIntentionalAgent):
+class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
 
     def __init__(self, actions, history, threshold: float, softmax_temp: float):
         super().__init__(actions, history, threshold, softmax_temp)

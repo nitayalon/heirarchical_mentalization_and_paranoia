@@ -1,7 +1,10 @@
 from agents_models.abstract_agents import *
 
 
-class Subject(SubIntentionalAgent):
+class Subject(SubIntentionalModel):
+
+    def forward(self, action=None, observation=None):
+        pass
 
     def act(self, seed, action=None, observation=None):
         if action >= self.threshold:

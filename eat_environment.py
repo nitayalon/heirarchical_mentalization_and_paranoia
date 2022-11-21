@@ -11,7 +11,7 @@ class EAT:
         self.trail_results = []
         self.subject_posterior_beliefs = []
 
-    def simulate_task(self, subject: Subject, agent: SubIntentionalAgent):
+    def simulate_task(self, subject: Subject, agent: SubIntentionalModel):
         seed = self.seed
         for trial in range(self.n_trails):
             trial_results = self.trial(subject, agent, seed)
