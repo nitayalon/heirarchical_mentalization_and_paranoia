@@ -1,0 +1,3 @@
+[submodule "IPOMCP_solver"]
+	path = IPOMCP_solver
+	url = https://github.com/nitayalon/IPOMCP_solver.git
