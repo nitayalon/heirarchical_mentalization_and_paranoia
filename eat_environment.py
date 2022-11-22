@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from agents_models.abstract_agents import *
 
@@ -7,11 +8,12 @@ class EAT:
     def __init__(self, n_trails, seed, endowment):
         self.endowment = endowment
         self.n_trails = n_trails
+        self.actions = np.arange(0, 1.05, 0.05)
         self.seed = seed
         self.trail_results = []
         self.subject_posterior_beliefs = []
 
-    def simulate_task(self, subject: Subject, agent: SubIntentionalModel):
+    def simulate_task(self, subject, agent):
         seed = self.seed
         for trial in range(self.n_trails):
             trial_results = self.trial(subject, agent, seed)

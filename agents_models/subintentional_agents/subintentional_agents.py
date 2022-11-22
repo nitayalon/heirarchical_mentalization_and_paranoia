@@ -1,5 +1,6 @@
 from agents_models.abstract_agents import *
 import numpy as np
+from typing import Callable, Optional, Tuple
 
 
 class RandomSubIntentionalModel(SubIntentionalModel):
@@ -15,12 +16,12 @@ class RandomSubIntentionalModel(SubIntentionalModel):
 
 class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
 
-    def __init__(self, actions, history, threshold: float, softmax_temp: float):
+    def __init__(self, actions, history, threshold: Optional[float, None], softmax_temp: float):
         super().__init__(actions, history, threshold, softmax_temp)
         self.high = [1.0]
         self.low = [0.0]
 
-    def act(self, seed, action=None, observation=None):
+    def act(self, seed, action=None, observation=None) -> float:
         relevant_actions, q_values, probabilities = self.forward(action, observation)
         random_number_generator = np.random.default_rng(seed)
         optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
