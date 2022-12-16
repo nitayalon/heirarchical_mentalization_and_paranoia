@@ -40,15 +40,17 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
         self.belief = SubIntentionalBelief()
 
     def act(self, seed, action=None, observation=None) -> float:
+        self.update_bounds(action, observation)
         relevant_actions, q_values, probabilities = self.forward(action, observation)
         random_number_generator = np.random.default_rng(seed)
         optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
         return optimal_offer
 
     def forward(self, action=None, observation=None):
-        self.update_bounds(action, observation)
         upper_bound = self.high[-1]
         lower_bound = self.low[-1]
+        if lower_bound >= upper_bound:
+            lower_bound = upper_bound - 0.05
         if upper_bound <= self.threshold:
             relevant_actions = self.actions[np.where(np.logical_and(self.actions >= lower_bound, self.actions <= self.threshold))]
         else:

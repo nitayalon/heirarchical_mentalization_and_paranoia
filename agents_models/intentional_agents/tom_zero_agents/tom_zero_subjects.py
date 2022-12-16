@@ -1,4 +1,4 @@
-from typing import Tuple, Any
+from typing import Any
 from agents_models.abstract_agents import *
 from agents_models.subintentional_agents.subintentional_agents import IntentionalAgentSubIntentionalModel
 from IPOMCP_solver.Solver.ipomcp_solver import *
@@ -17,6 +17,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         :return:
         """
         self.history.update_history(action, observation)
+        self.opponent_model.update_bounds(observation, action)
 
     def update_distribution(self, action, observation, first_move):
         """
@@ -66,9 +67,11 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
     def reset_persona(self, persona, history_length, nested_beliefs):
         self.opponent_model.threshold = persona
+        self.opponent_model.high = self.opponent_model.high[0:(history_length-1)]
+        self.opponent_model.low = self.opponent_model.low[0:(history_length-1)]
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-             iteration_number: int) -> tuple[InteractiveState, Action, float | Any]:
+             iteration_number: int) -> tuple[InteractiveState, Action, float]:
         counter_offer = self.opponent_model.act(seed, observation.value, action.value)
         reward = self.reward_function(observation.value, action.value)
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
@@ -100,9 +103,10 @@ class ToMZeroSubject(DoMZeroModel):
                  opponent_model: IntentionalAgentSubIntentionalModel,
                  seed: int):
         super().__init__(actions, softmax_temp, prior_belief, opponent_model)
+        self.config = get_config()
         self.belief = TomZeroSubjectBelief(prior_belief, opponent_model)
         self.environment_model = ToMZeroSubjectEnvironmentModel(opponent_model, self.utility_function)
-        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, 0.3)
+        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, self.config.get_from_env("rollout_accepting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
 
     def utility_function(self, action, observation):
@@ -129,7 +133,14 @@ class ToMZeroSubject(DoMZeroModel):
 
     def act(self, seed, action=None, observation=None, iteration_number=None):
         self.belief.history.update_observations(observation)
-        self.forward(action, observation, iteration_number)
+        action_nodes, q_values = self.forward(action, observation, iteration_number)
+        softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(q_values[:, 1] / self.softmax_temp).sum()
+        prng = np.random.default_rng(seed)
+        best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
+        actions = list(action_nodes.keys())
+        best_action = Action(actions[best_action_idx], False)
+        self.belief.history.update_actions(best_action)
+        return best_action #, q_values[best_action_idx, 1], softmax_transformation[best_action_idx]
 
     def forward(self, action=None, observation=None, iteration_number=None):
         actions, q_values = self.solver.plan(action, observation, iteration_number)
