@@ -140,7 +140,7 @@ class ToMZeroSubject(DoMZeroModel):
         actions = list(action_nodes.keys())
         best_action = Action(actions[best_action_idx], False)
         self.belief.history.update_actions(best_action)
-        return best_action #, q_values[best_action_idx, 1], softmax_transformation[best_action_idx]
+        return bool(best_action.value) #, q_values[best_action_idx, 1], softmax_transformation[best_action_idx]
 
     def forward(self, action=None, observation=None, iteration_number=None):
         actions, q_values = self.solver.plan(action, observation, iteration_number)

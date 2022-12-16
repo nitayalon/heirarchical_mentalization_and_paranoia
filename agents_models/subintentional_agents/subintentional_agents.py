@@ -35,8 +35,8 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
-        self.high = [1.0]
-        self.low = [0.0]
+        self.high = 1.0
+        self.low = 0.0
         self.belief = SubIntentionalBelief()
 
     def act(self, seed, action=None, observation=None) -> float:
@@ -47,8 +47,8 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
         return optimal_offer
 
     def forward(self, action=None, observation=None):
-        upper_bound = self.high[-1]
-        lower_bound = self.low[-1]
+        upper_bound = self.high
+        lower_bound = self.low
         if lower_bound >= upper_bound:
             lower_bound = upper_bound - 0.05
         if upper_bound <= self.threshold:
@@ -64,10 +64,10 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
             return None
         # If the subject accepted the offer the lower bound is updated
         if observation:
-            self.low.append(action)
+            self.low = action
         # If the offer is rejected the upper bound is updated
         else:
-            self.high.append(action)
+            self.high = action
 
 
 
