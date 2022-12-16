@@ -1,0 +1,10 @@
+general:
+  fee_discount: 0.95
+  results_folder: "data/manager_worker/results/"
+
+environments:
+  env_2:
+    name: env_2
+    exploration_bonus: 15.0
+    planning_depth: 7
+    mcts_number_of_iterations: 40000

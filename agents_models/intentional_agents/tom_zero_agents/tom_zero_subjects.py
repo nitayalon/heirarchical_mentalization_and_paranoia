@@ -4,7 +4,7 @@ from agents_models.subintentional_agents.subintentional_agents import Intentiona
 from IPOMCP_solver.Solver.ipomcp_solver import *
 
 
-class TomZeroSubjectBelief(BeliefDistribution):
+class TomZeroSubjectBelief(DoMZeroBelief):
 
     def __init__(self, prior_belief, opponent_model: IntentionalAgentSubIntentionalModel):
         super().__init__(prior_belief, opponent_model)
@@ -26,11 +26,11 @@ class TomZeroSubjectBelief(BeliefDistribution):
         :param first_move:
         :return:
         """
-        prior = np.copy(self.belief[:, -1])
-        policy_based_probabilities = self.compute_likelihood(action, observation, prior)
+        prior = np.copy(self.belief_distribution[:, -1])
+        policy_based_probabilities = self.compute_likelihood(action.value, observation.value, prior)
         probabilities = policy_based_probabilities
         posterior = probabilities * prior
-        self.belief = np.c_[self.belief, posterior / posterior.sum()]
+        self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
 
     def compute_likelihood(self, action, observation, prior):
         """
@@ -41,20 +41,20 @@ class TomZeroSubjectBelief(BeliefDistribution):
         :return:
         """
         last_observation = self.history.get_last_observation()
-        probabilities = np.empty_like(prior)
+        offer_likelihood = np.empty_like(prior)
         for i in range(len(self.prior_belief[:, 0])):
             theta = self.prior_belief[:, 0][i]
             self.opponent_model.threshold = theta
-            possible_opponent_actions, opponent_q_values = self.opponent_model.forward(last_observation, action, False)
-            observation_q_value = opponent_q_values[np.where(possible_opponent_actions == observation)]
-            observation_probability = np.minimum(np.exp(observation_q_value / self.opponent_model.softmax_temperature) / \
-                                                 np.exp(opponent_q_values / self.opponent_model.softmax_temperature).sum(),
-                                                 1.0)
-            probabilities[i] = observation_probability
-        return probabilities
+            possible_opponent_actions, opponent_q_values, probabilities = self.opponent_model.forward(last_observation, action)
+            observation_probability = probabilities[np.where(possible_opponent_actions == observation)]
+            offer_likelihood[i] = observation_probability
+        return offer_likelihood
 
     def sample(self, rng_key, n_samples):
-        pass
+        probabilities = self.belief_distribution[:, -1]
+        rng_generator = np.random.default_rng(rng_key)
+        particles = rng_generator.choice(self.belief_distribution[:, 0], size=n_samples, p=probabilities)
+        return particles
 
 
 class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
@@ -68,12 +68,12 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         self.opponent_model.threshold = persona
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-             iteration_number: int) -> tuple[InteractiveState, float, float | Any]:
-        counter_offer = self.opponent_model.act(observation.value, action.value)
-        reward = self.reward_function(counter_offer) * action.value
+             iteration_number: int) -> tuple[InteractiveState, Action, float | Any]:
+        counter_offer = self.opponent_model.act(seed, observation.value, action.value)
+        reward = self.reward_function(observation.value, action.value)
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         interactive_state.state.terminal = interactive_state.state.name == 10
-        return interactive_state, counter_offer, reward
+        return interactive_state, Action(counter_offer, False), reward
 
 
 class ToMZeroSubjectExplorationPolicy:
@@ -84,43 +84,53 @@ class ToMZeroSubjectExplorationPolicy:
         self.exploration_bonus = exploration_bonus
 
     def sample(self, interactive_state: InteractiveState, last_cation: bool, observation: float, rng_key: int):
-        reward_from_acceptance = self.reward_function(observation)
+        reward_from_acceptance = self.reward_function(observation, True)
         reward_from_rejection = 0.0 + self.exploration_bonus
         optimal_action = [True, False][np.argmax([reward_from_acceptance, reward_from_rejection])]
-        return Action(optimal_action, False)
+        q_value = reward_from_acceptance * optimal_action + reward_from_rejection * (1-optimal_action)
+        return Action(optimal_action, False), q_value
 
 
 class ToMZeroSubject(DoMZeroModel):
 
-    def __init__(self, actions,
-                 history,
-                 threshold: float,
+    def __init__(self,
+                 actions,
                  softmax_temp: float,
                  prior_belief: np.array,
                  opponent_model: IntentionalAgentSubIntentionalModel,
                  seed: int):
-        super().__init__(actions, history, threshold, softmax_temp, prior_belief, opponent_model)
+        super().__init__(actions, softmax_temp, prior_belief, opponent_model)
         self.belief = TomZeroSubjectBelief(prior_belief, opponent_model)
         self.environment_model = ToMZeroSubjectEnvironmentModel(opponent_model, self.utility_function)
         self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, 0.3)
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
 
+    def utility_function(self, action, observation):
+        """
+
+        :param action: bool - either True for accepting the offer or False for rejecting it
+        :param observation: float - representing the current offer
+        :return:
+        """
+        return (1 - action) * observation
+
     def update_belief(self, action, observation):
-        observation_likelihood_per_type = np.zeros_like(self.belief.prior_belief)
+        observation_likelihood_per_type = np.zeros_like(self.belief.belief_distribution[:, 0])
         i = 0
-        for gamma in self.belief[:, 0]:
+        for gamma in self.belief.belief_distribution[:, 0]:
             self.opponent_model.threshold = gamma
             relevant_actions, q_values, probabilities = self.opponent_model.forward(observation, action)
             observation_likelihood = probabilities[np.where(relevant_actions == observation)]
             observation_likelihood_per_type[i] = observation_likelihood
             i += 1
-        prior = self.belief[:, -1]
+        prior = self.belief.belief_distribution[:, -1]
         posterior = observation_likelihood_per_type * prior
-        self.belief = np.c_[self.belief, posterior / posterior.sum()]
+        self.belief.belief_distribution = np.c_[self.belief.belief_distribution, posterior / posterior.sum()]
 
-    def act(self, seed, action=None, observation=None):
-        self.update_belief(action, observation)
-        self.forward(action, observation)
+    def act(self, seed, action=None, observation=None, iteration_number=None):
+        self.belief.history.update_observations(observation)
+        self.forward(action, observation, iteration_number)
 
-    def forward(self, action=None, observation=None):
-        pass
+    def forward(self, action=None, observation=None, iteration_number=None):
+        actions, q_values = self.solver.plan(action, observation, iteration_number)
+        return actions, q_values

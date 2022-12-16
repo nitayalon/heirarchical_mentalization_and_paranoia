@@ -6,17 +6,22 @@ from agents_models.abstract_agents import *
 class EAT:
 
     def __init__(self, n_trails, seed, endowment):
-        self.endowment = endowment
         self.n_trails = n_trails
-        self.actions = np.arange(0, 1.05, 0.05)
         self.seed = seed
+        self.endowment = endowment
+        self.agent_actions = np.arange(0, 1.05, 0.05)
+        self.subject_actions = np.array([True, False])
         self.trail_results = []
         self.subject_posterior_beliefs = []
 
     def simulate_task(self, subject, agent):
         seed = self.seed
-        for trial in range(self.n_trails):
-            trial_results = self.trial(subject, agent, seed)
+        offer = 1.1
+        response = False
+        agent.belief.update_history(offer, response)
+        subject.belief.update_history(response, offer)
+        for trial_number in range(self.n_trails):
+            offer, response, trial_results = self.trial(trial_number, offer, response, subject, agent, seed)
             self.trail_results.append(trial_results)
             self.subject_posterior_beliefs.append(subject.posterior_beliefs)
             seed += 1
@@ -26,8 +31,8 @@ class EAT:
         return experiment_results
 
     @staticmethod
-    def trial(subject, agent, seed):
-        offer = agent.act(seed)
-        response = subject.act(seed, offer)
-        return np.array([offer, response, subject.posterior_mu_par])
+    def trial(trial_number, offer, response, subject, agent, seed):
+        offer = agent.act(seed, offer, response)
+        response = subject.act(seed, response, offer, trial_number)
+        return offer, response, np.array([offer, response, subject.posterior_mu_par])
 

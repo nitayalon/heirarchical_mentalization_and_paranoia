@@ -1,6 +1,5 @@
 from agents_models.abstract_agents import *
 import numpy as np
-from typing import Callable, Optional, Tuple
 
 
 class RandomSubIntentionalModel(SubIntentionalModel):
@@ -14,12 +13,31 @@ class RandomSubIntentionalModel(SubIntentionalModel):
         return offer
 
 
+class SubIntentionalBelief(BeliefDistribution):
+
+    def __init__(self):
+        super().__init__(None, None)
+
+    def get_current_belief(self):
+        return None
+
+    def update_distribution(self, action, observation, first_move):
+        return None
+
+    def sample(self, rng_key, n_samples):
+        return None
+
+    def update_history(self, action, observation):
+        return None
+
+
 class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
 
-    def __init__(self, actions, history, threshold: Optional[float, None], softmax_temp: float):
-        super().__init__(actions, history, threshold, softmax_temp)
+    def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
+        super().__init__(actions, softmax_temp, threshold)
         self.high = [1.0]
         self.low = [0.0]
+        self.belief = SubIntentionalBelief()
 
     def act(self, seed, action=None, observation=None) -> float:
         relevant_actions, q_values, probabilities = self.forward(action, observation)
@@ -31,10 +49,11 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
         self.update_bounds(action, observation)
         upper_bound = self.high[-1]
         lower_bound = self.low[-1]
-        if upper_bound < self.threshold:
-            upper_bound = self.threshold
-        relevant_actions = self.actions[np.where(np.logical_and(self.actions >= lower_bound, self.actions <= upper_bound))]
-        q_values = self.utility_function(relevant_actions)
+        if upper_bound <= self.threshold:
+            relevant_actions = self.actions[np.where(np.logical_and(self.actions >= lower_bound, self.actions <= self.threshold))]
+        else:
+            relevant_actions = self.actions[np.where(np.logical_and(self.actions >= lower_bound, self.actions < upper_bound))]
+        q_values = self.utility_function(relevant_actions, observation)
         probabilities = self.softmax_transformation(q_values)
         return relevant_actions, q_values, probabilities
 
