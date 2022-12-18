@@ -23,7 +23,6 @@ class EAT:
             offer, response, trial_results = self.trial(trial_number, offer, response, subject, agent, seed)
             self.trail_results.append(trial_results)
             self.subject_posterior_beliefs.append(subject.belief.belief_distribution)
-            seed += 1
             print(f'The updated belief of the subject are {subject.belief.belief_distribution[:,-1]}')
         experiment_results = pd.DataFrame(self.trail_results)
         return experiment_results

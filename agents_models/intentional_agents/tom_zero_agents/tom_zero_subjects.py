@@ -90,6 +90,10 @@ class ToMZeroSubjectExplorationPolicy:
         q_value = reward_from_acceptance * optimal_action + reward_from_rejection * (1-optimal_action)
         return Action(optimal_action, False), q_value
 
+    def init_q_values(self, observation: Action):
+        initial_qvalues = self.reward_function(observation.value, self.actions)
+        return initial_qvalues
+
 
 class ToMZeroSubject(DoMZeroModel):
 
