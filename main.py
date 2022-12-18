@@ -16,13 +16,18 @@ if __name__ == "__main__":
                         help='set subject tom level (default: tom0)')
     parser.add_argument('--softmax_temp', type=float, default='0.5', metavar='N',
                         help='set softmax temp (default: 0.5)')
+    parser.add_argument('--agent_threshold', type=float, default='0.5', metavar='N',
+                        help='set agent threshold (default: 0.5)')
     args = parser.parse_args()
     config = init_config(args.environment, args)
-    eat_task_simulator = EAT(100, config.seed, 1.0)
+    eat_task_simulator = EAT(20, config.seed, 1.0)
     thresholds = np.array([0.2, 0.5, 0.8])
     thresholds_probabilities = np.array([1/3, 1/3, 1/3])
     random_number_generator = npr.default_rng(get_config().seed)
-    agent_threshold = random_number_generator.choice(thresholds, p=thresholds_probabilities)
+    if config.args.agent_threshold is None:
+        agent_threshold = random_number_generator.choice(thresholds, p=thresholds_probabilities)
+    else:
+        agent_threshold = config.args.agent_threshold
     subject_threshold = random_number_generator.choice(thresholds, p=thresholds_probabilities)
     agent = IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions, config.softmax_temperature, agent_threshold)
     subject = ToMZeroSubject(eat_task_simulator.subject_actions, config.softmax_temperature,
