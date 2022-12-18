@@ -58,10 +58,17 @@ class TomZeroSubjectBelief(DoMZeroBelief):
 
 class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
-    def __init__(self, opponent_model: SubIntentionalModel, reward_function):
+    def __init__(self, opponent_model: SubIntentionalModel, reward_function, low, high):
         super().__init__(opponent_model)
         self.reward_function = reward_function
         self.opponent_model = opponent_model
+        self.low = low
+        self.high = high
+
+    def update_low_and_high(self, observation, action):
+        self.opponent_model.update_bounds(observation, action)
+        self.low = self.opponent_model.low
+        self.high = self.opponent_model.high
 
     def reset_persona(self, persona, action, observation, nested_beliefs):
         self.opponent_model.threshold = persona
@@ -74,6 +81,11 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         interactive_state.state.terminal = interactive_state.state.name == 10
         return interactive_state, Action(counter_offer, False), reward
+
+    def update_persona(self, observation, action):
+        self.opponent_model.low = self.low
+        self.opponent_model.high = self.high
+        self.opponent_model.update_bounds(observation, action)
 
 
 class ToMZeroSubjectExplorationPolicy:
@@ -106,7 +118,8 @@ class ToMZeroSubject(DoMZeroModel):
         super().__init__(actions, softmax_temp, prior_belief, opponent_model)
         self.config = get_config()
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
-        self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function)
+        self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
+                                                                self.opponent_model.low, self.opponent_model.high)
         self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, self.config.get_from_env("rollout_accepting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
 
@@ -139,9 +152,12 @@ class ToMZeroSubject(DoMZeroModel):
         prng = np.random.default_rng(seed)
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
         actions = list(action_nodes.keys())
-        best_action = Action(actions[best_action_idx], False)
+        best_action = action_nodes[actions[best_action_idx]].action
         self.belief.history.update_actions(best_action)
-        return bool(best_action.value) #, q_values[best_action_idx, 1], softmax_transformation[best_action_idx]
+        self.environment_model.update_persona(observation, bool(best_action.value))
+        if action_nodes is not None:
+            self.solver.action_node = action_nodes[str(best_action.value)]
+        return best_action.value #, q_values[best_action_idx, 1], softmax_transformation[best_action_idx]
 
     def forward(self, action=None, observation=None, iteration_number=None):
         actions, q_values = self.solver.plan(action, observation, iteration_number)

@@ -35,8 +35,6 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
-        self.high = 1.0
-        self.low = 0.0
         self.belief = SubIntentionalBelief()
 
     def act(self, seed, action=None, observation=None) -> float:

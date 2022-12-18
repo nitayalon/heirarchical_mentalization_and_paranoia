@@ -12,6 +12,8 @@ class SubIntentionalModel(ABC):
         self.history = []
         self.softmax_temp = softmax_temp
         self.rewards = []
+        self.high = 1.0
+        self.low = 0.0
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
