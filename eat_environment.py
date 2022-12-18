@@ -31,5 +31,7 @@ class EAT:
     def trial(trial_number, offer, response, subject, agent, seed):
         offer = agent.act(seed, offer, response)
         response = subject.act(seed, response, offer, trial_number)
-        return offer, response, np.array([offer, response])
+        agent_reward = offer * response
+        subject_reward = (1-offer) * response
+        return offer, response, np.array([offer, response, agent_reward, subject_reward])
 

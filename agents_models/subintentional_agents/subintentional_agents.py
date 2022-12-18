@@ -45,10 +45,10 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
         return optimal_offer
 
     def forward(self, action=None, observation=None):
-        upper_bound = self.high
-        lower_bound = self.low
+        upper_bound = np.round(self.high, 3)
+        lower_bound = np.round(self.low, 3)
         if lower_bound >= upper_bound:
-            lower_bound = upper_bound - 0.05
+            lower_bound = np.round(upper_bound - 0.1, 3)
         if upper_bound <= self.threshold:
             relevant_actions = self.actions[np.where(np.logical_and(self.actions >= lower_bound, self.actions <= self.threshold))]
         else:
