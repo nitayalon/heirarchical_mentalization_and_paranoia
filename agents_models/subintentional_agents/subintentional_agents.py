@@ -28,7 +28,7 @@ class SubIntentionalBelief(BeliefDistribution):
         return None
 
     def update_history(self, action, observation):
-        return None
+        self.history.update_history(action, observation)
 
 
 class IntentionalAgentSubIntentionalModel(SubIntentionalModel):

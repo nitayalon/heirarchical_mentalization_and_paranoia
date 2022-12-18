@@ -1,5 +1,6 @@
 from eat_environment import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_subjects import *
+from agents_models.subintentional_agents.subintentional_agents import *
 import argparse
 from IPOMCP_solver.Solver.ipomcp_config import *
 

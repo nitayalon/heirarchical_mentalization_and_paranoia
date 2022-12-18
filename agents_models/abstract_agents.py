@@ -28,6 +28,9 @@ class SubIntentionalModel(ABC):
     def forward(self, action=None, observation=None):
         pass
 
+    def update_bounds(self, action, observation):
+        pass
+
 
 class DoMZeroBelief(BeliefDistribution):
 
@@ -53,10 +56,11 @@ class DoMZeroModel(SubIntentionalModel):
                  opponent_model: SubIntentionalModel):
         super().__init__(actions, softmax_temp, None)
         self.opponent_model = opponent_model
-        self.belief = DoMZeroBelief(prior_belief, opponent_model)  # type: DoMZeroBelief
+        self.belief = DoMZeroBelief(prior_belief, self.opponent_model)  # type: DoMZeroBelief
 
     def act(self, seed, action=None, observation=None, iteration_number=None):
         pass
 
     def forward(self, action=None, observation=None, iteration_number=None):
         pass
+

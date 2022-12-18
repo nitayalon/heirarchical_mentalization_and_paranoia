@@ -1,12 +1,10 @@
-from typing import Any
 from agents_models.abstract_agents import *
-from agents_models.subintentional_agents.subintentional_agents import IntentionalAgentSubIntentionalModel
 from IPOMCP_solver.Solver.ipomcp_solver import *
 
 
 class TomZeroSubjectBelief(DoMZeroBelief):
 
-    def __init__(self, prior_belief, opponent_model: IntentionalAgentSubIntentionalModel):
+    def __init__(self, prior_belief, opponent_model: SubIntentionalModel):
         super().__init__(prior_belief, opponent_model)
 
     def update_history(self, action, observation):
@@ -60,15 +58,14 @@ class TomZeroSubjectBelief(DoMZeroBelief):
 
 class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
-    def __init__(self, opponent_model: IntentionalAgentSubIntentionalModel, reward_function):
+    def __init__(self, opponent_model: SubIntentionalModel, reward_function):
         super().__init__(opponent_model)
         self.reward_function = reward_function
         self.opponent_model = opponent_model
 
-    def reset_persona(self, persona, history_length, nested_beliefs):
+    def reset_persona(self, persona, action, observation, nested_beliefs):
         self.opponent_model.threshold = persona
-        self.opponent_model.high = self.opponent_model.high[0:(history_length-1)]
-        self.opponent_model.low = self.opponent_model.low[0:(history_length-1)]
+        self.opponent_model.update_bounds(observation, action)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int) -> tuple[InteractiveState, Action, float]:
@@ -100,12 +97,12 @@ class ToMZeroSubject(DoMZeroModel):
                  actions,
                  softmax_temp: float,
                  prior_belief: np.array,
-                 opponent_model: IntentionalAgentSubIntentionalModel,
+                 opponent_model: SubIntentionalModel,
                  seed: int):
         super().__init__(actions, softmax_temp, prior_belief, opponent_model)
         self.config = get_config()
-        self.belief = TomZeroSubjectBelief(prior_belief, opponent_model)
-        self.environment_model = ToMZeroSubjectEnvironmentModel(opponent_model, self.utility_function)
+        self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
+        self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function)
         self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, self.config.get_from_env("rollout_accepting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
 
