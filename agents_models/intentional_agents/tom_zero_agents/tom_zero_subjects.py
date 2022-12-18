@@ -86,7 +86,8 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         self.opponent_model.low = self.low
         self.opponent_model.high = self.high
         self.opponent_model.update_bounds(observation, action)
-
+        self.low = self.opponent_model.low
+        self.high = self.opponent_model.high
 
 class ToMZeroSubjectExplorationPolicy:
 
