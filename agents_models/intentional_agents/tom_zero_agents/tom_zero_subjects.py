@@ -1,5 +1,6 @@
 from agents_models.abstract_agents import *
 from IPOMCP_solver.Solver.ipomcp_solver import *
+from sklearn.metrics import log_loss
 
 
 class TomZeroSubjectBelief(DoMZeroBelief):
@@ -63,7 +64,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
 
     def reset_belief(self, history_length):
         self.belief_distribution = self.rollout_belief
-        self.history = self.history.reset(history_length+2)
+        self.history.reset(history_length+2)
 
 
 class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
@@ -121,7 +122,7 @@ class ToMZeroSubjectExplorationPolicy:
         return Action(optimal_action, False), q_value
 
     def init_q_values(self, observation: Action):
-        initial_qvalues = self.reward_function(observation.value, self.actions)
+        initial_qvalues = self.reward_function(observation.value, self.actions, None, False)
         return initial_qvalues
 
 
@@ -155,8 +156,9 @@ class ToMZeroSubject(DoMZeroModel):
         game_reward = (1 - action) * observation
         recognition_reward = 0.0
         if final_trial:
-            cross_entropy = np.log(self.belief.belief_distribution[:, -1]) * (self.belief.belief_distribution[:, 0] == theta_hat)
-            recognition_reward = np.sum(cross_entropy)
+            true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
+            theta_hat_distribution = self.belief.belief_distribution[:, -1]
+            recognition_reward = -log_loss(true_theta_hat, theta_hat_distribution)
         return self.alpha * game_reward + (1-self.alpha) * recognition_reward
 
     def update_belief(self, action, observation):
