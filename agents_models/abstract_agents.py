@@ -55,8 +55,10 @@ class DoMZeroModel(SubIntentionalModel):
     def __init__(self, actions,
                  softmax_temp: float,
                  prior_belief: np.array,
-                 opponent_model: SubIntentionalModel):
+                 opponent_model: SubIntentionalModel,
+                 alpha: float):
         super().__init__(actions, softmax_temp, None)
+        self.alpha = alpha
         self.opponent_model = opponent_model
         self.belief = DoMZeroBelief(prior_belief, self.opponent_model)  # type: DoMZeroBelief
 

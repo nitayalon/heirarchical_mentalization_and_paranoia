@@ -89,6 +89,7 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
+
 class ToMZeroSubjectExplorationPolicy:
 
     def __init__(self, actions, reward_function, exploration_bonus):
@@ -96,9 +97,9 @@ class ToMZeroSubjectExplorationPolicy:
         self.actions = actions
         self.exploration_bonus = exploration_bonus
 
-    def sample(self, interactive_state: InteractiveState, last_cation: bool, observation: float, rng_key: int):
+    def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float, rng_key: int):
         reward_from_acceptance = self.reward_function(observation, True)
-        reward_from_rejection = 0.0 + self.exploration_bonus
+        reward_from_rejection = self.reward_function(observation, False) + self.exploration_bonus
         optimal_action = [True, False][np.argmax([reward_from_acceptance, reward_from_rejection])]
         q_value = reward_from_acceptance * optimal_action + reward_from_rejection * (1-optimal_action)
         return Action(optimal_action, False), q_value
@@ -115,8 +116,9 @@ class ToMZeroSubject(DoMZeroModel):
                  softmax_temp: float,
                  prior_belief: np.array,
                  opponent_model: SubIntentionalModel,
-                 seed: int):
-        super().__init__(actions, softmax_temp, prior_belief, opponent_model)
+                 seed: int,
+                 alpha: float):
+        super().__init__(actions, softmax_temp, prior_belief, opponent_model, alpha)
         self.config = get_config()
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
@@ -124,14 +126,21 @@ class ToMZeroSubject(DoMZeroModel):
         self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, self.config.get_from_env("rollout_accepting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
 
-    def utility_function(self, action, observation):
+    def utility_function(self, action, observation, final_trial=False, theta_hat=None):
         """
 
+        :param theta_hat: float - representing the true persona of the opponent
+        :param final_trial: bool - indicate if last trial or not
         :param action: bool - either True for accepting the offer or False for rejecting it
         :param observation: float - representing the current offer
         :return:
         """
-        return (1 - action) * observation
+        game_reward = (1 - action) * observation
+        recognition_reward = 0.0
+        if final_trial:
+            cross_entropy = np.log(self.belief.belief_distribution[:, -1]) * (self.belief.belief_distribution[:, 0] == theta_hat)
+            recognition_reward = np.sum(cross_entropy)
+        return self.alpha * game_reward + (1-self.alpha) * recognition_reward
 
     def update_belief(self, action, observation):
         observation_likelihood_per_type = np.zeros_like(self.belief.belief_distribution[:, 0])

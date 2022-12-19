@@ -18,6 +18,8 @@ if __name__ == "__main__":
                         help='set softmax temp (default: 0.5)')
     parser.add_argument('--agent_threshold', type=float, default='0.5', metavar='N',
                         help='set agent threshold (default: 0.5)')
+    parser.add_argument('--subject_alpha', type=float, default='0.5', metavar='N',
+                        help='set subject reward mixing probability (default: 0.5)')
     args = parser.parse_args()
     config = init_config(args.environment, args)
     eat_task_simulator = EAT(20, config.seed, 1.0)
@@ -34,5 +36,5 @@ if __name__ == "__main__":
                              np.array([thresholds, thresholds_probabilities]).T,
                              IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions,
                                                                  config.softmax_temperature,
-                                                                 agent_threshold), config.seed)
+                                                                 agent_threshold), config.seed, config.args.subject_alpha)
     results = eat_task_simulator.simulate_task(subject, agent)
