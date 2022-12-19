@@ -6,6 +6,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
 
     def __init__(self, prior_belief, opponent_model: SubIntentionalModel):
         super().__init__(prior_belief, opponent_model)
+        self.rollout_belief = self.belief_distribution
 
     def update_history(self, action, observation):
         """
@@ -45,7 +46,12 @@ class TomZeroSubjectBelief(DoMZeroBelief):
             theta = self.prior_belief[:, 0][i]
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = self.opponent_model.forward(last_observation, action)
-            observation_probability = probabilities[np.where(possible_opponent_actions == observation)]
+            # If the observation is not in the feasible action set then it singles theta hat:
+            observation_in_feasible_set = np.any(possible_opponent_actions == observation)
+            if not observation_in_feasible_set:
+                observation_probability = 1e-4
+            else:
+                observation_probability = probabilities[np.where(possible_opponent_actions == observation)]
             offer_likelihood[i] = observation_probability
         return offer_likelihood
 
@@ -55,11 +61,16 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         particles = rng_generator.choice(self.belief_distribution[:, 0], size=n_samples, p=probabilities)
         return particles
 
+    def reset_belief(self, history_length):
+        self.belief_distribution = self.rollout_belief
+        self.history = self.history.reset(history_length+2)
+
 
 class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
-    def __init__(self, opponent_model: SubIntentionalModel, reward_function, low, high):
-        super().__init__(opponent_model)
+    def __init__(self, opponent_model: SubIntentionalModel, reward_function, low, high, 
+                 belief_distribution: TomZeroSubjectBelief):
+        super().__init__(opponent_model, belief_distribution)
         self.reward_function = reward_function
         self.opponent_model = opponent_model
         self.low = low
@@ -77,7 +88,10 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int) -> tuple[InteractiveState, Action, float]:
         counter_offer = self.opponent_model.act(seed, observation.value, action.value)
-        reward = self.reward_function(observation.value, action.value)
+        # Adding belief update here
+        self.belief_distribution.update_history(action.value, observation.value)
+        self.belief_distribution.update_distribution(action, Action(counter_offer, False), iteration_number)
+        reward = self.reward_function(observation.value, action.value, interactive_state.persona)
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         interactive_state.state.terminal = interactive_state.state.name == 10
         return interactive_state, Action(counter_offer, False), reward
@@ -97,9 +111,11 @@ class ToMZeroSubjectExplorationPolicy:
         self.actions = actions
         self.exploration_bonus = exploration_bonus
 
-    def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float, rng_key: int):
-        reward_from_acceptance = self.reward_function(observation, True)
-        reward_from_rejection = self.reward_function(observation, False) + self.exploration_bonus
+    def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float,
+               rng_key: int, iteration_number):
+        reward_from_acceptance = self.reward_function(observation, True, interactive_state.persona)
+        rejection_bonus = self.exploration_bonus * 1 / iteration_number
+        reward_from_rejection = self.reward_function(observation, False, interactive_state.persona) + rejection_bonus
         optimal_action = [True, False][np.argmax([reward_from_acceptance, reward_from_rejection])]
         q_value = reward_from_acceptance * optimal_action + reward_from_rejection * (1-optimal_action)
         return Action(optimal_action, False), q_value
@@ -122,11 +138,12 @@ class ToMZeroSubject(DoMZeroModel):
         self.config = get_config()
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
-                                                                self.opponent_model.low, self.opponent_model.high)
-        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, self.config.get_from_env("rollout_accepting_bonus"))
+                                                                self.opponent_model.low, self.opponent_model.high,
+                                                                self.belief)
+        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, self.config.get_from_env("rollout_rejecting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
 
-    def utility_function(self, action, observation, final_trial=False, theta_hat=None):
+    def utility_function(self, action, observation, theta_hat=None, final_trial=True):
         """
 
         :param theta_hat: float - representing the true persona of the opponent
