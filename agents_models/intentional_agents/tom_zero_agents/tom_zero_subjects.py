@@ -63,7 +63,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         return particles
 
     def reset_belief(self, history_length):
-        self.belief_distribution = self.rollout_belief
+        self.belief_distribution = self.belief_distribution[:, 0:history_length+3]
         self.history.reset(history_length+2)
 
 
