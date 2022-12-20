@@ -43,6 +43,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         """
         last_observation = self.history.get_last_observation()
         offer_likelihood = np.empty_like(prior)
+        original_threshold = self.opponent_model.threshold
         for i in range(len(self.prior_belief[:, 0])):
             theta = self.prior_belief[:, 0][i]
             self.opponent_model.threshold = theta
@@ -54,6 +55,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
             else:
                 observation_probability = probabilities[np.where(possible_opponent_actions == observation)]
             offer_likelihood[i] = observation_probability
+        self.opponent_model.threshold = original_threshold
         return offer_likelihood
 
     def sample(self, rng_key, n_samples):
@@ -164,12 +166,14 @@ class ToMZeroSubject(DoMZeroModel):
     def update_belief(self, action, observation):
         observation_likelihood_per_type = np.zeros_like(self.belief.belief_distribution[:, 0])
         i = 0
+        opponent_threshold = self.opponent_model.threshold
         for gamma in self.belief.belief_distribution[:, 0]:
             self.opponent_model.threshold = gamma
             relevant_actions, q_values, probabilities = self.opponent_model.forward(observation, action)
             observation_likelihood = probabilities[np.where(relevant_actions == observation)]
             observation_likelihood_per_type[i] = observation_likelihood
             i += 1
+        self.opponent_model.threshold = opponent_threshold
         prior = self.belief.belief_distribution[:, -1]
         posterior = observation_likelihood_per_type * prior
         self.belief.belief_distribution = np.c_[self.belief.belief_distribution, posterior / posterior.sum()]
