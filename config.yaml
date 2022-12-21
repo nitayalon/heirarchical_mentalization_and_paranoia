@@ -1,6 +1,6 @@
 general:
   fee_discount: 0.95
-  results_folder: "data/manager_worker/results/"
+  results_folder: "data/agent_subject/"
 
 environments:
   env_2:

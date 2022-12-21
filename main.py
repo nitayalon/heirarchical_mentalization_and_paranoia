@@ -38,3 +38,4 @@ if __name__ == "__main__":
                                                                  config.softmax_temperature,
                                                                  agent_threshold), config.seed, config.args.subject_alpha)
     results = eat_task_simulator.simulate_task(subject, agent)
+    results.to_csv(config.simulation_results_dir + "/" + f'seed_{config.seed}.csv')
