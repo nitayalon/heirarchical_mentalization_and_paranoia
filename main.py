@@ -37,5 +37,7 @@ if __name__ == "__main__":
                              IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions,
                                                                  config.softmax_temperature,
                                                                  agent_threshold), config.seed, config.args.subject_alpha)
-    results = eat_task_simulator.simulate_task(subject, agent)
-    results.to_csv(config.simulation_results_dir + "/" + f'seed_{config.seed}.csv')
+    experiment_results, agents_q_values, subject_belief = eat_task_simulator.simulate_task(subject, agent)
+    experiment_results.to_csv(config.simulation_results_dir + "/" + f'seed_{config.seed}.csv', index=False)
+    agents_q_values.to_csv(config.planning_results_dir + "/" + f'seed_{config.seed}.csv', index=False)
+    subject_belief.to_csv(config.beliefs_dir + "/" + f'seed_{config.seed}.csv', index=False)

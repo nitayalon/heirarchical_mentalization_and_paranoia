@@ -1,6 +1,6 @@
 import numpy as np
 from IPOMCP_solver.Solver.abstract_classes import *
-from typing import Callable, Optional, Tuple
+from typing import Optional
 
 
 class SubIntentionalModel(ABC):
@@ -14,16 +14,17 @@ class SubIntentionalModel(ABC):
         self.rewards = []
         self.high = 1.0
         self.low = 0.0
+        self.name = None
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
-        return softmax_transformation/softmax_transformation.sum()
+        return softmax_transformation / softmax_transformation.sum()
 
     def utility_function(self, action, observation):
         return action - self.threshold
 
     @abstractmethod
-    def act(self, seed, action=None, observation=None):
+    def act(self, seed, action=None, observation=None) -> [float, np.array]:
         pass
 
     @abstractmethod
@@ -62,9 +63,8 @@ class DoMZeroModel(SubIntentionalModel):
         self.opponent_model = opponent_model
         self.belief = DoMZeroBelief(prior_belief, self.opponent_model)  # type: DoMZeroBelief
 
-    def act(self, seed, action=None, observation=None, iteration_number=None):
+    def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         pass
 
     def forward(self, action=None, observation=None, iteration_number=None):
         pass
-

@@ -36,13 +36,14 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
         self.belief = SubIntentionalBelief()
+        self.name = "DoM(-1)_IA"
 
-    def act(self, seed, action=None, observation=None) -> float:
+    def act(self, seed, action=None, observation=None) -> [float, np.array]:
         self.update_bounds(action, observation)
         relevant_actions, q_values, probabilities = self.forward(action, observation)
         random_number_generator = np.random.default_rng(seed)
         optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
-        return optimal_offer
+        return optimal_offer, np.array([relevant_actions, q_values]).T
 
     def forward(self, action=None, observation=None):
         upper_bound = np.round(self.high, 3)

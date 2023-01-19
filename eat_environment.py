@@ -19,19 +19,30 @@ class EAT:
         response = False
         agent.belief.update_history(offer, response)
         subject.belief.update_history(response, offer)
+        q_values_list = []
         for trial_number in range(self.n_trails):
-            offer, response, trial_results = self.trial(trial_number, offer, response, subject, agent, seed)
+            offer, response, trial_results, q_values = self.trial(trial_number, offer, response, subject, agent, seed)
             self.trail_results.append(trial_results)
+            q_values_list.append(q_values)
             self.subject_posterior_beliefs.append(subject.belief.belief_distribution)
             print(f'The updated belief of the subject are {subject.belief.belief_distribution[:,-1]}')
-        experiment_results = pd.DataFrame(self.trail_results)
-        return experiment_results
+        experiment_results = pd.DataFrame(self.trail_results, columns=['offer', 'response', 'agent_reward',
+                                                                       'subject_reward'])
+        agents_q_values = pd.concat(q_values_list)
+        agents_q_values.columns = ['action', 'q_value', 'agent']
+        subject_belief = pd.DataFrame(subject.belief.belief_distribution)
+        return experiment_results, agents_q_values, subject_belief
 
     @staticmethod
     def trial(trial_number, offer, response, subject, agent, seed):
-        offer = agent.act(seed, offer, response)
-        response = subject.act(seed, response, offer, trial_number)
+        offer, agent_q_values = agent.act(seed, offer, response)
+        response, subject_q_values = subject.act(seed, response, offer, trial_number)
         agent_reward = offer * response
         subject_reward = (1-offer) * response
-        return offer, response, np.array([offer, response, agent_reward, subject_reward])
+        agent_q_values = pd.DataFrame(agent_q_values)
+        agent_q_values['agent'] = agent.name
+        subject_q_values = pd.DataFrame(subject_q_values)
+        subject_q_values['agent'] = subject.name
+        q_values = pd.concat([agent_q_values, subject_q_values])
+        return offer, response, np.array([offer, response, agent_reward, subject_reward]), q_values
 

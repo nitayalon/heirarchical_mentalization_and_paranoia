@@ -90,7 +90,7 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int) -> tuple[InteractiveState, Action, float]:
-        counter_offer = self.opponent_model.act(seed, observation.value, action.value)
+        counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value)
         # Adding belief update here
         self.belief_distribution.update_history(action.value, observation.value)
         self.belief_distribution.update_distribution(action, Action(counter_offer, False), iteration_number)
@@ -143,8 +143,10 @@ class ToMZeroSubject(DoMZeroModel):
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
                                                                 self.opponent_model.low, self.opponent_model.high,
                                                                 self.belief)
-        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function, self.config.get_from_env("rollout_rejecting_bonus"))
+        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function,
+                                                                  self.config.get_from_env("rollout_rejecting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        self.name = "DoM(0)_subject"
 
     def utility_function(self, action, observation, theta_hat=None, final_trial=True):
         """
@@ -178,7 +180,7 @@ class ToMZeroSubject(DoMZeroModel):
         posterior = observation_likelihood_per_type * prior
         self.belief.belief_distribution = np.c_[self.belief.belief_distribution, posterior / posterior.sum()]
 
-    def act(self, seed, action=None, observation=None, iteration_number=None):
+    def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         self.belief.history.update_observations(observation)
         action_nodes, q_values = self.forward(action, observation, iteration_number)
         softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(q_values[:, 1] / self.softmax_temp).sum()
@@ -190,7 +192,7 @@ class ToMZeroSubject(DoMZeroModel):
         self.environment_model.update_persona(observation, bool(best_action.value))
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
-        return best_action.value #, q_values[best_action_idx, 1], softmax_transformation[best_action_idx]
+        return best_action.value, q_values[:, :-1]
 
     def forward(self, action=None, observation=None, iteration_number=None):
         actions, q_values = self.solver.plan(action, observation, iteration_number)
