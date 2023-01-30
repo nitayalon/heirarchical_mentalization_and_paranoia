@@ -17,7 +17,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         :return:
         """
         self.history.update_history(action, observation)
-        self.opponent_model.update_bounds(observation, action)
+        self.opponent_model.belief.update_history(observation, action)
 
     def update_distribution(self, action, observation, first_move):
         """
@@ -28,8 +28,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         :return:
         """
         prior = np.copy(self.belief_distribution[:, -1])
-        policy_based_probabilities = self.compute_likelihood(action.value, observation.value, prior)
-        probabilities = policy_based_probabilities
+        probabilities = self.compute_likelihood(action.value, observation.value, prior)
         posterior = probabilities * prior
         self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
 
@@ -84,9 +83,11 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
-    def reset_persona(self, persona, action, observation, nested_beliefs):
+    def reset_persona(self, persona, history_length, nested_beliefs):
         self.opponent_model.threshold = persona
-        self.opponent_model.update_bounds(observation, action)
+        observation = self.opponent_model.belief.history.observations[history_length-1]
+        action = self.opponent_model.belief.history.actions[history_length-1]
+        self.opponent_model.update_bounds(action, observation)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int) -> tuple[InteractiveState, Action, float]:
@@ -143,7 +144,7 @@ class ToMZeroSubject(DoMZeroModel):
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
                                                                 self.opponent_model.low, self.opponent_model.high,
                                                                 self.belief)
-        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.actions, self.utility_function,
+        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.potential_actions, self.utility_function,
                                                                   self.config.get_from_env("rollout_rejecting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_subject"

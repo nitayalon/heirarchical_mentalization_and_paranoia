@@ -6,15 +6,17 @@ from typing import Optional
 class SubIntentionalModel(ABC):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None, endowment=1.0):
-        self.actions = actions
+        self.potential_actions = actions
         self.endowment = endowment
         self.threshold = threshold
-        self.history = []
         self.softmax_temp = softmax_temp
+        self.observations = []
+        self.actions = []
         self.rewards = []
         self.high = 1.0
         self.low = 0.0
         self.name = None
+        self.belief = None
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
@@ -33,6 +35,10 @@ class SubIntentionalModel(ABC):
 
     def update_bounds(self, action, observation):
         pass
+
+    def update_history(self, action, observation):
+        self.actions.append(action)
+        self.observations.append(observation)
 
 
 class DoMZeroBelief(BeliefDistribution):
