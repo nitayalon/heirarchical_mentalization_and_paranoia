@@ -189,7 +189,13 @@ class ToMZeroSubject(DoMZeroModel):
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         self.belief.history.update_observations(observation)
-        action_nodes, q_values = self.forward(action, observation, iteration_number)
+        action_nodes, q_values, mcts_tree = self.forward(action, observation, iteration_number)
+        mcts_tree["alpha"] = self.alpha
+        mcts_tree["softmax_temp"] = self.softmax_temp
+        mcts_tree["agent_type"] = self.name
+        mcts_tree.to_csv(
+            self.config.planning_results_dir + "/" + f'iteration_number_{iteration_number}_seed_{self.config.seed}.csv',
+            index=False)
         softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(q_values[:, 1] / self.softmax_temp).sum()
         prng = np.random.default_rng(seed)
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
@@ -202,5 +208,5 @@ class ToMZeroSubject(DoMZeroModel):
         return best_action.value, q_values[:, :-1]
 
     def forward(self, action=None, observation=None, iteration_number=None):
-        actions, q_values = self.solver.plan(action, observation, iteration_number)
-        return actions, q_values
+        actions, mcts_tree, q_values = self.solver.plan(action, observation, iteration_number)
+        return actions, q_values, mcts_tree

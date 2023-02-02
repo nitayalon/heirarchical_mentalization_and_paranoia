@@ -11,7 +11,6 @@ class EAT:
         self.agent_actions = np.arange(0, 1.05, 0.05)
         self.subject_actions = np.array([True, False])
         self.trail_results = []
-        self.subject_posterior_beliefs = []
 
     def simulate_task(self, subject, agent):
         seed = self.seed
@@ -24,8 +23,6 @@ class EAT:
             offer, response, trial_results, q_values = self.trial(trial_number, offer, response, subject, agent, seed)
             self.trail_results.append(trial_results)
             q_values_list.append(q_values)
-            self.subject_posterior_beliefs.append(subject.belief.belief_distribution)
-            print(f'The updated belief of the subject are {subject.belief.belief_distribution[:,-1]}')
         experiment_results = pd.DataFrame(self.trail_results, columns=['offer', 'response', 'agent_reward',
                                                                        'subject_reward'])
         agents_q_values = pd.concat(q_values_list)
@@ -40,9 +37,9 @@ class EAT:
         agent_reward = offer * response
         subject_reward = (1-offer) * response
         agent_q_values = pd.DataFrame(agent_q_values)
-        agent_q_values['agent'] = agent.name
         subject_q_values = pd.DataFrame(subject_q_values)
-        subject_q_values['agent'] = subject.name
         q_values = pd.concat([agent_q_values, subject_q_values])
+        q_values['agent'] = agent.name
+        q_values['gamma'] = agent.threshold
         return offer, response, np.array([offer, response, agent_reward, subject_reward]), q_values
 
