@@ -1,6 +1,5 @@
 from agents_models.abstract_agents import *
 from IPOMCP_solver.Solver.ipomcp_solver import *
-from sklearn.metrics import log_loss
 
 
 class TomZeroSubjectBelief(DoMZeroBelief):
@@ -149,6 +148,13 @@ class ToMZeroSubject(DoMZeroModel):
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_subject"
 
+    @staticmethod
+    def normalized_cross_entropy(support, posterior):
+        numerator = -np.mean(support * np.log(posterior) + (1-support) * np.log(1 - posterior))
+        p = 1/len(support)
+        denominator = -(p * np.log(p) + (1-p) * np.log(1-p))
+        return numerator / denominator
+
     def utility_function(self, action, observation, theta_hat=None, final_trial=True):
         """
 
@@ -163,7 +169,7 @@ class ToMZeroSubject(DoMZeroModel):
         if final_trial:
             true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
             theta_hat_distribution = self.belief.belief_distribution[:, -1]
-            recognition_reward = -log_loss(true_theta_hat, theta_hat_distribution)
+            recognition_reward = np.dot(true_theta_hat, theta_hat_distribution)
         return self.alpha * game_reward + (1-self.alpha) * recognition_reward
 
     def update_belief(self, action, observation):
@@ -189,7 +195,7 @@ class ToMZeroSubject(DoMZeroModel):
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
         actions = list(action_nodes.keys())
         best_action = action_nodes[actions[best_action_idx]].action
-        self.belief.history.update_actions(best_action)
+        self.belief.history.update_actions(best_action.value)
         self.environment_model.update_persona(observation, bool(best_action.value))
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]

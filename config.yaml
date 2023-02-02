@@ -5,7 +5,7 @@ general:
 environments:
   env_2:
     name: env_2
-    uct_exploration_bonus: 3.0
+    uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
     planning_depth: 10
     mcts_number_of_iterations: 10000
