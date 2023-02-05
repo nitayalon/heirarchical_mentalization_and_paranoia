@@ -29,6 +29,7 @@ if __name__ == "__main__":
             # Create directory for the experiment
             config.args.subject_alpha = i
             config.args.agent_threshold = k
+            config.new_experiment_name()
             print(f'Now running alpha of {config.args.subject_alpha}')
             print("\n")
             print(f'and threshold of {config.args.agent_threshold}')
@@ -52,3 +53,4 @@ if __name__ == "__main__":
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)
             agents_q_values.to_csv(config.q_values_results_dir + "/" + output_directory_name, index=False)
             subject_belief.to_csv(config.beliefs_dir + "/" + output_directory_name, index=False)
+            print(f'simulation over')

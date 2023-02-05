@@ -197,7 +197,8 @@ class ToMZeroSubject(DoMZeroModel):
         mcts_tree["agent_type"] = self.name
         mcts_tree_output_name = os.path.join(self.config.planning_results_dir,
                                              self.config.experiment_name)
-        mcts_tree.to_csv(mcts_tree_output_name + f'_iteration_number_{iteration_number}' + '.csv', index=False)
+        mcts_tree.to_csv(mcts_tree_output_name + f'_iteration_number_{iteration_number}_seed_{self.config.seed}.csv',
+                         index=False)
         softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(q_values[:, 1] / self.softmax_temp).sum()
         prng = np.random.default_rng(seed)
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
