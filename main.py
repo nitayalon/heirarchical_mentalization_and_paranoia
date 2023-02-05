@@ -29,6 +29,7 @@ if __name__ == "__main__":
             # Create directory for the experiment
             config.args.subject_alpha = i
             config.args.agent_threshold = k
+            config.new_experiment_name()
             print(f'Now running alpha of {config.args.subject_alpha}')
             print("\n")
             print(f'and threshold of {config.args.agent_threshold}')
