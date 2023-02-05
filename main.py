@@ -26,6 +26,7 @@ if __name__ == "__main__":
     thresholds = [0.2, 0.5, 0.8]  # parameters to control threshold of agent
     for i in alpha_seq:
         for k in thresholds:
+            # Create directory for the experiment
             config.args.subject_alpha = i
             config.args.agent_threshold = k
             print(f'Now running alpha of {config.args.subject_alpha}')
@@ -46,6 +47,8 @@ if __name__ == "__main__":
                                                                          config.softmax_temperature,
                                                                          agent_threshold), config.seed, config.args.subject_alpha)
             experiment_results, agents_q_values, subject_belief = eat_task_simulator.simulate_task(subject, agent)
-            experiment_results.to_csv(config.simulation_results_dir + "/" + f'seed_{config.seed}.csv', index=False)
-            agents_q_values.to_csv(config.q_values_results_dir + "/" + f'seed_{config.seed}.csv', index=False)
-            subject_belief.to_csv(config.beliefs_dir + "/" + f'seed_{config.seed}.csv', index=False)
+            experiment_name = config.experiment_name
+            output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}'
+            experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)
+            agents_q_values.to_csv(config.q_values_results_dir + "/" + output_directory_name, index=False)
+            subject_belief.to_csv(config.beliefs_dir + "/" + output_directory_name, index=False)

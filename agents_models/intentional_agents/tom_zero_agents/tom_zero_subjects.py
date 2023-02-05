@@ -1,5 +1,6 @@
 from agents_models.abstract_agents import *
 from IPOMCP_solver.Solver.ipomcp_solver import *
+import os
 
 
 class TomZeroSubjectBelief(DoMZeroBelief):
@@ -45,7 +46,8 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         for i in range(len(self.prior_belief[:, 0])):
             theta = self.prior_belief[:, 0][i]
             self.opponent_model.threshold = theta
-            possible_opponent_actions, opponent_q_values, probabilities = self.opponent_model.forward(last_observation, action)
+            possible_opponent_actions, opponent_q_values, probabilities = \
+                self.opponent_model.forward(last_observation, action)
             # If the observation is not in the feasible action set then it singles theta hat:
             observation_in_feasible_set = np.any(possible_opponent_actions == observation)
             if not observation_in_feasible_set:
@@ -193,9 +195,9 @@ class ToMZeroSubject(DoMZeroModel):
         mcts_tree["alpha"] = self.alpha
         mcts_tree["softmax_temp"] = self.softmax_temp
         mcts_tree["agent_type"] = self.name
-        mcts_tree.to_csv(
-            self.config.planning_results_dir + "/" + f'iteration_number_{iteration_number}_seed_{self.config.seed}.csv',
-            index=False)
+        mcts_tree_output_name = os.path.join(self.config.planning_results_dir,
+                                             self.config.experiment_name)
+        mcts_tree.to_csv(mcts_tree_output_name + f'_iteration_number_{iteration_number}' + '.csv', index=False)
         softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(q_values[:, 1] / self.softmax_temp).sum()
         prng = np.random.default_rng(seed)
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
