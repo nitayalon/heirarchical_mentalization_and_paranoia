@@ -4,13 +4,21 @@ import numpy as np
 
 class RandomSubIntentionalModel(SubIntentionalModel):
 
+    def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
+        super().__init__(actions, softmax_temp, threshold)
+        self.belief = SubIntentionalBelief()
+        self.name = "DoM(-1)_RA"
+
     def forward(self, action=None, observation=None):
-        pass
+        q_values = self.potential_actions * 0.5
+        probabilities = np.repeat(1 / len(self.potential_actions),len(self.potential_actions))
+        return self.potential_actions, q_values, probabilities
 
     def act(self, seed, action=None, observation=None):
+        relevant_actions, q_values, probabilities = self.forward(action, observation)
         random_number_generator = np.random.default_rng(seed)
-        offer = random_number_generator.choice(self.potential_actions)
-        return offer
+        offer = random_number_generator.choice(relevant_actions, p=probabilities)
+        return offer, np.array([relevant_actions, q_values]).T
 
 
 class SubIntentionalBelief(BeliefDistribution):
@@ -37,7 +45,18 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
         self.belief = SubIntentionalBelief()
-        self.name = "DoM(-1)_IA"
+        self._name = "DoM(-1)_IA"
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, threshold):
+        if threshold == 0.0:
+            self._name = "DoM(-1)_RA"
+        else:
+            self._name = "DoM(-1)_IA"
 
     def act(self, seed, action=None, observation=None) -> [float, np.array]:
         self.update_bounds(action, observation)
@@ -46,17 +65,25 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
         optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
         return optimal_offer, np.array([relevant_actions, q_values]).T
 
+    def _random_forward(self):
+        q_values = self.potential_actions * 0.5
+        probabilities = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
+        return self.potential_actions, q_values, probabilities
+
     def forward(self, action=None, observation=None):
-        upper_bound = np.round(self.high, 3)
-        lower_bound = np.round(self.low, 3)
-        if lower_bound >= upper_bound:
-            lower_bound = np.round(upper_bound - 0.1, 3)
-        if upper_bound <= self.threshold:
-            relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound, self.potential_actions <= self.threshold))]
+        if self.threshold == 0.0:
+            relevant_actions, q_values, probabilities = self._random_forward()
         else:
-            relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound, self.potential_actions < upper_bound))]
-        q_values = self.utility_function(relevant_actions, observation)
-        probabilities = self.softmax_transformation(q_values)
+            upper_bound = np.round(self.high, 3)
+            lower_bound = np.round(self.low, 3)
+            if lower_bound >= upper_bound:
+                lower_bound = np.round(upper_bound - 0.1, 3)
+            if upper_bound <= self.threshold:
+                relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound, self.potential_actions <= self.threshold))]
+            else:
+                relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound, self.potential_actions < upper_bound))]
+            q_values = self.utility_function(relevant_actions, observation)
+            probabilities = self.softmax_transformation(q_values)
         return relevant_actions, q_values, probabilities
 
     def update_bounds(self, action, observation):

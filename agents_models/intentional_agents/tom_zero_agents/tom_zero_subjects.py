@@ -5,9 +5,8 @@ import os
 
 class TomZeroSubjectBelief(DoMZeroBelief):
 
-    def __init__(self, prior_belief, opponent_model: SubIntentionalModel):
-        super().__init__(prior_belief, opponent_model)
-        self.rollout_belief = self.belief_distribution
+    def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalModel):
+        super().__init__(intentional_threshold_belief, opponent_model)
 
     def update_history(self, action, observation):
         """
@@ -45,6 +44,9 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         original_threshold = self.opponent_model.threshold
         for i in range(len(self.prior_belief[:, 0])):
             theta = self.prior_belief[:, 0][i]
+            if theta == 0.0:
+                offer_likelihood[i] = 1 / len(self.opponent_model.potential_actions)
+                continue
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
                 self.opponent_model.forward(last_observation, action)

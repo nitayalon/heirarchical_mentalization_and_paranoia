@@ -43,8 +43,12 @@ class SubIntentionalModel(ABC):
 
 class DoMZeroBelief(BeliefDistribution):
 
-    def __init__(self, prior_belief, opponent_model):
-        super().__init__(prior_belief, opponent_model)
+    def __init__(self, intentional_threshold_belief: np.array, opponent_model:SubIntentionalModel):
+        """
+        :param intentional_threshold_belief: np.array - represents the prior belief about the thresholds
+        :param opponent_model:
+        """
+        super().__init__(intentional_threshold_belief, opponent_model)
         self.opponent_belief = None
 
     def update_distribution(self, action, observation, first_move):
