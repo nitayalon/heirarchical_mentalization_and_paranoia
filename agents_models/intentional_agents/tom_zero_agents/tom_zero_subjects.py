@@ -93,7 +93,7 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         self.opponent_model.update_bounds(action, observation)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-             iteration_number: int) -> tuple[InteractiveState, Action, float]:
+             iteration_number: int):
         counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value)
         # Adding belief update here
         self.belief_distribution.update_history(action.value, observation.value)
