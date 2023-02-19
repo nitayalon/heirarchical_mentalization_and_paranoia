@@ -8,29 +8,6 @@ class TomZeroSubjectBelief(DoMZeroBelief):
     def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalModel):
         super().__init__(intentional_threshold_belief, opponent_model)
 
-    def update_history(self, action, observation):
-        """
-        Method helper for history update - append the last action and observation
-        :param action:
-        :param observation:
-        :return:
-        """
-        self.history.update_history(action, observation)
-        self.opponent_model.belief.update_history(observation, action)
-
-    def update_distribution(self, action, observation, first_move):
-        """
-        Update the belief based on the last action and observation (IRL)
-        :param action:
-        :param observation:
-        :param first_move:
-        :return:
-        """
-        prior = np.copy(self.belief_distribution[:, -1])
-        probabilities = self.compute_likelihood(action.value, observation.value, prior)
-        posterior = probabilities * prior
-        self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
-
     def compute_likelihood(self, action, observation, prior):
         """
         Compute observation likelihood given opponent's type and last action
@@ -59,16 +36,6 @@ class TomZeroSubjectBelief(DoMZeroBelief):
             offer_likelihood[i] = observation_probability
         self.opponent_model.threshold = original_threshold
         return offer_likelihood
-
-    def sample(self, rng_key, n_samples):
-        probabilities = self.belief_distribution[:, -1]
-        rng_generator = np.random.default_rng(rng_key)
-        particles = rng_generator.choice(self.belief_distribution[:, 0], size=n_samples, p=probabilities)
-        return particles
-
-    def reset_belief(self, history_length):
-        self.belief_distribution = self.belief_distribution[:, 0:history_length+3]
-        self.history.reset(history_length+2)
 
 
 class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
@@ -132,7 +99,7 @@ class ToMZeroSubjectExplorationPolicy:
         return initial_qvalues
 
 
-class ToMZeroSubject(DoMZeroModel):
+class DoMZeroSubject(DoMZeroModel):
 
     def __init__(self,
                  actions,

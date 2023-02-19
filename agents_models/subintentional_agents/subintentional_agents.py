@@ -9,16 +9,13 @@ class RandomSubIntentionalModel(SubIntentionalModel):
         self.belief = SubIntentionalBelief()
         self.name = "DoM(-1)_RA"
 
+    def utility_function(self, action, observation):
+        return action - self.threshold
+
     def forward(self, action=None, observation=None):
         q_values = self.potential_actions * 0.5
         probabilities = np.repeat(1 / len(self.potential_actions),len(self.potential_actions))
         return self.potential_actions, q_values, probabilities
-
-    def act(self, seed, action=None, observation=None):
-        relevant_actions, q_values, probabilities = self.forward(action, observation)
-        random_number_generator = np.random.default_rng(seed)
-        offer = random_number_generator.choice(relevant_actions, p=probabilities)
-        return offer, np.array([relevant_actions, q_values]).T
 
 
 class SubIntentionalBelief(BeliefDistribution):
@@ -40,7 +37,7 @@ class SubIntentionalBelief(BeliefDistribution):
         self.history.update_observations(observation)
 
 
-class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
+class IntentionalAgentSubIntentionalModel(RandomSubIntentionalModel):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
@@ -57,13 +54,6 @@ class IntentionalAgentSubIntentionalModel(SubIntentionalModel):
             self._name = "DoM(-1)_RA"
         else:
             self._name = "DoM(-1)_IA"
-
-    def act(self, seed, action=None, observation=None) -> [float, np.array]:
-        self.update_bounds(action, observation)
-        relevant_actions, q_values, probabilities = self.forward(action, observation)
-        random_number_generator = np.random.default_rng(seed)
-        optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
-        return optimal_offer, np.array([relevant_actions, q_values]).T
 
     def _random_forward(self):
         q_values = self.potential_actions * 0.5

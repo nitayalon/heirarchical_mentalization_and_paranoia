@@ -46,7 +46,7 @@ if __name__ == "__main__":
             else:
                 agent = RandomSubIntentionalModel(eat_task_simulator.agent_actions, config.softmax_temperature,
                                                   agent_threshold)
-            subject = ToMZeroSubject(eat_task_simulator.subject_actions, config.softmax_temperature,
+            subject = DoMZeroSubject(eat_task_simulator.subject_actions, config.softmax_temperature,
                                      np.array([thresholds, thresholds_probabilities]).T,
                                      IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions,
                                                                          config.softmax_temperature,
