@@ -10,7 +10,7 @@ class AgentFactory:
         self.device = self.config.device
         # Load environmental parameters
         self.softmax_temp = float(self.config.softmax_temperature)
-        self.exploration_bonus = float(self.config.get_from_env("exploration_bonus"))
+        self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.agent_actions = np.arange(0, 1.05, 0.05)
         self.subject_actions = np.array([True, False])
         self.alpha_seq = [0.1, 0.3, 0.5, 0.7, 0.9]  # parameters to control subject orientation
@@ -57,7 +57,7 @@ class AgentFactory:
             opponent_model = self.dom_minus_one_constructor("agent")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.agent_thresholds)
             output_agent = DoMZeroSubject(self.subject_actions, self.config.softmax_temperature,
-                                          opponent_theta_hat_distribution,opponent_model, self.config.seed, None)
+                                          opponent_theta_hat_distribution, opponent_model, self.config.seed, None)
         return output_agent
 
     # def dom_one_constructor(self, agent_role):

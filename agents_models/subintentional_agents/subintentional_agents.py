@@ -48,9 +48,11 @@ class IntentionalAgentSubIntentionalModel(RandomSubIntentionalModel):
             if lower_bound >= upper_bound:
                 lower_bound = np.round(upper_bound - 0.1, 3)
             if upper_bound <= self.threshold:
-                relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound, self.potential_actions <= self.threshold))]
+                relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
+                                                                                  self.potential_actions <= self.threshold))]
             else:
-                relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound, self.potential_actions < upper_bound))]
+                relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
+                                                                                  self.potential_actions < upper_bound))]
             q_values = self.utility_function(relevant_actions, observation)
             probabilities = self.softmax_transformation(q_values)
         return relevant_actions, q_values, probabilities

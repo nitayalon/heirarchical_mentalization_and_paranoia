@@ -86,7 +86,7 @@ class ToMZeroSubjectExplorationPolicy:
         self.exploration_bonus = exploration_bonus
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float,
-               rng_key: int, iteration_number):
+               iteration_number: int):
         reward_from_acceptance = self.reward_function(observation, True, interactive_state.persona)
         rejection_bonus = self.exploration_bonus * 1 / iteration_number
         reward_from_rejection = self.reward_function(observation, False, interactive_state.persona) + rejection_bonus

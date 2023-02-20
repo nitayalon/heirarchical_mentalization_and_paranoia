@@ -30,16 +30,15 @@ if __name__ == "__main__":
     for subject_param in subject_parameters:
         for agent_param in agent_parameters:
             # Update individual parameters
-            subject.threshold(subject_param)
-            subject.alpha(subject_param)
-            agent.threshold(agent_param)
+            subject.threshold = subject_param
+            subject.alpha = subject_param
+            agent.threshold = agent_param
             # Start new experiment name
             config.new_experiment_name()
             print(f'Now running alpha of {subject_param}')
             print("\n")
             print(f'and threshold of {agent_param}')
             eat_task_simulator = EAT(20, config.seed, 1.0)
-            thresholds_probabilities = np.repeat(1 / len(agent_parameters), len(agent_parameters))
             random_number_generator = npr.default_rng(get_config().seed)
             experiment_results, agents_q_values, subject_belief = eat_task_simulator.simulate_task(subject, agent)
             experiment_name = config.experiment_name

@@ -58,7 +58,8 @@ class ToMZeroAgentExplorationPolicy:
         self.actions = actions
         self.exploration_bonus = exploration_bonus
 
-    def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool):
+    def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool,
+                iteration_number: int):
         # if the last offer was rejected - we should narrow down the search space
         potential_actions = self.actions
         if not observation:
