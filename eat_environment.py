@@ -8,8 +8,6 @@ class EAT:
         self.n_trails = n_trails
         self.seed = seed
         self.endowment = endowment
-        self.agent_actions = np.arange(0, 1.05, 0.05)
-        self.subject_actions = np.array([True, False])
         self.trail_results = []
 
     def simulate_task(self, subject, agent):

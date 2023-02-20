@@ -1,61 +1,46 @@
 from eat_environment import *
-from agents_models.intentional_agents.tom_zero_agents.tom_zero_subjects import *
-from agents_models.intentional_agents.tom_zero_agents.tom_zero_agent import *
-from agents_models.subintentional_agents.subintentional_agents import *
-from agents_models.subintentional_agents.subintentional_subject import *
 import argparse
 from IPOMCP_solver.Solver.ipomcp_config import *
+from agent_factory import *
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cognitive hierarchy task')
-    parser.add_argument('--environment', type=str, default='env_2', metavar='N',
-                        help='game environment (default: env_2)')
+    parser.add_argument('--environment', type=str, default='basic_task', metavar='N',
+                        help='game environment (default: basic_task)')
     parser.add_argument('--seed', type=int, default='6431', metavar='N',
                         help='set simulation seed (default: 6431)')
-    parser.add_argument('--agent_tom', type=str, default='tom0', metavar='N',
-                        help='set agent tom level (default: tom0)')
-    parser.add_argument('--subject_tom', type=str, default='tom0', metavar='N',
-                        help='set subject tom level (default: tom0)')
-    parser.add_argument('--softmax_temp', type=float, default='0.5', metavar='N',
-                        help='set softmax temp (default: 0.5)')
+    parser.add_argument('--agent_tom', type=str, default='DoM0', metavar='N',
+                        help='set agent tom level (default: DoM0)')
+    parser.add_argument('--subject_tom', type=str, default='DoM0', metavar='N',
+                        help='set subject tom level (default: DoM0)')
+    parser.add_argument('--softmax_temp', type=float, default='0.05', metavar='N',
+                        help='set softmax temp (default: 0.05)')
     parser.add_argument('--agent_threshold', type=float, default='0.5', metavar='N',
                         help='set agent threshold (default: 0.5)')
     parser.add_argument('--subject_alpha', type=float, default='0.5', metavar='N',
                         help='set subject reward mixing probability (default: 0.5)')
     args = parser.parse_args()
     config = init_config(args.environment, args)
-    alpha_seq = [0.1, 0.3, 0.5, 0.7, 0.9]  # parameters to control exploration
-    agent_thresholds = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
-    subject_thresholds = [0.2, 0.5, 0.8]  # parameters to control threshold of agent
-    thresholds = subject_thresholds
-    for i in alpha_seq:
-        for k in thresholds:
-            # Create directory for the experiment
-            config.args.subject_alpha = i
-            config.args.agent_threshold = k
+    factory = AgentFactory()
+    agent = factory.constructor("agent")
+    subject = factory.constructor("subject")
+    experiment_data = factory.create_experiment_grid()
+    agent_parameters = experiment_data["agent_parameters"]
+    subject_parameters = experiment_data["subject_parameters"]
+    for subject_param in subject_parameters:
+        for agent_param in agent_parameters:
+            # Update individual parameters
+            subject.threshold(subject_param)
+            subject.alpha(subject_param)
+            agent.threshold(agent_param)
+            # Start new experiment name
             config.new_experiment_name()
-            print(f'Now running alpha of {config.args.subject_alpha}')
+            print(f'Now running alpha of {subject_param}')
             print("\n")
-            print(f'and threshold of {config.args.agent_threshold}')
+            print(f'and threshold of {agent_param}')
             eat_task_simulator = EAT(20, config.seed, 1.0)
-            thresholds_probabilities = np.repeat(1/len(thresholds), len(thresholds))
+            thresholds_probabilities = np.repeat(1 / len(agent_parameters), len(agent_parameters))
             random_number_generator = npr.default_rng(get_config().seed)
-            if config.args.agent_threshold is None:
-                agent_threshold = random_number_generator.choice(thresholds, p=thresholds_probabilities)
-            else:
-                agent_threshold = config.args.agent_threshold
-            # agent = IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions, config.softmax_temperature,
-            #                                             agent_threshold)
-            # subject = DoMZeroSubject(eat_task_simulator.subject_actions, config.softmax_temperature,
-            #                          np.array([thresholds, thresholds_probabilities]).T,
-            #                          IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions,
-            #                                                              config.softmax_temperature,
-            #                                                              agent_threshold), config.seed,
-            #                          config.args.subject_alpha)
-            subject = SubIntentionalSubject(eat_task_simulator.subject_actions, config.softmax_temperature, k)
-            nested_subject = SubIntentionalSubject(eat_task_simulator.subject_actions, config.softmax_temperature, k)
-            agent = DoMZeroAgent(eat_task_simulator.agent_actions, config.softmax_temperature,
-                                 np.array([thresholds, thresholds_probabilities]).T, nested_subject, config.seed)
             experiment_results, agents_q_values, subject_belief = eat_task_simulator.simulate_task(subject, agent)
             experiment_name = config.experiment_name
             output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}'

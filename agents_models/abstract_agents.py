@@ -24,10 +24,9 @@ class SubIntentionalBelief(BeliefDistribution):
 
 class SubIntentionalModel(ABC):
 
-    def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None, endowment=1.0):
+    def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         self.potential_actions = actions
-        self.endowment = endowment
-        self.threshold = threshold
+        self._threshold = threshold
         self.softmax_temp = softmax_temp
         self.observations = []
         self.actions = []
@@ -36,7 +35,23 @@ class SubIntentionalModel(ABC):
         self.low = 0.0
         self.name = None
         self.belief = SubIntentionalBelief()
-        self.alpha = None
+        self._alpha = None
+
+    @property
+    def threshold(self):
+        return self._threshold
+
+    @threshold.setter
+    def threshold(self, gamma):
+        self._threshold = gamma
+
+    @property
+    def alpha(self):
+        return self._alpha
+
+    @alpha.setter
+    def alpha(self, alpha):
+        self._alpha = alpha
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
@@ -68,7 +83,7 @@ class DoMZeroBelief(BeliefDistribution):
 
     def __init__(self, intentional_threshold_belief: np.array, opponent_model:SubIntentionalModel):
         """
-        :param intentional_threshold_belief: np.array - represents the prior belief about the thresholds
+        :param intentional_threshold_belief: np.array - represents the prior belief about the agent_parameters
         :param opponent_model:
         """
         super().__init__(intentional_threshold_belief, opponent_model)

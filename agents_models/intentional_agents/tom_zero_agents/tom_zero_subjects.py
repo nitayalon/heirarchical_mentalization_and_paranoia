@@ -107,7 +107,7 @@ class DoMZeroSubject(DoMZeroModel):
                  prior_belief: np.array,
                  opponent_model: SubIntentionalModel,
                  seed: int,
-                 alpha: float):
+                 alpha: Optional[float] = None):
         super().__init__(actions, softmax_temp, prior_belief, opponent_model)
         self.config = get_config()
         self.alpha = alpha

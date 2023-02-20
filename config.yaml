@@ -3,8 +3,8 @@ general:
   results_folder: "data/agent_subject/"
 
 environments:
-  env_2:
-    name: env_2
+  basic_task:
+    name: basic_task
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
     planning_depth: 10
