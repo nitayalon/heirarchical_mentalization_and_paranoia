@@ -119,14 +119,7 @@ class DoMZeroSubject(DoMZeroModel):
                                                                   self.config.get_from_env("rollout_rejecting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_subject"
-
-    @staticmethod
-    def normalized_cross_entropy(support, posterior):
-        numerator = -np.mean(support * np.log(posterior) + (1-support) * np.log(1 - posterior))
-        p = 1/len(support)
-        denominator = -(p * np.log(p) + (1-p) * np.log(1-p))
-        return numerator / denominator
-
+   
     def utility_function(self, action, observation, theta_hat=None, final_trial=True):
         """
 
