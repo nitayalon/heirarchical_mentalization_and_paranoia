@@ -1,6 +1,8 @@
 from eat_environment import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_subjects import *
+from agents_models.intentional_agents.tom_zero_agents.tom_zero_agent import *
 from agents_models.subintentional_agents.subintentional_agents import *
+from agents_models.subintentional_agents.subintentional_subject import *
 import argparse
 from IPOMCP_solver.Solver.ipomcp_config import *
 
@@ -23,7 +25,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = init_config(args.environment, args)
     alpha_seq = [0.1, 0.3, 0.5, 0.7, 0.9]  # parameters to control exploration
-    thresholds = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
+    agent_thresholds = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
+    subject_thresholds = [0.2, 0.5, 0.8]  # parameters to control threshold of agent
+    thresholds = subject_thresholds
     for i in alpha_seq:
         for k in thresholds:
             # Create directory for the experiment
@@ -34,24 +38,24 @@ if __name__ == "__main__":
             print("\n")
             print(f'and threshold of {config.args.agent_threshold}')
             eat_task_simulator = EAT(20, config.seed, 1.0)
-            thresholds_probabilities = np.array([1/4, 1/4, 1/4, 1/4])
+            thresholds_probabilities = np.repeat(1/len(thresholds), len(thresholds))
             random_number_generator = npr.default_rng(get_config().seed)
             if config.args.agent_threshold is None:
                 agent_threshold = random_number_generator.choice(thresholds, p=thresholds_probabilities)
             else:
                 agent_threshold = config.args.agent_threshold
-            if k is not None:
-                agent = IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions, config.softmax_temperature,
-                                                            agent_threshold)
-            else:
-                agent = RandomSubIntentionalModel(eat_task_simulator.agent_actions, config.softmax_temperature,
-                                                  agent_threshold)
-            subject = DoMZeroSubject(eat_task_simulator.subject_actions, config.softmax_temperature,
-                                     np.array([thresholds, thresholds_probabilities]).T,
-                                     IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions,
-                                                                         config.softmax_temperature,
-                                                                         agent_threshold), config.seed,
-                                     config.args.subject_alpha)
+            # agent = IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions, config.softmax_temperature,
+            #                                             agent_threshold)
+            # subject = DoMZeroSubject(eat_task_simulator.subject_actions, config.softmax_temperature,
+            #                          np.array([thresholds, thresholds_probabilities]).T,
+            #                          IntentionalAgentSubIntentionalModel(eat_task_simulator.agent_actions,
+            #                                                              config.softmax_temperature,
+            #                                                              agent_threshold), config.seed,
+            #                          config.args.subject_alpha)
+            subject = SubIntentionalSubject(eat_task_simulator.subject_actions, config.softmax_temperature, k)
+            nested_subject = SubIntentionalSubject(eat_task_simulator.subject_actions, config.softmax_temperature, k)
+            agent = DoMZeroAgent(eat_task_simulator.agent_actions, config.softmax_temperature,
+                                 np.array([thresholds, thresholds_probabilities]).T, nested_subject, config.seed)
             experiment_results, agents_q_values, subject_belief = eat_task_simulator.simulate_task(subject, agent)
             experiment_name = config.experiment_name
             output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}'

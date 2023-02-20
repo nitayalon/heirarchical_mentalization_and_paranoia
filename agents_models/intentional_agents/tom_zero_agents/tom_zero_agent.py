@@ -4,6 +4,7 @@ import os
 
 
 class TomZeroAgentBelief(DoMZeroBelief):
+
     def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalModel):
         super().__init__(intentional_threshold_belief, opponent_model)
 
@@ -44,7 +45,7 @@ class ToMZeroAgentEnvironmentModel(EnvironmentModel):
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
         counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value)
-        reward = self.reward_function(observation.value, action.value, interactive_state.persona)
+        reward = self.reward_function(action.value, counter_offer, interactive_state.persona)
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         interactive_state.state.terminal = interactive_state.state.name == 10
         return interactive_state, Action(counter_offer, False), reward
@@ -57,21 +58,20 @@ class ToMZeroAgentExplorationPolicy:
         self.actions = actions
         self.exploration_bonus = exploration_bonus
 
-    def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float,
-               rng_key: int, iteration_number):
+    def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool):
         # if the last offer was rejected - we should narrow down the search space
         potential_actions = self.actions
         if not observation:
             potential_actions = self.actions[self.actions < last_action]
-        expected_reward_from_offer = self.reward_function(potential_actions) * \
-                                     (interactive_state.persona >= self.actions)
+        expected_reward_from_offer = self.reward_function(potential_actions, True) * \
+                                     (interactive_state.persona <= (1 - potential_actions))
         optimal_action_idx = np.argmax(expected_reward_from_offer)
         optimal_action = potential_actions[optimal_action_idx]
         q_value = expected_reward_from_offer[optimal_action_idx]
         return Action(optimal_action, False), q_value
 
     def init_q_values(self, observation: Action):
-        initial_qvalues = self.reward_function(observation.value, self.actions, None, False)
+        initial_qvalues = self.reward_function(self.actions, True)
         return initial_qvalues
 
 
@@ -82,9 +82,8 @@ class DoMZeroAgent(DoMZeroModel):
                  softmax_temp: float,
                  prior_belief: np.array,
                  opponent_model: SubIntentionalModel,
-                 seed: int,
-                 alpha: float):
-        super().__init__(actions, softmax_temp, prior_belief, opponent_model, alpha)
+                 seed: int):
+        super().__init__(actions, softmax_temp, prior_belief, opponent_model)
         self.config = get_config()
         self.belief = TomZeroAgentBelief(prior_belief, self.opponent_model)
         self.environment_model = ToMZeroAgentEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
@@ -92,6 +91,7 @@ class DoMZeroAgent(DoMZeroModel):
                                                                 self.config.get_from_env("rollout_rejecting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_agent"
+        self.alpha = 0.0
 
     def utility_function(self, action, observation, theta_hat=None, final_trial=True):
         """
@@ -101,7 +101,7 @@ class DoMZeroAgent(DoMZeroModel):
         :param observation: float - representing the current offer
         :return:
         """
-        game_reward = (1 - action) * observation
+        game_reward = action * observation
         return game_reward
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:

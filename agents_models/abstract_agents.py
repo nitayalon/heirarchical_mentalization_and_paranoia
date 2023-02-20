@@ -3,6 +3,25 @@ from IPOMCP_solver.Solver.abstract_classes import *
 from typing import Optional
 
 
+class SubIntentionalBelief(BeliefDistribution):
+
+    def __init__(self):
+        super().__init__(None, None)
+
+    def get_current_belief(self):
+        return None
+
+    def update_distribution(self, action, observation, first_move):
+        return None
+
+    def sample(self, rng_key, n_samples):
+        return None
+
+    def update_history(self, action, observation):
+        self.history.update_actions(action)
+        self.history.update_observations(observation)
+
+
 class SubIntentionalModel(ABC):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None, endowment=1.0):
@@ -16,7 +35,8 @@ class SubIntentionalModel(ABC):
         self.high = 1.0
         self.low = 0.0
         self.name = None
-        self.belief = None
+        self.belief = SubIntentionalBelief()
+        self.alpha = None
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
@@ -25,7 +45,7 @@ class SubIntentionalModel(ABC):
     def utility_function(self, action, observation):
         pass
 
-    def act(self, seed, action=None, observation=None) -> [float, np.array]:
+    def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         self.update_bounds(action, observation)
         relevant_actions, q_values, probabilities = self.forward(action, observation)
         random_number_generator = np.random.default_rng(seed)
@@ -54,7 +74,6 @@ class DoMZeroBelief(BeliefDistribution):
         super().__init__(intentional_threshold_belief, opponent_model)
         self.opponent_belief = None
 
-    @abstractmethod
     def compute_likelihood(self, action, observation, prior):
         pass
 
@@ -66,6 +85,8 @@ class DoMZeroBelief(BeliefDistribution):
         :param first_move:
         :return:
         """
+        if first_move < 1:
+            return None
         prior = np.copy(self.belief_distribution[:, -1])
         probabilities = self.compute_likelihood(action.value, observation.value, prior)
         posterior = probabilities * prior
@@ -97,10 +118,8 @@ class DoMZeroModel(SubIntentionalModel):
     def __init__(self, actions,
                  softmax_temp: float,
                  prior_belief: np.array,
-                 opponent_model: SubIntentionalModel,
-                 alpha: float):
+                 opponent_model: SubIntentionalModel):
         super().__init__(actions, softmax_temp, None)
-        self.alpha = alpha
         self.opponent_model = opponent_model
         self.belief = DoMZeroBelief(prior_belief, self.opponent_model)  # type: DoMZeroBelief
 

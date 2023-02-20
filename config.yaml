@@ -9,3 +9,4 @@ environments:
     rollout_rejecting_bonus: 0.5
     planning_depth: 10
     mcts_number_of_iterations: 10000
+    discount_factor: 0.95

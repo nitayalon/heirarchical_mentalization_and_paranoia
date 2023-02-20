@@ -108,8 +108,9 @@ class DoMZeroSubject(DoMZeroModel):
                  opponent_model: SubIntentionalModel,
                  seed: int,
                  alpha: float):
-        super().__init__(actions, softmax_temp, prior_belief, opponent_model, alpha)
+        super().__init__(actions, softmax_temp, prior_belief, opponent_model)
         self.config = get_config()
+        self.alpha = alpha
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
                                                                 self.opponent_model.low, self.opponent_model.high,

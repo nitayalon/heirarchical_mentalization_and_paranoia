@@ -6,7 +6,6 @@ class RandomSubIntentionalModel(SubIntentionalModel):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
-        self.belief = SubIntentionalBelief()
         self.name = "DoM(-1)_RA"
 
     def utility_function(self, action, observation):
@@ -18,30 +17,10 @@ class RandomSubIntentionalModel(SubIntentionalModel):
         return self.potential_actions, q_values, probabilities
 
 
-class SubIntentionalBelief(BeliefDistribution):
-
-    def __init__(self):
-        super().__init__(None, None)
-
-    def get_current_belief(self):
-        return None
-
-    def update_distribution(self, action, observation, first_move):
-        return None
-
-    def sample(self, rng_key, n_samples):
-        return None
-
-    def update_history(self, action, observation):
-        self.history.update_actions(action)
-        self.history.update_observations(observation)
-
-
 class IntentionalAgentSubIntentionalModel(RandomSubIntentionalModel):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
-        self.belief = SubIntentionalBelief()
         self._name = "DoM(-1)_IA"
 
     @property

@@ -8,10 +8,10 @@ class SubIntentionalSubject(SubIntentionalModel):
         self._name = "DoM(-1)_Subject"
 
     def utility_function(self, action, observation):
-        return (observation - self.threshold) * action
+        return (1 - observation - self.threshold) * action
 
     def forward(self, action=None, observation=None):
-        q_values = self.utility_function(self.actions, observation)
+        q_values = self.utility_function(self.potential_actions, observation)
         probabilities = self.softmax_transformation(q_values)
-        return self.actions, q_values, probabilities
+        return self.potential_actions, q_values, probabilities
 

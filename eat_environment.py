@@ -33,7 +33,7 @@ class EAT:
 
     @staticmethod
     def trial(trial_number, offer, response, subject, agent, seed):
-        offer, agent_q_values = agent.act(seed, offer, response)
+        offer, agent_q_values = agent.act(seed, offer, response, trial_number)
         response, subject_q_values = subject.act(seed, response, offer, trial_number)
         agent_reward = offer * response
         subject_reward = (1-offer) * response
