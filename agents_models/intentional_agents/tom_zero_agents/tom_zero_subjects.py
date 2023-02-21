@@ -1,11 +1,9 @@
 from agents_models.abstract_agents import *
-from IPOMCP_solver.Solver.ipomcp_solver import *
-import os
 
 
 class TomZeroSubjectBelief(DoMZeroBelief):
 
-    def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalModel):
+    def __init__(self, intentional_threshold_belief, opponent_model):
         super().__init__(intentional_threshold_belief, opponent_model)
 
     def compute_likelihood(self, action, observation, prior):
@@ -40,7 +38,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
 
 class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
-    def __init__(self, opponent_model: SubIntentionalModel, reward_function, low, high, 
+    def __init__(self, opponent_model: BasicModel, reward_function, low, high,
                  belief_distribution: TomZeroSubjectBelief):
         super().__init__(opponent_model, belief_distribution)
         self.reward_function = reward_function
@@ -105,11 +103,10 @@ class DoMZeroSubject(DoMZeroModel):
                  actions,
                  softmax_temp: float,
                  prior_belief: np.array,
-                 opponent_model: SubIntentionalModel,
+                 opponent_model: BasicModel,
                  seed: int,
                  alpha: Optional[float] = None):
-        super().__init__(actions, softmax_temp, prior_belief, opponent_model)
-        self.config = get_config()
+        super().__init__(actions, softmax_temp, prior_belief, opponent_model, seed)
         self.alpha = alpha
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
@@ -151,28 +148,3 @@ class DoMZeroSubject(DoMZeroModel):
         prior = self.belief.belief_distribution[:, -1]
         posterior = observation_likelihood_per_type * prior
         self.belief.belief_distribution = np.c_[self.belief.belief_distribution, posterior / posterior.sum()]
-
-    def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
-        self.belief.history.update_observations(observation)
-        action_nodes, q_values, mcts_tree = self.forward(action, observation, iteration_number)
-        mcts_tree["alpha"] = self.alpha
-        mcts_tree["softmax_temp"] = self.softmax_temp
-        mcts_tree["agent_type"] = self.name
-        mcts_tree_output_name = os.path.join(self.config.planning_results_dir,
-                                             self.config.experiment_name)
-        mcts_tree.to_csv(mcts_tree_output_name + f'_iteration_number_{iteration_number}_seed_{self.config.seed}.csv',
-                         index=False)
-        softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(q_values[:, 1] / self.softmax_temp).sum()
-        prng = np.random.default_rng(seed)
-        best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
-        actions = list(action_nodes.keys())
-        best_action = action_nodes[actions[best_action_idx]].action
-        self.belief.history.update_actions(best_action.value)
-        self.environment_model.update_persona(observation, bool(best_action.value))
-        if action_nodes is not None:
-            self.solver.action_node = action_nodes[str(best_action.value)]
-        return best_action.value, q_values[:, :-1]
-
-    def forward(self, action=None, observation=None, iteration_number=None):
-        actions, mcts_tree, q_values = self.solver.plan(action, observation, iteration_number)
-        return actions, q_values, mcts_tree

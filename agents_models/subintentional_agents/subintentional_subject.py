@@ -1,7 +1,7 @@
 from agents_models.abstract_agents import *
 
 
-class SubIntentionalSubject(SubIntentionalModel):
+class BasicSubject(BasicModel):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)

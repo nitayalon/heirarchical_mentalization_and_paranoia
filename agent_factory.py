@@ -20,7 +20,7 @@ class AgentFactory:
     def create_experiment_grid(self):
         agent_dom_level = self.config.get_agent_tom_level("agent")
         subject_dom_level = self.config.get_agent_tom_level("subject")
-        agent_parameters = self.agent_thresholds if agent_dom_level == "DoM(-1)" else None
+        agent_parameters = self.agent_thresholds
         subject_parameters = self.subject_thresholds if subject_dom_level == "DoM(-1)" else self.alpha_seq
         return {"agent_parameters": agent_parameters, "subject_parameters": subject_parameters}
 
@@ -44,7 +44,7 @@ class AgentFactory:
         if agent_role == "agent":
             agent = IntentionalAgentSubIntentionalModel(self.agent_actions, self.softmax_temp)
         else:
-            agent = SubIntentionalSubject(self.subject_actions, self.softmax_temp)
+            agent = BasicSubject(self.subject_actions, self.softmax_temp)
         return agent
 
     def dom_zero_constructor(self, agent_role):

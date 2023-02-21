@@ -2,7 +2,7 @@ from agents_models.abstract_agents import *
 import numpy as np
 
 
-class RandomSubIntentionalModel(SubIntentionalModel):
+class RandomBasicModel(BasicModel):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
@@ -17,7 +17,7 @@ class RandomSubIntentionalModel(SubIntentionalModel):
         return self.potential_actions, q_values, probabilities
 
 
-class IntentionalAgentSubIntentionalModel(RandomSubIntentionalModel):
+class IntentionalAgentSubIntentionalModel(RandomBasicModel):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
