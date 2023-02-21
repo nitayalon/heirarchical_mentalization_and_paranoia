@@ -15,3 +15,15 @@ class DoMOneSubject(DoMZeroSubject):
         super().__init__(actions, softmax_temp, prior_belief, opponent_model, seed, alpha)
         self.belief = TomOneSubjectBelief(prior_belief, self.opponent_model)
 
+    def utility_function(self, action, observation, theta_hat=None, final_trial=True):
+        """
+
+        :param theta_hat: float - representing the true persona of the opponent
+        :param final_trial: bool - indicate if last trial or not
+        :param action: bool - either True for accepting the offer or False for rejecting it
+        :param observation: float - representing the current offer
+        :return:
+        """
+        game_reward = (1 - action) * observation
+        return game_reward
+

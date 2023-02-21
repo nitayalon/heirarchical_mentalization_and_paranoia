@@ -83,10 +83,11 @@ class DoMZeroAgent(DoMZeroModel):
     def __init__(self,
                  actions,
                  softmax_temp: float,
+                 threshold: float,
                  prior_belief: np.array,
                  opponent_model: BasicModel,
                  seed: int):
-        super().__init__(actions, softmax_temp, prior_belief, opponent_model)
+        super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.config = get_config()
         self.belief = TomZeroAgentBelief(prior_belief, self.opponent_model)
         self.environment_model = ToMZeroAgentEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
@@ -104,6 +105,6 @@ class DoMZeroAgent(DoMZeroModel):
         :param observation: float - representing the current offer
         :return:
         """
-        game_reward = action * observation
+        game_reward = (action - self.threshold) * observation
         return game_reward
 

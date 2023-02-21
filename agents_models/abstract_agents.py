@@ -132,10 +132,11 @@ class DoMZeroModel(BasicModel):
 
     def __init__(self, actions,
                  softmax_temp: float,
+                 threshold: float,
                  prior_belief: np.array,
                  opponent_model: BasicModel,
                  seed: int):
-        super().__init__(actions, softmax_temp, None)
+        super().__init__(actions, softmax_temp, threshold)
         self.opponent_model = opponent_model
         self.belief = DoMZeroBelief(prior_belief, self.opponent_model)  # type: DoMZeroBelief
         self.environment_model = EnvironmentModel()
@@ -158,7 +159,7 @@ class DoMZeroModel(BasicModel):
         actions = list(action_nodes.keys())
         best_action = action_nodes[actions[best_action_idx]].action
         self.belief.history.update_actions(best_action.value)
-        self.environment_model.update_persona(observation, bool(best_action.value))
+        self.environment_model.update_persona(observation, best_action)
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
         return best_action.value, q_values[:, :-1]

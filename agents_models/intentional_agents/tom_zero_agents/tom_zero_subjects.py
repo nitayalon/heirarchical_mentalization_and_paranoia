@@ -69,9 +69,10 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         return interactive_state, Action(counter_offer, False), reward
 
     def update_persona(self, observation, action):
+        response = bool(action.value)
         self.opponent_model.low = self.low
         self.opponent_model.high = self.high
-        self.opponent_model.update_bounds(observation, action)
+        self.opponent_model.update_bounds(observation, response)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -102,11 +103,12 @@ class DoMZeroSubject(DoMZeroModel):
     def __init__(self,
                  actions,
                  softmax_temp: float,
+                 threshold: float,
                  prior_belief: np.array,
                  opponent_model: BasicModel,
                  seed: int,
                  alpha: Optional[float] = None):
-        super().__init__(actions, softmax_temp, prior_belief, opponent_model, seed)
+        super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.alpha = alpha
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
@@ -116,7 +118,7 @@ class DoMZeroSubject(DoMZeroModel):
                                                                   self.config.get_from_env("rollout_rejecting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_subject"
-   
+
     def utility_function(self, action, observation, theta_hat=None, final_trial=True):
         """
 
@@ -126,7 +128,7 @@ class DoMZeroSubject(DoMZeroModel):
         :param observation: float - representing the current offer
         :return:
         """
-        game_reward = (1 - action) * observation
+        game_reward = (1 - action - self.threshold) * observation
         recognition_reward = 0.0
         if final_trial:
             true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
