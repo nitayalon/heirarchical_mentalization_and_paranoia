@@ -2,6 +2,7 @@ from agents_models.intentional_agents.tom_zero_agents.tom_zero_subjects import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_agent import *
 from agents_models.subintentional_agents.subintentional_agents import *
 from agents_models.subintentional_agents.subintentional_subject import *
+import itertools
 
 
 class AgentFactory:
@@ -14,15 +15,12 @@ class AgentFactory:
         self.agent_actions = np.arange(0, 1.05, 0.05)
         self.subject_actions = np.array([True, False])
         self.alpha_seq = [0.1, 0.3, 0.5, 0.7, 0.9]  # parameters to control subject orientation
-        self.agent_thresholds = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
-        self.subject_thresholds = [0.2, 0.5, 0.8]  # parameters to control threshold of agent
+        self.thresholds_seq = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
 
     def create_experiment_grid(self):
-        agent_dom_level = self.config.get_agent_tom_level("agent")
-        subject_dom_level = self.config.get_agent_tom_level("subject")
-        agent_parameters = self.agent_thresholds
-        subject_parameters = self.subject_thresholds if subject_dom_level == "DoM(-1)" else self.alpha_seq
-        return {"agent_parameters": agent_parameters, "subject_parameters": subject_parameters}
+        subject_parameters = itertools.product(self.alpha_seq, self.thresholds_seq)
+        return {"agent_parameters": self.thresholds_seq,
+                "subject_parameters": subject_parameters}
 
     @staticmethod
     def _create_prior_distribution(support):
@@ -55,7 +53,7 @@ class AgentFactory:
                                         opponent_theta_hat_distribution, opponent_model, self.config.seed)
         else:
             opponent_model = self.dom_minus_one_constructor("agent")
-            opponent_theta_hat_distribution = self._create_prior_distribution(self.agent_thresholds)
+            opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             output_agent = DoMZeroSubject(self.subject_actions, self.config.softmax_temperature, None,
                                           opponent_theta_hat_distribution, opponent_model, self.config.seed)
         return output_agent

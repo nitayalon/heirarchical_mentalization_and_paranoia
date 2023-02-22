@@ -9,6 +9,10 @@ def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory
         table.to_csv(f'{config.beliefs_dir} + "/{directory_name}/" + {output_directory}', index=False)
 
 
+def set_experiment_name(subject_alpha, subject_threshold, agent_threshold):
+    return f'alpha_{subject_alpha}_subject_gamma_{subject_threshold}_agent_gamma_{agent_threshold}'
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cognitive hierarchy task')
     parser.add_argument('--environment', type=str, default='basic_task', metavar='N',
@@ -36,17 +40,18 @@ if __name__ == "__main__":
     for subject_param in subject_parameters:
         for agent_param in agent_parameters:
             # Update individual parameters
-            subject.threshold = subject_param
-            subject.alpha = subject_param
+            subject.threshold = subject_param[0]
+            subject.alpha = subject_param[1]
             agent.threshold = agent_param
-            # Start new experiment name
-            config.new_experiment_name()
+            # Initial experiment name
+            experiment_name = set_experiment_name(subject.threshold, subject.alpha, agent.threshold)
+            config.new_experiment_name(experiment_name)
             print(f'Now running alpha of {subject_param}')
             print("\n")
             print(f'and threshold of {agent_param}')
             eat_task_simulator = EAT(20, config.seed, 1.0)
-            random_number_generator = npr.default_rng(get_config().seed)
-            experiment_results, agents_q_values, subject_belief, agent_belief = eat_task_simulator.simulate_task(subject, agent)
+            experiment_results, agents_q_values, subject_belief, agent_belief = \
+                eat_task_simulator.simulate_task(subject, agent)
             experiment_name = config.experiment_name
             output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}'
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)
