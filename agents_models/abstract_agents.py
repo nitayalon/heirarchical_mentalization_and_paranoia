@@ -62,6 +62,7 @@ class BasicModel(ABC):
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         self.update_bounds(action, observation)
+        seed = self.update_seed(seed, iteration_number)
         relevant_actions, q_values, probabilities = self.forward(action, observation)
         random_number_generator = np.random.default_rng(seed)
         optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
@@ -77,6 +78,9 @@ class BasicModel(ABC):
     def update_history(self, action, observation):
         self.actions.append(action)
         self.observations.append(observation)
+
+    def update_seed(self, seed, number):
+        return seed
 
 
 class DoMZeroBelief(BeliefDistribution):
@@ -132,7 +136,7 @@ class DoMZeroModel(BasicModel):
 
     def __init__(self, actions,
                  softmax_temp: float,
-                 threshold: float,
+                 threshold: Optional[float],
                  prior_belief: np.array,
                  opponent_model: BasicModel,
                  seed: int):
@@ -143,7 +147,8 @@ class DoMZeroModel(BasicModel):
         self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
-        self.belief.history.update_observations(observation)
+        if iteration_number > 0:
+            self.belief.history.update_observations(observation)
         action_nodes, q_values, mcts_tree = self.forward(action, observation, iteration_number)
         mcts_tree["alpha"] = self.alpha
         mcts_tree["softmax_temp"] = self.softmax_temp

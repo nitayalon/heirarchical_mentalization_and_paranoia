@@ -1,4 +1,3 @@
-import pandas as pd
 from agents_models.abstract_agents import *
 
 

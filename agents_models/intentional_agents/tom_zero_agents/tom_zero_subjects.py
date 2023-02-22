@@ -59,7 +59,7 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value)
+        counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value, iteration_number)
         # Adding belief update here
         self.belief_distribution.update_history(action.value, observation.value)
         self.belief_distribution.update_distribution(action, Action(counter_offer, False), iteration_number)
@@ -103,7 +103,7 @@ class DoMZeroSubject(DoMZeroModel):
     def __init__(self,
                  actions,
                  softmax_temp: float,
-                 threshold: float,
+                 threshold: Optional[float],
                  prior_belief: np.array,
                  opponent_model: BasicModel,
                  seed: int,
@@ -134,7 +134,7 @@ class DoMZeroSubject(DoMZeroModel):
             true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
             theta_hat_distribution = self.belief.belief_distribution[:, -1]
             recognition_reward = np.dot(true_theta_hat, theta_hat_distribution)
-        return self.alpha * game_reward + (1-self.alpha) * recognition_reward
+        return (1-self.alpha) * recognition_reward + self.alpha * game_reward
 
     def update_belief(self, action, observation):
         observation_likelihood_per_type = np.zeros_like(self.belief.belief_distribution[:, 0])

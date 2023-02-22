@@ -83,7 +83,7 @@ class DoMZeroAgent(DoMZeroModel):
     def __init__(self,
                  actions,
                  softmax_temp: float,
-                 threshold: float,
+                 threshold: Optional[float],
                  prior_belief: np.array,
                  opponent_model: BasicModel,
                  seed: int):

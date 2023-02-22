@@ -16,6 +16,9 @@ class RandomBasicModel(BasicModel):
         probabilities = np.repeat(1 / len(self.potential_actions),len(self.potential_actions))
         return self.potential_actions, q_values, probabilities
 
+    def update_seed(self, seed, number):
+        return seed + number
+
 
 class IntentionalAgentSubIntentionalModel(RandomBasicModel):
 
