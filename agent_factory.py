@@ -48,7 +48,7 @@ class AgentFactory:
     def dom_zero_constructor(self, agent_role):
         if agent_role == "agent":
             opponent_model = self.dom_minus_one_constructor("subject")
-            opponent_theta_hat_distribution = self._create_prior_distribution(self.subject_thresholds)
+            opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             output_agent = DoMZeroAgent(self.agent_actions, self.config.softmax_temperature, None,
                                         opponent_theta_hat_distribution, opponent_model, self.config.seed)
         else:
