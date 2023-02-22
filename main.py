@@ -5,8 +5,11 @@ from agent_factory import *
 
 
 def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory):
+    outdir = os.path.join(config.beliefs_dir, directory_name)
     if table is not None:
-        table.to_csv(f'{config.beliefs_dir} + "/{directory_name}/" + {output_directory}', index=False)
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        table.to_csv(os.path.join(outdir, output_directory), index=False)
 
 
 def set_experiment_name(subject_alpha, subject_threshold, agent_threshold):
@@ -46,9 +49,9 @@ if __name__ == "__main__":
             # Initial experiment name
             experiment_name = set_experiment_name(subject.threshold, subject.alpha, agent.threshold)
             config.new_experiment_name(experiment_name)
-            print(f'Now running alpha of {subject_param}')
+            print(f'Subject parameters: gamma = {subject_param[0]}, alpha = {subject_param[1]}')
             print("\n")
-            print(f'and threshold of {agent_param}')
+            print(f'Agent parameters: gamma = {agent_param[0]}')
             eat_task_simulator = EAT(20, config.seed, 1.0)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
                 eat_task_simulator.simulate_task(subject, agent)
@@ -58,4 +61,4 @@ if __name__ == "__main__":
             agents_q_values.to_csv(config.q_values_results_dir + "/" + output_directory_name, index=False)
             export_beliefs_to_file(subject_belief, 'subject_beliefs', output_directory_name)
             export_beliefs_to_file(agent_belief, 'agent_beliefs', output_directory_name)
-            print(f'simulation over')
+            print("#" * 10 + ' simulation over ' + "#" * 10)
