@@ -31,10 +31,10 @@ module load singularity
 export SINGULARITY_BIND="/run,/ptmp,/scratch,/tmp,/opt/ohpc,${HOME}"
 export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-02-ec95d31ea677.sif
 
-ENV=env_2
+ENV=basic_task
 SOFTMAX_TEMP=0.1
-AGENT_TOM=tom-1
-SUBJECT_TOM=tom0
+AGENT_TOM=DoM0
+SUBJECT_TOM=DoM-1
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
-time singularity exec ${CONTAINER_PATH} python main.py  --environment env_2 --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --agent_tom $AGENT_TOM --subject_tom $SUBJECT_TOM
+time singularity exec ${CONTAINER_PATH} python main.py  --environment $ENV --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --agent_tom $AGENT_TOM --subject_tom $SUBJECT_TOM
