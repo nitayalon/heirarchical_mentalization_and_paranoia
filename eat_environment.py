@@ -9,6 +9,13 @@ class EAT:
         self.endowment = endowment
         self.trail_results = []
 
+    @staticmethod
+    def export_beliefs(beliefs: Optional[np.array]=None):
+        beliefs_df = None
+        if beliefs is not None:
+            beliefs_df = pd.DataFrame(beliefs.T)
+        return beliefs_df
+
     def simulate_task(self, subject, agent):
         seed = self.seed
         offer = 1.1
@@ -25,8 +32,9 @@ class EAT:
         experiment_results['trial_number'] = np.arange(0, self.n_trails)
         agents_q_values = pd.concat(q_values_list)
         agents_q_values.columns = ['action', 'q_value', 'agent', 'parameter', 'trial_number']
-        subject_belief = pd.DataFrame(subject.belief.belief_distribution.T)
-        return experiment_results, agents_q_values, subject_belief
+        subject_belief = self.export_beliefs(subject.belief.belief_distribution)
+        agent_belief = self.export_beliefs(agent.belief.belief_distribution)
+        return experiment_results, agents_q_values, subject_belief, agent_belief
 
     @staticmethod
     def trial(trial_number, offer, response, subject, agent, seed):
