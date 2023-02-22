@@ -3,6 +3,12 @@ import argparse
 from IPOMCP_solver.Solver.ipomcp_config import *
 from agent_factory import *
 
+
+def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory):
+    if table is not None:
+        table.to_csv(f'{config.beliefs_dir} + "/{directory_name}/" + {output_directory}', index=False)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cognitive hierarchy task')
     parser.add_argument('--environment', type=str, default='basic_task', metavar='N',
@@ -40,10 +46,11 @@ if __name__ == "__main__":
             print(f'and threshold of {agent_param}')
             eat_task_simulator = EAT(20, config.seed, 1.0)
             random_number_generator = npr.default_rng(get_config().seed)
-            experiment_results, agents_q_values, subject_belief = eat_task_simulator.simulate_task(subject, agent)
+            experiment_results, agents_q_values, subject_belief, agent_belief = eat_task_simulator.simulate_task(subject, agent)
             experiment_name = config.experiment_name
             output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}'
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)
             agents_q_values.to_csv(config.q_values_results_dir + "/" + output_directory_name, index=False)
-            subject_belief.to_csv(config.beliefs_dir + "/" + output_directory_name, index=False)
+            export_beliefs_to_file(subject_belief, 'subject_beliefs', output_directory_name)
+            export_beliefs_to_file(agent_belief, 'agent_beliefs', output_directory_name)
             print(f'simulation over')
