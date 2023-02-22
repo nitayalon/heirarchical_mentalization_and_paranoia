@@ -1,4 +1,3 @@
-import pandas as pd
 from agents_models.abstract_agents import *
 
 
@@ -8,8 +7,6 @@ class EAT:
         self.n_trails = n_trails
         self.seed = seed
         self.endowment = endowment
-        self.agent_actions = np.arange(0, 1.05, 0.05)
-        self.subject_actions = np.array([True, False])
         self.trail_results = []
 
     def simulate_task(self, subject, agent):
@@ -33,8 +30,8 @@ class EAT:
 
     @staticmethod
     def trial(trial_number, offer, response, subject, agent, seed):
-        offer, agent_q_values = agent.act(seed, offer, response)
-        response, subject_q_values = subject.act(seed, response, offer, trial_number)
+        offer, agent_q_values = agent.act(seed, offer, response, trial_number)
+        response, subject_q_values = subject.act(seed, response, offer, trial_number + 1)
         agent_reward = offer * response
         subject_reward = (1-offer) * response
         agent_q_values = pd.DataFrame(agent_q_values)

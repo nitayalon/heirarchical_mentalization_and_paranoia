@@ -1,36 +1,10 @@
 from agents_models.abstract_agents import *
-from IPOMCP_solver.Solver.ipomcp_solver import *
-import os
 
 
 class TomZeroSubjectBelief(DoMZeroBelief):
 
-    def __init__(self, prior_belief, opponent_model: SubIntentionalModel):
-        super().__init__(prior_belief, opponent_model)
-        self.rollout_belief = self.belief_distribution
-
-    def update_history(self, action, observation):
-        """
-        Method helper for history update - append the last action and observation
-        :param action:
-        :param observation:
-        :return:
-        """
-        self.history.update_history(action, observation)
-        self.opponent_model.belief.update_history(observation, action)
-
-    def update_distribution(self, action, observation, first_move):
-        """
-        Update the belief based on the last action and observation (IRL)
-        :param action:
-        :param observation:
-        :param first_move:
-        :return:
-        """
-        prior = np.copy(self.belief_distribution[:, -1])
-        probabilities = self.compute_likelihood(action.value, observation.value, prior)
-        posterior = probabilities * prior
-        self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
+    def __init__(self, intentional_threshold_belief, opponent_model):
+        super().__init__(intentional_threshold_belief, opponent_model)
 
     def compute_likelihood(self, action, observation, prior):
         """
@@ -45,6 +19,9 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         original_threshold = self.opponent_model.threshold
         for i in range(len(self.prior_belief[:, 0])):
             theta = self.prior_belief[:, 0][i]
+            if theta == 0.0:
+                offer_likelihood[i] = 1 / len(self.opponent_model.potential_actions)
+                continue
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
                 self.opponent_model.forward(last_observation, action)
@@ -58,20 +35,10 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         self.opponent_model.threshold = original_threshold
         return offer_likelihood
 
-    def sample(self, rng_key, n_samples):
-        probabilities = self.belief_distribution[:, -1]
-        rng_generator = np.random.default_rng(rng_key)
-        particles = rng_generator.choice(self.belief_distribution[:, 0], size=n_samples, p=probabilities)
-        return particles
-
-    def reset_belief(self, history_length):
-        self.belief_distribution = self.belief_distribution[:, 0:history_length+3]
-        self.history.reset(history_length+2)
-
 
 class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
-    def __init__(self, opponent_model: SubIntentionalModel, reward_function, low, high, 
+    def __init__(self, opponent_model: BasicModel, reward_function, low, high,
                  belief_distribution: TomZeroSubjectBelief):
         super().__init__(opponent_model, belief_distribution)
         self.reward_function = reward_function
@@ -92,7 +59,7 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value)
+        counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value, iteration_number)
         # Adding belief update here
         self.belief_distribution.update_history(action.value, observation.value)
         self.belief_distribution.update_distribution(action, Action(counter_offer, False), iteration_number)
@@ -102,9 +69,10 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         return interactive_state, Action(counter_offer, False), reward
 
     def update_persona(self, observation, action):
+        response = bool(action.value)
         self.opponent_model.low = self.low
         self.opponent_model.high = self.high
-        self.opponent_model.update_bounds(observation, action)
+        self.opponent_model.update_bounds(observation, response)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -117,7 +85,7 @@ class ToMZeroSubjectExplorationPolicy:
         self.exploration_bonus = exploration_bonus
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float,
-               rng_key: int, iteration_number):
+               iteration_number: int):
         reward_from_acceptance = self.reward_function(observation, True, interactive_state.persona)
         rejection_bonus = self.exploration_bonus * 1 / iteration_number
         reward_from_rejection = self.reward_function(observation, False, interactive_state.persona) + rejection_bonus
@@ -130,17 +98,18 @@ class ToMZeroSubjectExplorationPolicy:
         return initial_qvalues
 
 
-class ToMZeroSubject(DoMZeroModel):
+class DoMZeroSubject(DoMZeroModel):
 
     def __init__(self,
                  actions,
                  softmax_temp: float,
+                 threshold: Optional[float],
                  prior_belief: np.array,
-                 opponent_model: SubIntentionalModel,
+                 opponent_model: BasicModel,
                  seed: int,
-                 alpha: float):
-        super().__init__(actions, softmax_temp, prior_belief, opponent_model, alpha)
-        self.config = get_config()
+                 alpha: Optional[float] = None):
+        super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
+        self.alpha = alpha
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
                                                                 self.opponent_model.low, self.opponent_model.high,
@@ -149,13 +118,6 @@ class ToMZeroSubject(DoMZeroModel):
                                                                   self.config.get_from_env("rollout_rejecting_bonus"))
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_subject"
-
-    @staticmethod
-    def normalized_cross_entropy(support, posterior):
-        numerator = -np.mean(support * np.log(posterior) + (1-support) * np.log(1 - posterior))
-        p = 1/len(support)
-        denominator = -(p * np.log(p) + (1-p) * np.log(1-p))
-        return numerator / denominator
 
     def utility_function(self, action, observation, theta_hat=None, final_trial=True):
         """
@@ -166,13 +128,13 @@ class ToMZeroSubject(DoMZeroModel):
         :param observation: float - representing the current offer
         :return:
         """
-        game_reward = (1 - action) * observation
+        game_reward = (1 - action - self.threshold) * observation
         recognition_reward = 0.0
         if final_trial:
             true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
             theta_hat_distribution = self.belief.belief_distribution[:, -1]
             recognition_reward = np.dot(true_theta_hat, theta_hat_distribution)
-        return self.alpha * game_reward + (1-self.alpha) * recognition_reward
+        return (1-self.alpha) * recognition_reward + self.alpha * game_reward
 
     def update_belief(self, action, observation):
         observation_likelihood_per_type = np.zeros_like(self.belief.belief_distribution[:, 0])
@@ -188,28 +150,3 @@ class ToMZeroSubject(DoMZeroModel):
         prior = self.belief.belief_distribution[:, -1]
         posterior = observation_likelihood_per_type * prior
         self.belief.belief_distribution = np.c_[self.belief.belief_distribution, posterior / posterior.sum()]
-
-    def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
-        self.belief.history.update_observations(observation)
-        action_nodes, q_values, mcts_tree = self.forward(action, observation, iteration_number)
-        mcts_tree["alpha"] = self.alpha
-        mcts_tree["softmax_temp"] = self.softmax_temp
-        mcts_tree["agent_type"] = self.name
-        mcts_tree_output_name = os.path.join(self.config.planning_results_dir,
-                                             self.config.experiment_name)
-        mcts_tree.to_csv(mcts_tree_output_name + f'_iteration_number_{iteration_number}_seed_{self.config.seed}.csv',
-                         index=False)
-        softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(q_values[:, 1] / self.softmax_temp).sum()
-        prng = np.random.default_rng(seed)
-        best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
-        actions = list(action_nodes.keys())
-        best_action = action_nodes[actions[best_action_idx]].action
-        self.belief.history.update_actions(best_action.value)
-        self.environment_model.update_persona(observation, bool(best_action.value))
-        if action_nodes is not None:
-            self.solver.action_node = action_nodes[str(best_action.value)]
-        return best_action.value, q_values[:, :-1]
-
-    def forward(self, action=None, observation=None, iteration_number=None):
-        actions, mcts_tree, q_values = self.solver.plan(action, observation, iteration_number)
-        return actions, q_values, mcts_tree
