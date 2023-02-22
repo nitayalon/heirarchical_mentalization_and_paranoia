@@ -32,11 +32,11 @@ class AgentFactory:
     def constructor(self, agent_role: str):
         agent = None
         agent_dom_level = self.config.get_agent_tom_level(agent_role)
-        if agent_dom_level == "DoM(-1)":
+        if agent_dom_level == "DoM-1":
             agent = self.dom_minus_one_constructor(agent_role)
-        if agent_dom_level == "DoM(0)":
+        if agent_dom_level == "DoM0":
             agent = self.dom_zero_constructor(agent_role)
-        # if agent_name == "DoM(1)":
+        # if agent_name == "DoM1":
         #     agent = self.dom_one_constructor(agent_role)
         return agent
 
