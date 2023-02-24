@@ -37,6 +37,15 @@ class BasicModel(ABC):
         self.belief = SubIntentionalBelief()
         self._alpha = None
 
+    def reset(self):
+        self.actions = []
+        self.observations = []
+        self.rewards = []
+        self.high = 1.0
+        self.low = 0.0
+        self.reset_belief()
+        self.reset_solver()
+
     @property
     def threshold(self):
         return self._threshold
@@ -81,6 +90,12 @@ class BasicModel(ABC):
 
     def update_seed(self, seed, number):
         return seed
+
+    def reset_solver(self):
+        pass
+
+    def reset_belief(self):
+        pass
 
 
 class DoMZeroBelief(BeliefDistribution):

@@ -46,6 +46,11 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
         self.low = low
         self.high = high
 
+    def reset(self):
+        self.opponent_model.reset()
+        self.low = self.opponent_model.low
+        self.high = self.opponent_model.high
+
     def update_low_and_high(self, observation, action):
         self.opponent_model.update_bounds(observation, action)
         self.low = self.opponent_model.low

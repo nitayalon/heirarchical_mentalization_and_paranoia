@@ -50,11 +50,12 @@ if __name__ == "__main__":
             experiment_name = set_experiment_name(subject.threshold, subject.alpha, agent.threshold)
             config.new_experiment_name(experiment_name)
             print(f'Subject parameters: gamma = {subject_param[0]}, alpha = {subject_param[1]}')
-            print("\n")
-            print(f'Agent parameters: gamma = {agent_param[0]}')
+            print(f'Agent parameters: gamma = {agent_param}')
             eat_task_simulator = EAT(20, config.seed, 1.0)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
                 eat_task_simulator.simulate_task(subject, agent)
+            agent.reset()
+            subject.reset()
             experiment_name = config.experiment_name
             output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}'
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)
