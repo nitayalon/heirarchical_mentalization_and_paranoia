@@ -187,3 +187,9 @@ class DoMZeroModel(BasicModel):
     def forward(self, action=None, observation=None, iteration_number=None):
         actions, mcts_tree, q_values = self.solver.plan(action, observation, iteration_number)
         return actions, q_values, mcts_tree
+
+    def reset_belief(self):
+        self.belief.reset()
+
+    def reset_solver(self):
+        self.solver.reset()

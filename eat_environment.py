@@ -3,10 +3,11 @@ from agents_models.abstract_agents import *
 
 class EAT:
 
-    def __init__(self, n_trails, seed, endowment):
-        self.n_trails = n_trails
+    def __init__(self, seed):
+        self.config = get_config()
+        self.n_trails = int(self.config.get_from_env("n_trials"))
         self.seed = seed
-        self.endowment = endowment
+        self.endowment = float(self.config.get_from_env("endowment"))
         self.trail_results = []
 
     @staticmethod
