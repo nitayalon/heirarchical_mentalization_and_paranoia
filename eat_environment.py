@@ -21,8 +21,8 @@ class EAT:
         seed = self.seed
         offer = Action(1.1, False)
         response = Action(False, False)
-        agent.belief.update_history(offer, response, 0.0)
-        subject.belief.update_history(response, offer, 0.0)
+        agent.update_history(offer, response, 0.0)
+        subject.update_history(response, offer, 0.0)
         q_values_list = []
         for trial_number in range(self.n_trails):
             offer, response, trial_results, q_values = self.trial(trial_number, offer, response, subject, agent, seed)
@@ -43,8 +43,8 @@ class EAT:
         response, subject_q_values = subject.act(seed, response, offer, trial_number + 1)
         agent_reward = offer * response
         subject_reward = (1-offer) * response
-        agent.update_history
-        subject.update_history
+        agent.update_history(offer, response, agent_reward)
+        subject.update_history(response, offer, subject_reward)
         agent_q_values = pd.DataFrame(agent_q_values)
         agent_q_values['agent'] = agent.name
         agent_q_values['parameter'] = agent.threshold

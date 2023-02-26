@@ -94,12 +94,13 @@ class BasicModel(ABC):
 
 class DoMZeroBelief(BeliefDistribution):
 
-    def __init__(self, intentional_threshold_belief: np.array, opponent_model: Optional[BasicModel]):
+    def __init__(self, intentional_threshold_belief: np.array, opponent_model: Optional[BasicModel],
+                 history: History):
         """
         :param intentional_threshold_belief: np.array - represents the prior belief about the agent_parameters
         :param opponent_model:
         """
-        super().__init__(intentional_threshold_belief, opponent_model)
+        super().__init__(intentional_threshold_belief, opponent_model, history)
         self.opponent_belief = None
 
     def compute_likelihood(self, action, observation, prior):
@@ -130,15 +131,16 @@ class DoMZeroBelief(BeliefDistribution):
         self.belief_distribution = self.belief_distribution[:, 0:history_length+3]
         self.history.reset(history_length+2)
 
-    def update_history(self, action, observation):
+    def update_history(self, action, observation, reward):
         """
         Method helper for history update - append the last action and observation
+        :param reward:
         :param action:
         :param observation:
         :return:
         """
-        self.history.update_history(action, observation)
-        self.opponent_model.belief.update_history(observation, action)
+        self.history.update_history(action, observation, reward)
+        self.opponent_model.history.update_history(observation, action, None)
 
 
 class DoMZeroModel(BasicModel):
@@ -150,8 +152,9 @@ class DoMZeroModel(BasicModel):
                  opponent_model: BasicModel,
                  seed: int):
         super().__init__(actions, softmax_temp, threshold)
+        self.history = History()
         self.opponent_model = opponent_model
-        self.belief = DoMZeroBelief(prior_belief, self.opponent_model)  # type: DoMZeroBelief
+        self.belief = DoMZeroBelief(prior_belief, self.opponent_model, self.history)  # type: DoMZeroBelief
         self.environment_model = EnvironmentModel()
         self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
 

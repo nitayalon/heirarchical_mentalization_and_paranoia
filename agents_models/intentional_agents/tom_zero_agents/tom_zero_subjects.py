@@ -58,8 +58,8 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
 
     def reset_persona(self, persona, history_length, nested_beliefs):
         self.opponent_model.threshold = persona
-        observation = self.opponent_model.belief.history.observations[history_length-1]
-        action = self.opponent_model.belief.history.actions[history_length-1]
+        observation = self.opponent_model.history.observations[history_length-1]
+        action = self.opponent_model.history.actions[history_length-1]
         self.opponent_model.update_bounds(action, observation)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
