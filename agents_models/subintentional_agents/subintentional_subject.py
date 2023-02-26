@@ -7,7 +7,7 @@ class BasicSubject(BasicModel):
         super().__init__(actions, softmax_temp, threshold)
         self._name = "DoM(-1)_Subject"
 
-    def utility_function(self, action, observation, **kwargs):
+    def utility_function(self, action, observation):
         return (1 - observation - self.threshold) * action
 
     def forward(self, action=None, observation=None):

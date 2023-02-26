@@ -8,7 +8,7 @@ class RandomBasicModel(BasicModel):
         super().__init__(actions, softmax_temp, threshold)
         self.name = "DoM(-1)_RA"
 
-    def utility_function(self, action, observation, **kwargs):
+    def utility_function(self, action, observation):
         return action - self.threshold
 
     def forward(self, action=None, observation=None):

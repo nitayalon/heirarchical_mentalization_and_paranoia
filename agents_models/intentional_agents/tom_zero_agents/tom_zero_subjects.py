@@ -52,15 +52,15 @@ class ToMZeroSubjectExplorationPolicy:
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float,
                iteration_number: int):
-        reward_from_acceptance = self.reward_function(observation, True, interactive_state.persona)
+        reward_from_acceptance = self.reward_function(observation, True)
         rejection_bonus = self.exploration_bonus * 1 / iteration_number
-        reward_from_rejection = self.reward_function(observation, False, interactive_state.persona) + rejection_bonus
+        reward_from_rejection = self.reward_function(observation, False) + rejection_bonus
         optimal_action = [True, False][np.argmax([reward_from_acceptance, reward_from_rejection])]
         q_value = reward_from_acceptance * optimal_action + reward_from_rejection * (1-optimal_action)
         return Action(optimal_action, False), q_value
 
     def init_q_values(self, observation: Action):
-        initial_qvalues = self.reward_function(observation.value, self.actions, None, False)
+        initial_qvalues = self.reward_function(self.actions, observation.value)
         return initial_qvalues
 
 
@@ -92,15 +92,20 @@ class DoMZeroSubject(DoMZeroModel):
         :param observation: float - representing the current offer
         :return:
         """
-        final_trial = bool(kwargs['final_trial'])
-        theta_hat = float(kwargs['theta_hat'])
-        counter_offer = float(kwargs['counter_offer'])
-        iteration_number = int(kwargs['iteration_number'])
-        # Update belief for recognition reward
-        self.history.update_history(action, observation, 0.0)
-        self.belief.update_distribution(action, Action(counter_offer, False), iteration_number)
-        game_reward = (1 - action - self.threshold) * observation
         recognition_reward = 0.0
+        if not kwargs:
+            final_trial = False
+            theta_hat = None
+            recognition_reward = 1/3
+        else:
+            final_trial = bool(kwargs['final_trial'])
+            theta_hat = float(kwargs['theta_hat'])
+            counter_offer = float(kwargs['counter_offer'])
+            iteration_number = int(kwargs['iteration_number'])
+            # Update belief for recognition reward
+            self.history.update_history(Action(action, False), Action(observation, False), 0.0)
+            self.belief.update_distribution(Action(action, False), Action(counter_offer, False), iteration_number)
+        game_reward = (1 - action - self.threshold) * observation
         if final_trial:
             true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
             theta_hat_distribution = self.belief.belief_distribution[:, -1]

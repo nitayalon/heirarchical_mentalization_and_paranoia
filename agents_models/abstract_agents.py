@@ -60,7 +60,7 @@ class BasicModel(ABC):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
         return softmax_transformation / softmax_transformation.sum()
 
-    def utility_function(self, action, observation, **kwargs):
+    def utility_function(self, action, observation):
         pass
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
@@ -162,11 +162,11 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
              iteration_number: int):
         counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value, iteration_number)
         interactive_state.state.terminal = interactive_state.state.name == 10
-        reward = self.reward_function(observation.value, action.value, interactive_state.persona,
-                                      {"final_trial": interactive_state.state.terminal,
-                                       "theta_hat": interactive_state.persona,
-                                       "counter_offer": counter_offer.value,
-                                       "iteration_number": iteration_number})
+        reward = self.reward_function(observation.value, action.value,
+                                      **{"final_trial": True,
+                                         "theta_hat": interactive_state.persona,
+                                         "counter_offer": counter_offer.value,
+                                         "iteration_number": iteration_number})
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         return interactive_state, counter_offer, reward
 

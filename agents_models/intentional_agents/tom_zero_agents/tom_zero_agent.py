@@ -34,7 +34,7 @@ class ToMZeroAgentEnvironmentModel(DoMZeroEnvironmentModel):
 
     def __init__(self, opponent_model: BasicModel, reward_function,
                  belief_distribution: TomZeroAgentBelief):
-        super().__init__(opponent_model, reward_function, 1.0, 0.0, belief_distribution)
+        super().__init__(opponent_model, reward_function, belief_distribution)
 
     def update_persona(self, observation, action):
         pass
@@ -83,10 +83,9 @@ class DoMZeroAgent(DoMZeroModel):
         self.name = "DoM(0)_agent"
         self.alpha = 0.0
 
-    def utility_function(self, action, observation, **kwargs):
+    def utility_function(self, action, observation, *args, **kwargs):
         """
-        :param theta_hat: float - representing the true persona of the opponent
-        :param final_trial: bool - indicate if last trial or not
+
         :param action: bool - either True for accepting the offer or False for rejecting it
         :param observation: float - representing the current offer
         :return:
