@@ -36,50 +36,11 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         return offer_likelihood
 
 
-class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
+class ToMZeroSubjectEnvironmentModel(DoMZeroEnvironmentModel):
 
     def __init__(self, opponent_model: BasicModel, reward_function, low, high,
                  belief_distribution: TomZeroSubjectBelief):
-        super().__init__(opponent_model, belief_distribution)
-        self.reward_function = reward_function
-        self.opponent_model = opponent_model
-        self.low = low
-        self.high = high
-
-    def reset(self):
-        self.opponent_model.reset()
-        self.low = self.opponent_model.low
-        self.high = self.opponent_model.high
-
-    def update_low_and_high(self, observation, action):
-        self.opponent_model.update_bounds(observation, action)
-        self.low = self.opponent_model.low
-        self.high = self.opponent_model.high
-
-    def reset_persona(self, persona, history_length, nested_beliefs):
-        self.opponent_model.threshold = persona
-        observation = self.opponent_model.history.observations[history_length-1]
-        action = self.opponent_model.history.actions[history_length-1]
-        self.opponent_model.update_bounds(action, observation)
-
-    def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-             iteration_number: int):
-        counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value, iteration_number)
-        # Adding belief update here
-        self.belief_distribution.update_history(action.value, observation.value, 0.0)
-        self.belief_distribution.update_distribution(action, Action(counter_offer, False), iteration_number)
-        reward = self.reward_function(observation.value, action.value, interactive_state.persona)
-        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        interactive_state.state.terminal = interactive_state.state.name == 10
-        return interactive_state, Action(counter_offer, False), reward
-
-    def update_persona(self, observation, action):
-        response = bool(action.value)
-        self.opponent_model.low = self.low
-        self.opponent_model.high = self.high
-        self.opponent_model.update_bounds(observation, response)
-        self.low = self.opponent_model.low
-        self.high = self.opponent_model.high
+        super().__init__(opponent_model, reward_function, low, high, belief_distribution)
 
 
 class ToMZeroSubjectExplorationPolicy:
@@ -124,15 +85,20 @@ class DoMZeroSubject(DoMZeroModel):
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_subject"
 
-    def utility_function(self, action, observation, theta_hat=None, final_trial=True):
+    def utility_function(self, action, observation, **kwargs):
         """
 
-        :param theta_hat: float - representing the true persona of the opponent
-        :param final_trial: bool - indicate if last trial or not
         :param action: bool - either True for accepting the offer or False for rejecting it
         :param observation: float - representing the current offer
         :return:
         """
+        final_trial = bool(kwargs['final_trial'])
+        theta_hat = float(kwargs['theta_hat'])
+        counter_offer = float(kwargs['counter_offer'])
+        iteration_number = int(kwargs['iteration_number'])
+        # Update belief for recognition reward
+        self.history.update_history(action, observation, 0.0)
+        self.belief.update_distribution(action, Action(counter_offer, False), iteration_number)
         game_reward = (1 - action - self.threshold) * observation
         recognition_reward = 0.0
         if final_trial:

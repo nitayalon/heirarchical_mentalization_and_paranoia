@@ -30,27 +30,14 @@ class TomZeroAgentBelief(DoMZeroBelief):
         return offer_likelihood
 
 
-class ToMZeroAgentEnvironmentModel(EnvironmentModel):
+class ToMZeroAgentEnvironmentModel(DoMZeroEnvironmentModel):
 
     def __init__(self, opponent_model: BasicModel, reward_function,
                  belief_distribution: TomZeroAgentBelief):
-        super().__init__(opponent_model, belief_distribution)
-        self.reward_function = reward_function
-        self.opponent_model = opponent_model
-
-    def reset_persona(self, persona, history_length, nested_beliefs):
-        self.opponent_model.threshold = persona
-
-    def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-             iteration_number: int):
-        counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value)
-        reward = self.reward_function(action.value, counter_offer, interactive_state.persona)
-        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        interactive_state.state.terminal = interactive_state.state.name == 10
-        return interactive_state, Action(counter_offer, False), reward
+        super().__init__(opponent_model, reward_function, 1.0, 0.0, belief_distribution)
 
     def update_persona(self, observation, action):
-        return None
+        pass
 
 
 class ToMZeroAgentExplorationPolicy:
@@ -60,8 +47,7 @@ class ToMZeroAgentExplorationPolicy:
         self.actions = actions
         self.exploration_bonus = exploration_bonus
 
-    def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool,
-                iteration_number: int):
+    def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool, iteration_number: int):
         # if the last offer was rejected - we should narrow down the search space
         potential_actions = self.actions
         if not observation:
@@ -97,7 +83,7 @@ class DoMZeroAgent(DoMZeroModel):
         self.name = "DoM(0)_agent"
         self.alpha = 0.0
 
-    def utility_function(self, action, observation, theta_hat=None, final_trial=True):
+    def utility_function(self, action, observation, **kwargs):
         """
         :param theta_hat: float - representing the true persona of the opponent
         :param final_trial: bool - indicate if last trial or not
