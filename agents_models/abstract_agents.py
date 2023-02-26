@@ -28,19 +28,14 @@ class BasicModel(ABC):
         self.potential_actions = actions
         self._threshold = threshold
         self.softmax_temp = softmax_temp
-        self.observations = []
-        self.actions = []
-        self.rewards = []
         self.high = 1.0
         self.low = 0.0
         self.name = None
+        self.history = History()
         self.belief = SubIntentionalBelief()
         self._alpha = None
 
     def reset(self):
-        self.actions = []
-        self.observations = []
-        self.rewards = []
         self.high = 1.0
         self.low = 0.0
         self.reset_belief()
@@ -84,9 +79,8 @@ class BasicModel(ABC):
     def update_bounds(self, action, observation):
         pass
 
-    def update_history(self, action, observation):
-        self.actions.append(action)
-        self.observations.append(observation)
+    def update_history(self, action: Action, observation: Action, reward: float):
+        self.history.update_history(action, observation, reward)
 
     def update_seed(self, seed, number):
         return seed

@@ -66,7 +66,7 @@ class ToMZeroSubjectEnvironmentModel(EnvironmentModel):
              iteration_number: int):
         counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value, iteration_number)
         # Adding belief update here
-        self.belief_distribution.update_history(action.value, observation.value)
+        self.belief_distribution.update_history(action.value, observation.value, 0.0)
         self.belief_distribution.update_distribution(action, Action(counter_offer, False), iteration_number)
         reward = self.reward_function(observation.value, action.value, interactive_state.persona)
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
