@@ -4,8 +4,8 @@ import os
 
 class SubIntentionalBelief(BeliefDistribution):
 
-    def __init__(self):
-        super().__init__(None, None)
+    def __init__(self, history: History):
+        super().__init__(None, None, history)
 
     def get_current_belief(self):
         return None
@@ -16,9 +16,8 @@ class SubIntentionalBelief(BeliefDistribution):
     def sample(self, rng_key, n_samples):
         return None
 
-    def update_history(self, action, observation):
-        self.history.update_actions(action)
-        self.history.update_observations(observation)
+    def update_history(self, action, observation, reward):
+        self.history.update_history(action, observation, reward)
 
 
 class BasicModel(ABC):
@@ -32,7 +31,7 @@ class BasicModel(ABC):
         self.low = 0.0
         self.name = None
         self.history = History()
-        self.belief = SubIntentionalBelief()
+        self.belief = SubIntentionalBelief(self.history)
         self._alpha = None
 
     def reset(self):
@@ -131,17 +130,6 @@ class DoMZeroBelief(BeliefDistribution):
         self.belief_distribution = self.belief_distribution[:, 0:history_length+3]
         self.history.reset(history_length+2)
 
-    def update_history(self, action, observation, reward):
-        """
-        Method helper for history update - append the last action and observation
-        :param reward:
-        :param action:
-        :param observation:
-        :return:
-        """
-        self.history.update_history(action, observation, reward)
-        self.opponent_model.history.update_history(observation, action, None)
-
 
 class DoMZeroModel(BasicModel):
 
@@ -160,7 +148,7 @@ class DoMZeroModel(BasicModel):
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         if iteration_number > 0:
-            self.belief.history.update_observations(observation)
+            self.history.update_observations(observation)
         action_nodes, q_values, mcts_tree = self.forward(action, observation, iteration_number)
         mcts_tree["alpha"] = self.alpha
         mcts_tree["softmax_temp"] = self.softmax_temp
@@ -175,7 +163,6 @@ class DoMZeroModel(BasicModel):
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
         actions = list(action_nodes.keys())
         best_action = action_nodes[actions[best_action_idx]].action
-        self.belief.history.update_actions(best_action.value)
         self.environment_model.update_persona(observation, best_action)
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
@@ -190,3 +177,15 @@ class DoMZeroModel(BasicModel):
 
     def reset_solver(self):
         self.solver.reset()
+
+    def update_history(self, action, observation, reward):
+        """
+        Method helper for history update - append the last action and observation
+        :param reward:
+        :param action:
+        :param observation:
+        :return:
+        """
+        self.history.update_history(action, observation, reward)
+        self.opponent_model.history.update_history(observation, action, None)
+

@@ -4,8 +4,8 @@ from IPOMCP_solver.Solver.ipomcp_solver import *
 
 class TomZeroAgentBelief(DoMZeroBelief):
 
-    def __init__(self, intentional_threshold_belief, opponent_model: BasicModel):
-        super().__init__(intentional_threshold_belief, opponent_model)
+    def __init__(self, intentional_threshold_belief, opponent_model: BasicModel, history: History):
+        super().__init__(intentional_threshold_belief, opponent_model, history)
 
     def compute_likelihood(self, action, observation, prior):
         """
@@ -89,7 +89,7 @@ class DoMZeroAgent(DoMZeroModel):
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.config = get_config()
-        self.belief = TomZeroAgentBelief(prior_belief, self.opponent_model)
+        self.belief = TomZeroAgentBelief(prior_belief, self.opponent_model, self.history)
         self.environment_model = ToMZeroAgentEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
         self.exploration_policy = ToMZeroAgentExplorationPolicy(self.potential_actions, self.utility_function,
                                                                 self.config.get_from_env("rollout_rejecting_bonus"))

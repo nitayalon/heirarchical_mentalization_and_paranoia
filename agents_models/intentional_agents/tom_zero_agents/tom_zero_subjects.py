@@ -3,8 +3,8 @@ from agents_models.abstract_agents import *
 
 class TomZeroSubjectBelief(DoMZeroBelief):
 
-    def __init__(self, intentional_threshold_belief, opponent_model):
-        super().__init__(intentional_threshold_belief, opponent_model)
+    def __init__(self, intentional_threshold_belief, opponent_model, history: History):
+        super().__init__(intentional_threshold_belief, opponent_model, history)
 
     def compute_likelihood(self, action, observation, prior):
         """
@@ -115,7 +115,7 @@ class DoMZeroSubject(DoMZeroModel):
                  alpha: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.alpha = alpha
-        self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model)
+        self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model, self.history)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
                                                                 self.opponent_model.low, self.opponent_model.high,
                                                                 self.belief)
