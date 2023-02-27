@@ -47,7 +47,7 @@ class ToMZeroAgentExplorationPolicy:
     def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool, iteration_number: int):
         # if the last offer was rejected - we should narrow down the search space
         potential_actions = self.actions
-        if not observation:
+        if not observation and not np.all(False == (self.actions < last_action)):
             potential_actions = self.actions[self.actions < last_action]
         expected_reward_from_offer = self.reward_function(potential_actions, True) * \
                                      (interactive_state.persona <= (1 - potential_actions))
