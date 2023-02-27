@@ -24,7 +24,7 @@ class TomZeroAgentBelief(DoMZeroBelief):
             possible_opponent_actions, opponent_q_values, probabilities = \
                 self.opponent_model.forward(last_observation, action)
             # If the observation is not in the feasible action set then it singles theta hat:
-            observation_probability = probabilities[np.where(possible_opponent_actions == observation)]
+            observation_probability = probabilities[np.where(possible_opponent_actions == observation.value)]
             offer_likelihood[i] = observation_probability
         self.opponent_model.threshold = original_threshold
         return offer_likelihood
@@ -35,9 +35,6 @@ class ToMZeroAgentEnvironmentModel(DoMZeroEnvironmentModel):
     def __init__(self, opponent_model: BasicModel, reward_function,
                  belief_distribution: TomZeroAgentBelief):
         super().__init__(opponent_model, reward_function, belief_distribution)
-
-    def update_persona(self, observation, action):
-        pass
 
 
 class ToMZeroAgentExplorationPolicy:

@@ -63,7 +63,8 @@ class BasicModel(ABC):
     def utility_function(self, action, observation):
         pass
 
-    def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
+    def act(self, seed, action: Optional[Action] = None, observation: Optional[Action] = None,
+            iteration_number: Optional[int] = None) -> [float, np.array]:
         self.update_bounds(action, observation)
         seed = self.update_seed(seed, iteration_number)
         relevant_actions, q_values, probabilities = self.forward(action, observation)
@@ -72,10 +73,10 @@ class BasicModel(ABC):
         return Action(optimal_offer, False), np.array([relevant_actions, q_values]).T
 
     @abstractmethod
-    def forward(self, action=None, observation=None):
+    def forward(self, action: Action, observation: Action):
         pass
 
-    def update_bounds(self, action, observation):
+    def update_bounds(self, action: Action, observation: Action):
         pass
 
     def update_history(self, action: Action, observation: Action, reward: float):
@@ -105,18 +106,18 @@ class DoMZeroBelief(BeliefDistribution):
     def compute_likelihood(self, action, observation, prior):
         pass
 
-    def update_distribution(self, action, observation, first_move):
+    def update_distribution(self, action, observation, iteration_number):
         """
         Update the belief based on the last action and observation (IRL)
         :param action:
         :param observation:
-        :param first_move:
+        :param iteration_number:
         :return:
         """
-        if first_move < 1:
+        if iteration_number <= 1:
             return None
         prior = np.copy(self.belief_distribution[:, -1])
-        probabilities = self.compute_likelihood(action.value, observation.value, prior)
+        probabilities = self.compute_likelihood(action, observation, prior)
         posterior = probabilities * prior
         self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
 
@@ -126,9 +127,9 @@ class DoMZeroBelief(BeliefDistribution):
         particles = rng_generator.choice(self.belief_distribution[:, 0], size=n_samples, p=probabilities)
         return particles
 
-    def reset_belief(self, history_length):
-        self.belief_distribution = self.belief_distribution[:, 0:history_length+3]
-        self.history.reset(history_length+2)
+    def reset_belief(self, iteration_number, action_length, observation_length):
+        self.belief_distribution = self.belief_distribution[:, 0:iteration_number+1]
+        self.history.reset(action_length, observation_length)
 
 
 class DoMZeroEnvironmentModel(EnvironmentModel):
@@ -152,31 +153,32 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
-    def reset_persona(self, persona, history_length, nested_beliefs):
+    def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
         self.opponent_model.threshold = persona
-        observation = self.opponent_model.history.observations[history_length-1]
-        action = self.opponent_model.history.actions[history_length-1]
+        if action_length == 0 and observation_length == 0:
+            return None
+        observation = self._get_last_from_list(self.opponent_model.history.observations, action_length)
+        action = self._get_last_from_list(self.opponent_model.history.actions, observation_length)
         self.opponent_model.update_bounds(action, observation)
+
+    @staticmethod
+    def _get_last_from_list(l, location):
+        return l[location - 1] if len(l) > 0 else Action(None, False)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        counter_offer, q_values = self.opponent_model.act(seed, observation.value, action.value, iteration_number)
+        counter_offer, q_values = self.opponent_model.act(seed, observation, action, iteration_number)
         interactive_state.state.terminal = interactive_state.state.name == 10
-        reward = self.reward_function(observation.value, action.value,
+        reward = self.reward_function(action.value, counter_offer.value,
                                       **{"final_trial": True,
                                          "theta_hat": interactive_state.persona,
-                                         "counter_offer": counter_offer.value,
+                                         "previous_observation": observation.value,
                                          "iteration_number": iteration_number})
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         return interactive_state, counter_offer, reward
 
     def update_persona(self, observation, action):
-        response = bool(action.value)
-        self.opponent_model.low = self.low
-        self.opponent_model.high = self.high
-        self.opponent_model.update_bounds(observation, response)
-        self.low = self.opponent_model.low
-        self.high = self.opponent_model.high
+        pass
 
 
 class DoMZeroModel(BasicModel):
@@ -195,8 +197,9 @@ class DoMZeroModel(BasicModel):
         self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
-        if iteration_number > 0:
+        if iteration_number > 1:
             self.history.update_observations(observation)
+            self.opponent_model.history.update_actions(observation)
         action_nodes, q_values, mcts_tree = self.forward(action, observation, iteration_number)
         mcts_tree["alpha"] = self.alpha
         mcts_tree["softmax_temp"] = self.softmax_temp
@@ -212,6 +215,8 @@ class DoMZeroModel(BasicModel):
         actions = list(action_nodes.keys())
         best_action = action_nodes[actions[best_action_idx]].action
         self.environment_model.update_persona(observation, best_action)
+        self.history.update_actions(best_action)
+        self.environment_model.opponent_model.history.update_observations(best_action)
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
         return best_action, q_values[:, :-1]

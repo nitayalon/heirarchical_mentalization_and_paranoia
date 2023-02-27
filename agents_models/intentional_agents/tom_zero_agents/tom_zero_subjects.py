@@ -6,7 +6,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
     def __init__(self, intentional_threshold_belief, opponent_model, history: History):
         super().__init__(intentional_threshold_belief, opponent_model, history)
 
-    def compute_likelihood(self, action, observation, prior):
+    def compute_likelihood(self, action: Action, observation: Action, prior):
         """
         Compute observation likelihood given opponent's type and last action
         :param action:
@@ -26,11 +26,11 @@ class TomZeroSubjectBelief(DoMZeroBelief):
             possible_opponent_actions, opponent_q_values, probabilities = \
                 self.opponent_model.forward(last_observation, action)
             # If the observation is not in the feasible action set then it singles theta hat:
-            observation_in_feasible_set = np.any(possible_opponent_actions == observation)
+            observation_in_feasible_set = np.any(possible_opponent_actions == observation.value)
             if not observation_in_feasible_set:
                 observation_probability = 1e-4
             else:
-                observation_probability = probabilities[np.where(possible_opponent_actions == observation)]
+                observation_probability = probabilities[np.where(possible_opponent_actions == observation.value)]
             offer_likelihood[i] = observation_probability
         self.opponent_model.threshold = original_threshold
         return offer_likelihood
@@ -38,9 +38,15 @@ class TomZeroSubjectBelief(DoMZeroBelief):
 
 class ToMZeroSubjectEnvironmentModel(DoMZeroEnvironmentModel):
 
-    def __init__(self, opponent_model: BasicModel, reward_function, low, high,
-                 belief_distribution: TomZeroSubjectBelief):
-        super().__init__(opponent_model, reward_function, low, high, belief_distribution)
+    def __init__(self, opponent_model: BasicModel, reward_function, belief_distribution: TomZeroSubjectBelief):
+        super().__init__(opponent_model, reward_function, belief_distribution)
+
+    def update_persona(self, observation, action):
+        self.opponent_model.low = self.low
+        self.opponent_model.high = self.high
+        self.opponent_model.update_bounds(observation, action)
+        self.low = self.opponent_model.low
+        self.high = self.opponent_model.high
 
 
 class ToMZeroSubjectExplorationPolicy:
@@ -52,15 +58,18 @@ class ToMZeroSubjectExplorationPolicy:
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float,
                iteration_number: int):
-        reward_from_acceptance = self.reward_function(observation, True)
+        reward_from_acceptance = self.reward_function(True, observation)
         rejection_bonus = self.exploration_bonus * 1 / iteration_number
-        reward_from_rejection = self.reward_function(observation, False) + rejection_bonus
+        reward_from_rejection = self.reward_function(False, observation) + rejection_bonus
         optimal_action = [True, False][np.argmax([reward_from_acceptance, reward_from_rejection])]
         q_value = reward_from_acceptance * optimal_action + reward_from_rejection * (1-optimal_action)
         return Action(optimal_action, False), q_value
 
     def init_q_values(self, observation: Action):
-        initial_qvalues = self.reward_function(self.actions, observation.value)
+        if observation.value is None:
+            initial_qvalues = np.repeat(0.0, len(self.actions))
+        else:
+            initial_qvalues = self.reward_function(self.actions, observation.value)
         return initial_qvalues
 
 
@@ -78,7 +87,6 @@ class DoMZeroSubject(DoMZeroModel):
         self.alpha = alpha
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model, self.history)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
-                                                                self.opponent_model.low, self.opponent_model.high,
                                                                 self.belief)
         self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.potential_actions, self.utility_function,
                                                                   self.config.get_from_env("rollout_rejecting_bonus"))
@@ -97,15 +105,16 @@ class DoMZeroSubject(DoMZeroModel):
             final_trial = False
             theta_hat = None
             recognition_reward = 1/3
+            game_reward = (1 - observation - self.threshold) * action
         else:
             final_trial = bool(kwargs['final_trial'])
             theta_hat = float(kwargs['theta_hat'])
-            counter_offer = float(kwargs['counter_offer'])
+            previous_observation = float(kwargs['previous_observation'])
             iteration_number = int(kwargs['iteration_number'])
             # Update belief for recognition reward
+            self.belief.update_distribution(Action(action, False), Action(observation, False), iteration_number)
             self.history.update_history(Action(action, False), Action(observation, False), 0.0)
-            self.belief.update_distribution(Action(action, False), Action(counter_offer, False), iteration_number)
-        game_reward = (1 - action - self.threshold) * observation
+            game_reward = (1 - previous_observation - self.threshold) * action
         if final_trial:
             true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
             theta_hat_distribution = self.belief.belief_distribution[:, -1]

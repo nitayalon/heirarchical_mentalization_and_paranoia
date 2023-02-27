@@ -11,7 +11,7 @@ class RandomBasicModel(BasicModel):
     def utility_function(self, action, observation):
         return action - self.threshold
 
-    def forward(self, action=None, observation=None):
+    def forward(self, action: Action, observation: Action):
         q_values = self.potential_actions * 0.5
         probabilities = np.repeat(1 / len(self.potential_actions),len(self.potential_actions))
         return self.potential_actions, q_values, probabilities
@@ -42,7 +42,7 @@ class IntentionalAgentSubIntentionalModel(RandomBasicModel):
         probabilities = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
         return self.potential_actions, q_values, probabilities
 
-    def forward(self, action=None, observation=None):
+    def forward(self, action: Action, observation: Action):
         if self.threshold == 0.0:
             relevant_actions, q_values, probabilities = self._random_forward()
         else:
@@ -56,19 +56,19 @@ class IntentionalAgentSubIntentionalModel(RandomBasicModel):
             else:
                 relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
                                                                                   self.potential_actions < upper_bound))]
-            q_values = self.utility_function(relevant_actions, observation)
+            q_values = self.utility_function(relevant_actions, observation.value)
             probabilities = self.softmax_transformation(q_values)
         return relevant_actions, q_values, probabilities
 
-    def update_bounds(self, action, observation):
-        if action is None or observation is None:
+    def update_bounds(self, action: Action, observation: Action):
+        if action.value is None or observation.value is None:
             return None
         # If the subject accepted the offer the lower bound is updated
-        if observation:
-            self.low = action
+        if observation.value:
+            self.low = action.value
         # If the offer is rejected the upper bound is updated
         else:
-            self.high = action
+            self.high = action.value
 
 
 
