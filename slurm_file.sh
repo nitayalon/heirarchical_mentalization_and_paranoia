@@ -32,7 +32,7 @@ export SINGULARITY_BIND="/run,/ptmp,/scratch,/tmp,/opt/ohpc,${HOME}"
 export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-02-ec95d31ea677.sif
 
 ENV=basic_task
-SOFTMAX_TEMP=0.1
+SOFTMAX_TEMP=0.05
 AGENT_TOM=DoM0
 SUBJECT_TOM=DoM-1
 
