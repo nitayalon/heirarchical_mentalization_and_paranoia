@@ -3,10 +3,11 @@ from agents_models.abstract_agents import *
 
 class EAT:
 
-    def __init__(self, n_trails, seed, endowment):
-        self.n_trails = n_trails
+    def __init__(self, seed):
+        self.config = get_config()
+        self.n_trails = int(self.config.get_from_env("n_trials"))
         self.seed = seed
-        self.endowment = endowment
+        self.endowment = float(self.config.get_from_env("endowment"))
         self.trail_results = []
 
     @staticmethod
@@ -18,13 +19,11 @@ class EAT:
 
     def simulate_task(self, subject, agent):
         seed = self.seed
-        offer = 1.1
-        response = False
-        agent.belief.update_history(offer, response)
-        subject.belief.update_history(response, offer)
         q_values_list = []
-        for trial_number in range(self.n_trails):
-            offer, response, trial_results, q_values = self.trial(trial_number, offer, response, subject, agent, seed)
+        offer = Action(None, False)
+        response = Action(None, False)
+        for trial_number in range(1, self.n_trails+1, 1):
+            offer, response, trial_results, q_values = self.trial(trial_number, subject, agent, seed, offer, response)
             self.trail_results.append(trial_results)
             q_values_list.append(q_values)
         experiment_results = pd.DataFrame(self.trail_results, columns=['offer', 'response', 'agent_reward',
@@ -37,11 +36,13 @@ class EAT:
         return experiment_results, agents_q_values, subject_belief, agent_belief
 
     @staticmethod
-    def trial(trial_number, offer, response, subject, agent, seed):
+    def trial(trial_number, subject, agent, seed, offer, response):
         offer, agent_q_values = agent.act(seed, offer, response, trial_number)
         response, subject_q_values = subject.act(seed, response, offer, trial_number + 1)
-        agent_reward = offer * response
-        subject_reward = (1-offer) * response
+        agent_reward = offer.value * response.value
+        subject_reward = (1-offer.value) * response.value
+        # agent.update_history(offer, response, agent_reward)
+        # subject.update_history(response, offer, subject_reward)
         agent_q_values = pd.DataFrame(agent_q_values)
         agent_q_values['agent'] = agent.name
         agent_q_values['parameter'] = agent.threshold
@@ -51,5 +52,5 @@ class EAT:
         subject_q_values['parameter'] = subject.alpha
         subject_q_values['trial'] = trial_number
         q_values = pd.concat([agent_q_values, subject_q_values])
-        return offer, response, np.array([offer, response, agent_reward, subject_reward]), q_values
+        return offer, response, np.array([offer.value, response.value, agent_reward, subject_reward]), q_values
 

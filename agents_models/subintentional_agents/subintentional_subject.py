@@ -10,8 +10,8 @@ class BasicSubject(BasicModel):
     def utility_function(self, action, observation):
         return (1 - observation - self.threshold) * action
 
-    def forward(self, action=None, observation=None):
-        q_values = self.utility_function(self.potential_actions, observation)
+    def forward(self, action: Action, observation: Action):
+        q_values = self.utility_function(self.potential_actions, observation.value)
         probabilities = self.softmax_transformation(q_values)
         return self.potential_actions, q_values, probabilities
 
