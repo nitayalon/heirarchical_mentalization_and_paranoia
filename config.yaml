@@ -12,5 +12,5 @@ environments:
     planning_depth: 5
     mcts_number_of_iterations: 1000
     discount_factor: 0.95
-    n_trials: 5
+    n_trials: 20
     endowment: 1.0
