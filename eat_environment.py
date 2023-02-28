@@ -1,3 +1,5 @@
+import pandas as pd
+from typing import Tuple
 from agents_models.abstract_agents import *
 
 
@@ -10,14 +12,22 @@ class EAT:
         self.endowment = float(self.config.get_from_env("endowment"))
         self.trail_results = []
 
-    @staticmethod
-    def export_beliefs(beliefs: Optional[np.array]=None):
+    def export_beliefs(self, beliefs: Optional[np.array], subject_threshold: str, subject_alpha: str, agent_threshold: str):
         beliefs_df = None
         if beliefs is not None:
             beliefs_df = pd.DataFrame(beliefs.T)
+            beliefs_df = self.add_experiment_data_to_df(beliefs_df, subject_threshold, subject_alpha, agent_threshold)
         return beliefs_df
 
-    def simulate_task(self, subject, agent):
+    @staticmethod
+    def add_experiment_data_to_df(df: pd.DataFrame, subject_threshold: str, subject_alpha: str, agent_threshold: str) -> pd.DataFrame:
+        df['subject_threshold'] = subject_threshold
+        df['subject_alpha'] = subject_alpha
+        df['agent_threshold'] = agent_threshold
+        return df
+
+    def simulate_task(self, subject, agent, subject_threshold: str, subject_alpha: str, agent_threshold: str) -> \
+            Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         seed = self.seed
         q_values_list = []
         offer = Action(None, False)
@@ -28,11 +38,17 @@ class EAT:
             q_values_list.append(q_values)
         experiment_results = pd.DataFrame(self.trail_results, columns=['offer', 'response', 'agent_reward',
                                                                        'subject_reward'])
-        experiment_results['trial_number'] = np.arange(0, self.n_trails)
+        experiment_results['trial_number'] = np.arange(1, self.n_trails+1, 1)
+        experiment_results = self.add_experiment_data_to_df(experiment_results, subject_threshold, subject_alpha,
+                                                            agent_threshold)
         agents_q_values = pd.concat(q_values_list)
         agents_q_values.columns = ['action', 'q_value', 'agent', 'parameter', 'trial_number']
-        subject_belief = self.export_beliefs(subject.belief.belief_distribution)
-        agent_belief = self.export_beliefs(agent.belief.belief_distribution)
+        agents_q_values = self.add_experiment_data_to_df(agents_q_values, subject_threshold, subject_alpha,
+                                                         agent_threshold)
+        subject_belief = self.export_beliefs(subject.belief.belief_distribution, subject_threshold, subject_alpha,
+                                             agent_threshold)
+        agent_belief = self.export_beliefs(agent.belief.belief_distribution, subject_threshold, subject_alpha,
+                                           agent_threshold)
         return experiment_results, agents_q_values, subject_belief, agent_belief
 
     @staticmethod
