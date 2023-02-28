@@ -53,7 +53,7 @@ if __name__ == "__main__":
             print(f'Agent parameters: gamma = {agent_param}')
             eat_task_simulator = EAT(config.seed)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
-                eat_task_simulator.simulate_task(subject, agent)
+                eat_task_simulator.simulate_task(subject, agent, subject.threshold, subject.alpha, agent.threshold)
             agent.reset()
             subject.reset()
             experiment_name = config.experiment_name

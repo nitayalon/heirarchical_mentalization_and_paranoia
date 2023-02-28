@@ -1,6 +1,8 @@
 general:
   fee_discount: 0.95
   results_folder: "data/agent_subject/"
+  report_ipocmp_statistics: False
+  output_planning_tree: False
 
 environments:
   basic_task:
@@ -10,5 +12,5 @@ environments:
     planning_depth: 10
     mcts_number_of_iterations: 1000
     discount_factor: 0.95
-    n_trials: 10
+    n_trials: 20
     endowment: 1.0
