@@ -43,8 +43,8 @@ if __name__ == "__main__":
     for subject_param in subject_parameters:
         for agent_param in agent_parameters:
             # Update individual parameters
-            subject.threshold = subject_param[0]
-            subject.alpha = subject_param[1]
+            subject.alpha = subject_param[0]
+            subject.threshold = subject_param[1]
             agent.threshold = agent_param
             # Initial experiment name
             experiment_name = set_experiment_name(subject.threshold, subject.alpha, agent.threshold)
