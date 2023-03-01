@@ -16,7 +16,7 @@ class EAT:
         beliefs_df = None
         if beliefs is not None:
             beliefs_df = pd.DataFrame(beliefs.T[1:, ], columns=beliefs.T[0, ])
-            beliefs_df['trial_number'] = np.arange(0, self.n_trails + 1, 1)
+            beliefs_df['trial_number'] = np.arange(0, beliefs_df.shape[0], 1)
             beliefs_df['agent_name'] = agent_name
             beliefs_df = self.add_experiment_data_to_df(beliefs_df, subject_threshold, subject_alpha, agent_threshold)
         return beliefs_df
