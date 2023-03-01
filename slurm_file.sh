@@ -31,7 +31,7 @@ export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-0
 ENV=basic_task
 SOFTMAX_TEMP=0.5
 AGENT_TOM=DoM0
-SUBJECT_TOM=DoM-1
+SUBJECT_TOM=DoM0
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
 time singularity exec ${CONTAINER_PATH} python main.py  --environment $ENV --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --agent_tom $AGENT_TOM --subject_tom $SUBJECT_TOM
