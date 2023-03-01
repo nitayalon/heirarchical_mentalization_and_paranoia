@@ -43,8 +43,8 @@ if __name__ == "__main__":
     for subject_param in subject_parameters:
         for agent_param in agent_parameters:
             # Update individual parameters
-            subject.threshold = subject_param[0]
-            subject.alpha = subject_param[1]
+            subject.alpha = subject_param[0]
+            subject.threshold = subject_param[1]
             agent.threshold = agent_param
             # Initial experiment name
             experiment_name = set_experiment_name(subject.threshold, subject.alpha, agent.threshold)
@@ -57,7 +57,7 @@ if __name__ == "__main__":
             agent.reset()
             subject.reset()
             experiment_name = config.experiment_name
-            output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}'
+            output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)
             agents_q_values.to_csv(config.q_values_results_dir + "/" + output_directory_name, index=False)
             export_beliefs_to_file(subject_belief, 'subject_beliefs', output_directory_name)
