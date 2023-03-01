@@ -49,12 +49,10 @@ class ToMZeroSubjectEnvironmentModel(DoMZeroEnvironmentModel):
         self.high = self.opponent_model.high
 
 
-class ToMZeroSubjectExplorationPolicy:
+class ToMZeroSubjectExplorationPolicy(DoMZeroExplorationPolicy):
 
-    def __init__(self, actions, reward_function, exploration_bonus):
-        self.reward_function = reward_function
-        self.actions = actions
-        self.exploration_bonus = exploration_bonus
+    def __init__(self, actions, reward_function, exploration_bonus, belief: np.array):
+        super().__init__(actions, reward_function, exploration_bonus, belief)
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float,
                iteration_number: int):
@@ -89,7 +87,8 @@ class DoMZeroSubject(DoMZeroModel):
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
                                                                 self.belief)
         self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.potential_actions, self.utility_function,
-                                                                  self.config.get_from_env("rollout_rejecting_bonus"))
+                                                                  self.config.get_from_env("rollout_rejecting_bonus"),
+                                                                  self.belief.belief_distribution[:, :2])
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_subject"
 
