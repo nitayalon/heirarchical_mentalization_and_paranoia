@@ -10,7 +10,11 @@ environments:
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
     planning_depth: 10
+<<<<<<< HEAD
     mcts_number_of_iterations: 1000
+=======
+    mcts_number_of_iterations: 10000
+>>>>>>> origin/main
     discount_factor: 0.95
     n_trials: 20
     endowment: 1.0

@@ -37,12 +37,10 @@ class ToMZeroAgentEnvironmentModel(DoMZeroEnvironmentModel):
         super().__init__(opponent_model, reward_function, belief_distribution)
 
 
-class ToMZeroAgentExplorationPolicy:
+class ToMZeroAgentExplorationPolicy(DoMZeroExplorationPolicy):
 
-    def __init__(self, actions, reward_function, exploration_bonus):
-        self.reward_function = reward_function
-        self.actions = actions
-        self.exploration_bonus = exploration_bonus
+    def __init__(self, actions, reward_function, exploration_bonus, belief: np.array):
+        super().__init__(actions, reward_function, exploration_bonus, belief)
 
     def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool, iteration_number: int):
         # if the last offer was rejected - we should narrow down the search space
@@ -50,14 +48,16 @@ class ToMZeroAgentExplorationPolicy:
         if not observation and not np.all(False == (self.actions < last_action)):
             potential_actions = self.actions[self.actions < last_action]
         expected_reward_from_offer = self.reward_function(potential_actions, True) * \
-                                     (interactive_state.persona <= (1 - potential_actions))
+                                     (interactive_state.persona < (1 - potential_actions))
         optimal_action_idx = np.argmax(expected_reward_from_offer)
         optimal_action = potential_actions[optimal_action_idx]
         q_value = expected_reward_from_offer[optimal_action_idx]
         return Action(optimal_action, False), q_value
 
     def init_q_values(self, observation: Action):
-        initial_qvalues = self.reward_function(self.actions, True)
+        reward_from_action = self.reward_function(self.actions, True)
+        acceptance_probability = np.dot((self.belief[:, 0][:, np.newaxis] <= (1-self.actions)).T, self.belief[:, 1])
+        initial_qvalues = np.multiply(reward_from_action, acceptance_probability)
         return initial_qvalues
 
 
@@ -75,7 +75,8 @@ class DoMZeroAgent(DoMZeroModel):
         self.belief = TomZeroAgentBelief(prior_belief, self.opponent_model, self.history)
         self.environment_model = ToMZeroAgentEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
         self.exploration_policy = ToMZeroAgentExplorationPolicy(self.potential_actions, self.utility_function,
-                                                                self.config.get_from_env("rollout_rejecting_bonus"))
+                                                                self.config.get_from_env("rollout_rejecting_bonus"),
+                                                                self.belief.belief_distribution[:, :2])
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_agent"
         self.alpha = 0.0

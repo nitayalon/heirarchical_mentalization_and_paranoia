@@ -181,6 +181,25 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         pass
 
 
+class DoMZeroExplorationPolicy:
+    def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array):
+        self.belief = belief
+        self.actions = actions
+        self.reward_function = reward_function
+        self.exploration_bonus = exploration_bonus
+
+    def update_belief(self, belief: np.array):
+        if belief[:, -1].sum() != 1:
+            return None
+        self.belief = belief
+
+    def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool, iteration_number: int):
+        pass
+
+    def init_q_values(self, observation: Action):
+        pass
+
+
 class DoMZeroModel(BasicModel):
 
     def __init__(self, actions,
