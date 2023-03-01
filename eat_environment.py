@@ -1,4 +1,3 @@
-import pandas as pd
 from typing import Tuple
 from agents_models.abstract_agents import *
 
@@ -12,10 +11,13 @@ class EAT:
         self.endowment = float(self.config.get_from_env("endowment"))
         self.trail_results = []
 
-    def export_beliefs(self, beliefs: Optional[np.array], subject_threshold: str, subject_alpha: str, agent_threshold: str):
+    def export_beliefs(self, beliefs: Optional[np.array], agent_name: str,
+                       subject_threshold: str, subject_alpha: str, agent_threshold: str):
         beliefs_df = None
         if beliefs is not None:
-            beliefs_df = pd.DataFrame(beliefs.T)
+            beliefs_df = pd.DataFrame(beliefs.T[1:, ], columns=beliefs.T[0, ])
+            beliefs_df['trial_number'] = np.arange(1, self.n_trails + 1, 1)
+            beliefs_df['agent_name'] = agent_name
             beliefs_df = self.add_experiment_data_to_df(beliefs_df, subject_threshold, subject_alpha, agent_threshold)
         return beliefs_df
 
@@ -45,10 +47,10 @@ class EAT:
         agents_q_values.columns = ['action', 'q_value', 'agent', 'parameter', 'trial_number']
         agents_q_values = self.add_experiment_data_to_df(agents_q_values, subject_threshold, subject_alpha,
                                                          agent_threshold)
-        subject_belief = self.export_beliefs(subject.belief.belief_distribution, subject_threshold, subject_alpha,
-                                             agent_threshold)
-        agent_belief = self.export_beliefs(agent.belief.belief_distribution, subject_threshold, subject_alpha,
-                                           agent_threshold)
+        subject_belief = self.export_beliefs(subject.belief.belief_distribution, subject.name,
+                                             subject_threshold, subject_alpha, agent_threshold)
+        agent_belief = self.export_beliefs(agent.belief.belief_distribution, agent.name,
+                                           subject_threshold, subject_alpha, agent_threshold)
         return experiment_results, agents_q_values, subject_belief, agent_belief
 
     @staticmethod
