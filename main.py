@@ -38,8 +38,10 @@ if __name__ == "__main__":
     agent = factory.constructor("agent")
     subject = factory.constructor("subject")
     experiment_data = factory.create_experiment_grid()
+    report_point = factory.grid_size // 10
     agent_parameters = experiment_data["agent_parameters"]
     subject_parameters = experiment_data["subject_parameters"]
+    i = 0
     for subject_param in subject_parameters:
         for agent_param in agent_parameters:
             # Update individual parameters
@@ -49,8 +51,8 @@ if __name__ == "__main__":
             # Initial experiment name
             experiment_name = set_experiment_name(subject.threshold, subject.alpha, agent.threshold)
             config.new_experiment_name(experiment_name)
-            print(f'Subject parameters: gamma = {subject_param[0]}, alpha = {subject_param[1]}')
-            print(f'Agent parameters: gamma = {agent_param}')
+            print(f'Subject parameters: gamma = {subject_param[0]}, alpha = {subject_param[1]}', flush=True)
+            print(f'Agent parameters: gamma = {agent_param}', flush=True)
             eat_task_simulator = EAT(config.seed)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
                 eat_task_simulator.simulate_task(subject, agent, subject.threshold, subject.alpha, agent.threshold)
@@ -62,4 +64,7 @@ if __name__ == "__main__":
             agents_q_values.to_csv(config.q_values_results_dir + "/" + output_directory_name, index=False)
             export_beliefs_to_file(subject_belief, 'subject_beliefs', output_directory_name)
             export_beliefs_to_file(agent_belief, 'agent_beliefs', output_directory_name)
-            print("#" * 10 + ' simulation over ' + "#" * 10)
+            print("#" * 10 + ' simulation over ' + "#" * 10, flush=True)
+            i += 1
+            if i % report_point == 0:
+                print(f'{i / factory.grid_size * 100}% of trials completed', flush=True)

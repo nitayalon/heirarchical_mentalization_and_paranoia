@@ -16,6 +16,7 @@ class AgentFactory:
         self.subject_actions = np.array([True, False])
         self.alpha_seq = [0.1, 0.3, 0.5, 0.7, 0.9]  # parameters to control subject orientation
         self.thresholds_seq = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
+        self.grid_size = len(self.thresholds_seq) * len(self.thresholds_seq) * len(self.alpha_seq)
 
     def create_experiment_grid(self):
         subject_parameters = itertools.product(self.alpha_seq, self.thresholds_seq)
