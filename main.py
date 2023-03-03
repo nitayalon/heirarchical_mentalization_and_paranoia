@@ -45,14 +45,18 @@ if __name__ == "__main__":
     for subject_param in subject_parameters:
         for agent_param in agent_parameters:
             # Update individual parameters
-            subject.alpha = subject_param[0]
-            subject.threshold = subject_param[1]
+            if factory.include_subject_threshold:
+                subject.alpha = subject_param[0]
+                subject.threshold = subject_param[1]
+            else:
+                subject.alpha = subject_param
+                subject.threshold = 0
             agent.threshold = agent_param
             # Initial experiment name
             experiment_name = set_experiment_name(subject.threshold, subject.alpha, agent.threshold)
             config.new_experiment_name(experiment_name)
-            print(f'Subject parameters: gamma = {subject_param[0]}, alpha = {subject_param[1]}', flush=True)
-            print(f'Agent parameters: gamma = {agent_param}', flush=True)
+            print(f'Subject parameters: gamma = {subject.threshold}, alpha = {subject.alpha}', flush=True)
+            print(f'Agent parameters: gamma = {agent.threshold}', flush=True)
             eat_task_simulator = EAT(config.seed)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
                 eat_task_simulator.simulate_task(subject, agent, subject.threshold, subject.alpha, agent.threshold)
