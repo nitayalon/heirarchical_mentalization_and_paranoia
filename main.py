@@ -12,7 +12,7 @@ def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory
         table.to_csv(os.path.join(outdir, output_directory), index=False)
 
 
-def set_experiment_name(subject_alpha, subject_threshold, agent_threshold):
+def set_experiment_name(subject_threshold, subject_alpha, agent_threshold):
     return f'alpha_{subject_alpha}_subject_gamma_{subject_threshold}_agent_gamma_{agent_threshold}'
 
 
