@@ -16,8 +16,9 @@ class EAT:
         beliefs_df = None
         if beliefs is not None:
             beliefs_df = pd.DataFrame(beliefs.T[1:, ], columns=beliefs.T[0, ])
-            beliefs_df['trial_number'] = np.arange(0, beliefs_df.shape[0], 1)
             beliefs_df['agent_name'] = agent_name
+            beliefs_df['seed'] = self.seed
+            beliefs_df['trial_number'] = np.arange(0, beliefs_df.shape[0], 1)
             beliefs_df = self.add_experiment_data_to_df(beliefs_df, subject_threshold, subject_alpha, agent_threshold)
         return beliefs_df
 
@@ -41,10 +42,12 @@ class EAT:
         experiment_results = pd.DataFrame(self.trail_results, columns=['offer', 'response', 'agent_reward',
                                                                        'subject_reward'])
         experiment_results['trial_number'] = np.arange(1, self.n_trails+1, 1)
+        experiment_results['seed'] = self.seed
         experiment_results = self.add_experiment_data_to_df(experiment_results, subject_threshold, subject_alpha,
                                                             agent_threshold)
         agents_q_values = pd.concat(q_values_list)
         agents_q_values.columns = ['action', 'q_value', 'agent', 'parameter', 'trial_number']
+        agents_q_values['seed'] = self.seed
         agents_q_values = self.add_experiment_data_to_df(agents_q_values, subject_threshold, subject_alpha,
                                                          agent_threshold)
         subject_belief = self.export_beliefs(subject.belief.belief_distribution, subject.name,
