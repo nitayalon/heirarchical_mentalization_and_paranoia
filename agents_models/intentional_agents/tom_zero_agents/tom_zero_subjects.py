@@ -118,7 +118,7 @@ class DoMZeroSubject(DoMZeroModel):
             true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
             theta_hat_distribution = self.belief.belief_distribution[:, -1]
             recognition_reward = np.dot(true_theta_hat, theta_hat_distribution)
-        return (1-self.alpha) * recognition_reward + self.alpha * game_reward
+        return self.alpha * recognition_reward + (1-self.alpha) * game_reward
 
     def update_belief(self, action, observation):
         observation_likelihood_per_type = np.zeros_like(self.belief.belief_distribution[:, 0])
