@@ -51,6 +51,7 @@ class AgentFactory:
     def dom_minus_one_constructor(self, agent_role):
         if agent_role == "agent":
             agent = IntentionalAgentSubIntentionalModel(self.agent_actions, self.softmax_temp)
+            # agent = SemiRandomAgent(self.agent_actions, self.softmax_temp)
         else:
             agent = BasicSubject(self.subject_actions, self.softmax_temp)
         return agent
