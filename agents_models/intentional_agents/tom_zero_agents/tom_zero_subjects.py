@@ -112,8 +112,8 @@ class DoMZeroSubject(DoMZeroModel):
             iteration_number = int(kwargs['iteration_number'])
             # Update belief for recognition reward
             self.belief.update_distribution(Action(action, False), Action(observation, False), iteration_number)
-            self.history.update_history(Action(action, False), Action(observation, False), 0.0)
             game_reward = (1 - previous_observation - self.threshold) * action
+            self.history.update_history(Action(action, False), Action(observation, False), 0.0)
         if final_trial:
             true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
             theta_hat_distribution = self.belief.belief_distribution[:, -1]

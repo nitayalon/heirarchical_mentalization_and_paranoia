@@ -96,7 +96,10 @@ class SemiRandomAgent(IntentionalAgentSubIntentionalModel):
         if action.value is None:
             action = Action(0.5, False)
         probabilities = norm.pdf(relevant_actions, loc=action.value, scale=action.value/10)
-        probabilities = probabilities / probabilities.sum()
+        if np.any(probabilities is None):
+            probabilities = 1 / len(relevant_actions)
+        else:
+            probabilities = probabilities / probabilities.sum()
         return relevant_actions, q_values, probabilities
 
 

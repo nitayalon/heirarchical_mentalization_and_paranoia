@@ -37,6 +37,7 @@ class BasicModel(ABC):
     def reset(self):
         self.high = 1.0
         self.low = 0.0
+        self.history.reset(0, 0)
         self.reset_belief()
         self.reset_solver()
 
@@ -209,11 +210,18 @@ class DoMZeroModel(BasicModel):
                  opponent_model: BasicModel,
                  seed: int):
         super().__init__(actions, softmax_temp, threshold)
-        self.history = History()
         self.opponent_model = opponent_model
         self.belief = DoMZeroBelief(prior_belief, self.opponent_model, self.history)  # type: DoMZeroBelief
         self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
         self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
+
+    def reset(self):
+        self.high = 1.0
+        self.low = 0.0
+        self.history.reset(0, 0)
+        self.reset_belief()
+        self.reset_solver()
+        self.opponent_model.reset()
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         if iteration_number > 1:
