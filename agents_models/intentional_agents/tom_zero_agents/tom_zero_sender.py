@@ -4,7 +4,7 @@ from IPOMCP_solver.Solver.ipomcp_solver import *
 
 class TomZeroAgentBelief(DoMZeroBelief):
 
-    def __init__(self, intentional_threshold_belief, opponent_model: BasicModel, history: History):
+    def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalAgent, history: History):
         super().__init__(intentional_threshold_belief, opponent_model, history)
 
     def compute_likelihood(self, action, observation, prior):
@@ -32,7 +32,7 @@ class TomZeroAgentBelief(DoMZeroBelief):
 
 class ToMZeroAgentEnvironmentModel(DoMZeroEnvironmentModel):
 
-    def __init__(self, opponent_model: BasicModel, reward_function,
+    def __init__(self, opponent_model: SubIntentionalAgent, reward_function,
                  belief_distribution: TomZeroAgentBelief):
         super().__init__(opponent_model, reward_function, belief_distribution)
 
@@ -61,14 +61,14 @@ class ToMZeroAgentExplorationPolicy(DoMZeroExplorationPolicy):
         return initial_qvalues
 
 
-class DoMZeroAgent(DoMZeroModel):
+class DoMZeroSender(DoMZeroModel):
 
     def __init__(self,
                  actions,
                  softmax_temp: float,
                  threshold: Optional[float],
                  prior_belief: np.array,
-                 opponent_model: BasicModel,
+                 opponent_model: SubIntentionalAgent,
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.config = get_config()
@@ -81,13 +81,15 @@ class DoMZeroAgent(DoMZeroModel):
         self.name = "DoM(0)_agent"
         self.alpha = 0.0
 
-    def utility_function(self, action, observation, *args, **kwargs):
+    def utility_function(self, action, observation, *args):
         """
 
         :param action: bool - either True for accepting the offer or False for rejecting it
         :param observation: float - representing the current offer
         :return:
         """
-        game_reward = (action - self.threshold) * observation
+        receiver_counter_action = args[0]
+        game_reward = (action - self.threshold) * receiver_counter_action
+        self.history.rewards.append(game_reward)
         return game_reward
 

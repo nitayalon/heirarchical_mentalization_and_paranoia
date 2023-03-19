@@ -1,8 +1,7 @@
-from agents_models.intentional_agents.tom_zero_agents.tom_zero_subjects import *
-from agents_models.intentional_agents.tom_zero_agents.tom_zero_agent import *
-from agents_models.subintentional_agents.subintentional_agents import *
-from agents_models.subintentional_agents.subintentional_subject import *
-import itertools
+from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
+from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
+from agents_models.subintentional_agents.subintentional_senders import *
+from agents_models.subintentional_agents.subintentional_receiver import *
 
 
 class AgentFactory:
@@ -14,18 +13,13 @@ class AgentFactory:
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.agent_actions = np.arange(0, 1.05, 0.05)
         self.subject_actions = np.array([True, False])
-        self.alpha_seq = [0.1, 0.3, 0.5, 0.7, 0.9]  # parameters to control subject orientation
         self.thresholds_seq = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("include_subject_threshold")
 
     def create_experiment_grid(self):
-        if self.include_subject_threshold:
-            subject_parameters = itertools.product(self.alpha_seq, self.thresholds_seq)
-            subject_grid_size = len(self.thresholds_seq) * len(self.alpha_seq)
-        else:
-            subject_parameters = self.alpha_seq
-            subject_grid_size = len(self.alpha_seq)
+        subject_parameters = self.thresholds_seq
+        subject_grid_size = len(self.thresholds_seq)
         agent_parameters = self.thresholds_seq
         agent_grid_size = len(self.thresholds_seq)
         self.grid_size = agent_grid_size * subject_grid_size
@@ -50,8 +44,7 @@ class AgentFactory:
 
     def dom_minus_one_constructor(self, agent_role):
         if agent_role == "agent":
-            agent = IntentionalAgentSubIntentionalModel(self.agent_actions, self.softmax_temp)
-            # agent = SemiRandomAgent(self.agent_actions, self.softmax_temp)
+            agent = RationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
         else:
             agent = BasicSubject(self.subject_actions, self.softmax_temp)
         return agent
@@ -60,13 +53,13 @@ class AgentFactory:
         if agent_role == "agent":
             opponent_model = self.dom_minus_one_constructor("subject")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-            output_agent = DoMZeroAgent(self.agent_actions, self.config.softmax_temperature, None,
-                                        opponent_theta_hat_distribution, opponent_model, self.config.seed)
+            output_agent = DoMZeroSender(self.agent_actions, self.config.softmax_temperature, None,
+                                         opponent_theta_hat_distribution, opponent_model, self.config.seed)
         else:
             opponent_model = self.dom_minus_one_constructor("agent")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-            output_agent = DoMZeroSubject(self.subject_actions, self.config.softmax_temperature, None,
-                                          opponent_theta_hat_distribution, opponent_model, self.config.seed)
+            output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, None,
+                                           opponent_theta_hat_distribution, opponent_model, self.config.seed)
         return output_agent
 
     # def dom_one_constructor(self, agent_role):

@@ -12,8 +12,8 @@ def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory
         table.to_csv(os.path.join(outdir, output_directory), index=False)
 
 
-def set_experiment_name(subject_threshold, subject_alpha, agent_threshold):
-    return f'alpha_{subject_alpha}_subject_gamma_{subject_threshold}_agent_gamma_{agent_threshold}'
+def set_experiment_name(subject_threshold, agent_threshold):
+    return f'subject_gamma_{subject_threshold}_agent_gamma_{agent_threshold}'
 
 
 if __name__ == "__main__":
@@ -46,20 +46,18 @@ if __name__ == "__main__":
         for agent_param in agent_parameters:
             # Update individual parameters
             if factory.include_subject_threshold:
-                subject.alpha = subject_param[0]
                 subject.threshold = subject_param[1]
             else:
-                subject.alpha = subject_param
                 subject.threshold = 0
             agent.threshold = agent_param
             # Initial experiment name
-            experiment_name = set_experiment_name(subject.threshold, subject.alpha, agent.threshold)
+            experiment_name = set_experiment_name(subject.threshold, agent.threshold)
             config.new_experiment_name(experiment_name)
-            print(f'Subject parameters: gamma = {subject.threshold}, alpha = {subject.alpha}', flush=True)
+            print(f'Subject parameters: gamma = {subject.threshold}', flush=True)
             print(f'Agent parameters: gamma = {agent.threshold}', flush=True)
             eat_task_simulator = EAT(config.seed)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
-                eat_task_simulator.simulate_task(subject, agent, subject.threshold, subject.alpha, agent.threshold)
+                eat_task_simulator.simulate_task(subject, agent, subject.threshold, agent.threshold)
             agent.reset()
             subject.reset()
             experiment_name = config.experiment_name

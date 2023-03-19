@@ -20,7 +20,7 @@ class SubIntentionalBelief(BeliefDistribution):
         self.history.update_history(action, observation, reward)
 
 
-class BasicModel(ABC):
+class SubIntentionalAgent(ABC):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         self.config = get_config()
@@ -95,7 +95,7 @@ class BasicModel(ABC):
 
 class DoMZeroBelief(BeliefDistribution):
 
-    def __init__(self, intentional_threshold_belief: np.array, opponent_model: Optional[BasicModel],
+    def __init__(self, intentional_threshold_belief: np.array, opponent_model: Optional[SubIntentionalAgent],
                  history: History):
         """
         :param intentional_threshold_belief: np.array - represents the prior belief about the agent_parameters
@@ -135,7 +135,7 @@ class DoMZeroBelief(BeliefDistribution):
 
 class DoMZeroEnvironmentModel(EnvironmentModel):
 
-    def __init__(self, opponent_model: BasicModel,
+    def __init__(self, opponent_model: SubIntentionalAgent,
                  reward_function, belief_distribution: DoMZeroBelief,
                  low=0.0, high=1.0):
         super().__init__(opponent_model, belief_distribution)
@@ -169,12 +169,8 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
         counter_offer, q_values = self.opponent_model.act(seed, observation, action, iteration_number)
+        reward = self.reward_function(action.value, observation.value, counter_offer.value)
         interactive_state.state.terminal = interactive_state.state.name == 10
-        reward = self.reward_function(action.value, counter_offer.value,
-                                      **{"final_trial": True,
-                                         "theta_hat": interactive_state.persona,
-                                         "previous_observation": observation.value,
-                                         "iteration_number": iteration_number})
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         return interactive_state, counter_offer, reward
 
@@ -201,13 +197,13 @@ class DoMZeroExplorationPolicy:
         pass
 
 
-class DoMZeroModel(BasicModel):
+class DoMZeroModel(SubIntentionalAgent):
 
     def __init__(self, actions,
                  softmax_temp: float,
                  threshold: Optional[float],
                  prior_belief: np.array,
-                 opponent_model: BasicModel,
+                 opponent_model: SubIntentionalAgent,
                  seed: int):
         super().__init__(actions, softmax_temp, threshold)
         self.opponent_model = opponent_model

@@ -38,7 +38,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
 
 class ToMZeroSubjectEnvironmentModel(DoMZeroEnvironmentModel):
 
-    def __init__(self, opponent_model: BasicModel, reward_function, belief_distribution: TomZeroSubjectBelief):
+    def __init__(self, opponent_model: SubIntentionalAgent, reward_function, belief_distribution: TomZeroSubjectBelief):
         super().__init__(opponent_model, reward_function, belief_distribution)
 
     def update_persona(self, observation, action):
@@ -71,18 +71,16 @@ class ToMZeroSubjectExplorationPolicy(DoMZeroExplorationPolicy):
         return initial_qvalues
 
 
-class DoMZeroSubject(DoMZeroModel):
+class DoMZeroReceiver(DoMZeroModel):
 
     def __init__(self,
                  actions,
                  softmax_temp: float,
                  threshold: Optional[float],
                  prior_belief: np.array,
-                 opponent_model: BasicModel,
-                 seed: int,
-                 alpha: Optional[float] = None):
+                 opponent_model: SubIntentionalAgent,
+                 seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
-        self.alpha = alpha
         self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model, self.history)
         self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
                                                                 self.belief)
@@ -92,33 +90,16 @@ class DoMZeroSubject(DoMZeroModel):
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(0)_subject"
 
-    def utility_function(self, action, observation, **kwargs):
+    def utility_function(self, action, observation, *args):
         """
 
         :param action: bool - either True for accepting the offer or False for rejecting it
         :param observation: float - representing the current offer
         :return:
         """
-        recognition_reward = 0.0
-        if not kwargs:
-            final_trial = False
-            theta_hat = None
-            recognition_reward = 1/3
-            game_reward = (1 - observation - self.threshold) * action
-        else:
-            final_trial = bool(kwargs['final_trial'])
-            theta_hat = float(kwargs['theta_hat'])
-            previous_observation = float(kwargs['previous_observation'])
-            iteration_number = int(kwargs['iteration_number'])
-            # Update belief for recognition reward
-            self.belief.update_distribution(Action(action, False), Action(observation, False), iteration_number)
-            game_reward = (1 - previous_observation - self.threshold) * action
-            self.history.update_history(Action(action, False), Action(observation, False), 0.0)
-        if final_trial:
-            true_theta_hat = self.belief.belief_distribution[:, 0] == theta_hat
-            theta_hat_distribution = self.belief.belief_distribution[:, -1]
-            recognition_reward = np.dot(true_theta_hat, theta_hat_distribution)
-        return self.alpha * recognition_reward + (1-self.alpha) * game_reward
+        game_reward = (1 - observation - self.threshold) * action
+        self.history.rewards.append(game_reward)
+        return game_reward
 
     def update_belief(self, action, observation):
         observation_likelihood_per_type = np.zeros_like(self.belief.belief_distribution[:, 0])
