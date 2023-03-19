@@ -23,40 +23,40 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default='6431', metavar='N',
                         help='set simulation seed (default: 6431)')
     parser.add_argument('--agent_tom', type=str, default='DoM0', metavar='N',
-                        help='set agent tom level (default: DoM0)')
+                        help='set sender tom level (default: DoM0)')
     parser.add_argument('--subject_tom', type=str, default='DoM0', metavar='N',
-                        help='set subject tom level (default: DoM0)')
+                        help='set receiver tom level (default: DoM0)')
     parser.add_argument('--softmax_temp', type=float, default='0.05', metavar='N',
                         help='set softmax temp (default: 0.05)')
     parser.add_argument('--agent_threshold', type=float, default='0.5', metavar='N',
-                        help='set agent threshold (default: 0.5)')
+                        help='set sender threshold (default: 0.5)')
     parser.add_argument('--subject_alpha', type=float, default='0.5', metavar='N',
-                        help='set subject reward mixing probability (default: 0.5)')
+                        help='set receiver reward mixing probability (default: 0.5)')
     args = parser.parse_args()
     config = init_config(args.environment, args)
     factory = AgentFactory()
-    agent = factory.constructor("agent")
-    subject = factory.constructor("subject")
+    sender = factory.constructor("sender")
+    receiver = factory.constructor("receiver")
     experiment_data = factory.create_experiment_grid()
-    report_point = factory.grid_size // 10
+    report_point = factory.grid_size
     agent_parameters = experiment_data["agent_parameters"]
     subject_parameters = experiment_data["subject_parameters"]
     i = 0
     for subject_param in subject_parameters:
         for agent_param in agent_parameters:
             # Update individual parameters
-            subject.threshold = subject_param
-            agent.threshold = agent_param
+            receiver.threshold = subject_param
+            sender.threshold = agent_param
             # Initial experiment name
-            experiment_name = set_experiment_name(subject.threshold, agent.threshold)
+            experiment_name = set_experiment_name(receiver.threshold, sender.threshold)
             config.new_experiment_name(experiment_name)
-            print(f'Subject parameters: gamma = {subject.threshold}', flush=True)
-            print(f'Agent parameters: gamma = {agent.threshold}', flush=True)
+            print(f'Subject parameters: gamma = {receiver.threshold}', flush=True)
+            print(f'Agent parameters: gamma = {sender.threshold}', flush=True)
             eat_task_simulator = EAT(config.seed)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
-                eat_task_simulator.simulate_task(subject, agent, subject.threshold, agent.threshold)
-            agent.reset(terminal=True)
-            subject.reset(terminal=True)
+                eat_task_simulator.simulate_task(sender, receiver, receiver.threshold, sender.threshold)
+            sender.reset(terminal=True)
+            receiver.reset(terminal=True)
             experiment_name = config.experiment_name
             output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)
@@ -65,5 +65,4 @@ if __name__ == "__main__":
             export_beliefs_to_file(agent_belief, 'agent_beliefs', output_directory_name)
             print("#" * 10 + ' simulation over ' + "#" * 10, flush=True)
             i += 1
-            if i % report_point == 0:
-                print(f'{i / factory.grid_size * 100}% of trials completed', flush=True)
+            print(f'{i / factory.grid_size * 100}% of trials completed', flush=True)
