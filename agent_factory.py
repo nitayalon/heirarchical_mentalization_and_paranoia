@@ -13,8 +13,7 @@ class AgentFactory:
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.agent_actions = np.arange(0, 1.05, 0.05)
         self.subject_actions = np.array([True, False])
-        # self.thresholds_seq = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
-        self.thresholds_seq = [0.2, 0.5, 0.8]  # parameters to control threshold of agent
+        self.thresholds_seq = [0.0, 0.1, 0.2]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("include_subject_threshold")
 
@@ -44,20 +43,20 @@ class AgentFactory:
         return agent
 
     def dom_minus_one_constructor(self, agent_role):
-        if agent_role == "agent":
+        if agent_role == "sender":
             agent = RationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
         else:
             agent = BasicSubject(self.subject_actions, self.softmax_temp)
         return agent
 
     def dom_zero_constructor(self, agent_role):
-        if agent_role == "agent":
-            opponent_model = self.dom_minus_one_constructor("subject")
+        if agent_role == "sender":
+            opponent_model = self.dom_minus_one_constructor("receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             output_agent = DoMZeroSender(self.agent_actions, self.config.softmax_temperature, None,
                                          opponent_theta_hat_distribution, opponent_model, self.config.seed)
         else:
-            opponent_model = self.dom_minus_one_constructor("agent")
+            opponent_model = self.dom_minus_one_constructor("sender")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, None,
                                            opponent_theta_hat_distribution, opponent_model, self.config.seed)

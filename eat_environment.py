@@ -28,7 +28,7 @@ class EAT:
         df['agent_threshold'] = agent_threshold
         return df
 
-    def simulate_task(self, receiver, sender, subject_threshold: str, agent_threshold: str) -> \
+    def simulate_task(self, sender, receiver, subject_threshold: str, agent_threshold: str) -> \
             Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         seed = self.seed
         q_values_list = []

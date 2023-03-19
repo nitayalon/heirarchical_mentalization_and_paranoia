@@ -22,15 +22,15 @@ if __name__ == "__main__":
                         help='game environment (default: basic_task)')
     parser.add_argument('--seed', type=int, default='6431', metavar='N',
                         help='set simulation seed (default: 6431)')
-    parser.add_argument('--agent_tom', type=str, default='DoM0', metavar='N',
+    parser.add_argument('--sender_tom', type=str, default='DoM0', metavar='N',
                         help='set sender tom level (default: DoM0)')
-    parser.add_argument('--subject_tom', type=str, default='DoM0', metavar='N',
+    parser.add_argument('--receiver_tom', type=str, default='DoM0', metavar='N',
                         help='set receiver tom level (default: DoM0)')
     parser.add_argument('--softmax_temp', type=float, default='0.05', metavar='N',
                         help='set softmax temp (default: 0.05)')
-    parser.add_argument('--agent_threshold', type=float, default='0.5', metavar='N',
+    parser.add_argument('--sender_threshold', type=float, default='0.5', metavar='N',
                         help='set sender threshold (default: 0.5)')
-    parser.add_argument('--subject_alpha', type=float, default='0.5', metavar='N',
+    parser.add_argument('--receiver_alpha', type=float, default='0.5', metavar='N',
                         help='set receiver reward mixing probability (default: 0.5)')
     args = parser.parse_args()
     config = init_config(args.environment, args)
@@ -50,8 +50,8 @@ if __name__ == "__main__":
             # Initial experiment name
             experiment_name = set_experiment_name(receiver.threshold, sender.threshold)
             config.new_experiment_name(experiment_name)
-            print(f'Subject parameters: gamma = {receiver.threshold}', flush=True)
-            print(f'Agent parameters: gamma = {sender.threshold}', flush=True)
+            print(f'Sender parameters: gamma = {sender.threshold}', flush=True)
+            print(f'Receiver parameters: gamma = {receiver.threshold}', flush=True)
             eat_task_simulator = EAT(config.seed)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
                 eat_task_simulator.simulate_task(sender, receiver, receiver.threshold, sender.threshold)

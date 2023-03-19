@@ -88,7 +88,10 @@ class DoMZeroSender(DoMZeroModel):
         :param observation: float - representing the current offer
         :return:
         """
-        receiver_counter_action = args[0]
+        if len(args) == 0:
+            receiver_counter_action = observation
+        else:
+            receiver_counter_action = args[0]
         game_reward = (action - self.threshold) * receiver_counter_action
         self.history.rewards.append(game_reward)
         return game_reward
