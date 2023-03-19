@@ -45,10 +45,7 @@ if __name__ == "__main__":
     for subject_param in subject_parameters:
         for agent_param in agent_parameters:
             # Update individual parameters
-            if factory.include_subject_threshold:
-                subject.threshold = subject_param[1]
-            else:
-                subject.threshold = 0
+            subject.threshold = subject_param
             agent.threshold = agent_param
             # Initial experiment name
             experiment_name = set_experiment_name(subject.threshold, agent.threshold)
@@ -58,8 +55,8 @@ if __name__ == "__main__":
             eat_task_simulator = EAT(config.seed)
             experiment_results, agents_q_values, subject_belief, agent_belief = \
                 eat_task_simulator.simulate_task(subject, agent, subject.threshold, agent.threshold)
-            agent.reset()
-            subject.reset()
+            agent.reset(terminal=True)
+            subject.reset(terminal=True)
             experiment_name = config.experiment_name
             output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)

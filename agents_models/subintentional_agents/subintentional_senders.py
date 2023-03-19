@@ -59,14 +59,14 @@ class RationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         lower_bound = np.round(self.low, 3)
         if lower_bound >= upper_bound:
             lower_bound = np.round(upper_bound - 0.1, 3)
-        if lower_bound <= self.threshold:
-            relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= self.threshold,
-                                                                              self.potential_actions <= upper_bound))]
+        if upper_bound <= self.threshold:
+            relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
+                                                                              self.potential_actions <= self.threshold))]
         else:
             relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
-                                                                              self.potential_actions <= upper_bound))]
+                                                                              self.potential_actions < upper_bound))]
         q_values = self.utility_function(relevant_actions, Action(None, False))
-        probabilities = np.repeat(1 / len(relevant_actions), len(relevant_actions))
+        probabilities = self.softmax_transformation(q_values)
         return relevant_actions, q_values, probabilities
 
     def forward(self, action: Action, observation: Action):

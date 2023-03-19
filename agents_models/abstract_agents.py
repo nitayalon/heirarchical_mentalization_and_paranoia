@@ -34,12 +34,13 @@ class SubIntentionalAgent(ABC):
         self.belief = SubIntentionalBelief(self.history)
         self._alpha = None
 
-    def reset(self):
-        self.high = 1.0
-        self.low = 0.0
-        self.history.reset(0, 0)
+    def reset(self, high: Optional[float] = None, low: Optional[float] = None, terminal: Optional[bool] = False):
+        self.high = high
+        self.low = low
         self.reset_belief()
         self.reset_solver()
+        if terminal:
+            self.history.reset(0, 0)
 
     @property
     def threshold(self):
@@ -145,7 +146,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.high = high
 
     def reset(self):
-        self.opponent_model.reset()
+        self.opponent_model.reset(1.0, 0.0)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -159,8 +160,14 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         if action_length == 0 and observation_length == 0:
             return None
         observation = self._get_last_from_list(self.opponent_model.history.observations, action_length)
-        action = self._get_last_from_list(self.opponent_model.history.actions, observation_length)
-        self.opponent_model.update_bounds(action, observation)
+        action = self._get_last_from_list(self.opponent_model.history.actions, action_length)
+        if action.value is None or observation.value is None:
+            low = 0.0
+            high = 1.0
+        else:
+            low = action.value if observation.value else 0.0
+            high = 1.0 if observation.value else action.value
+        self.opponent_model.reset(high, low)
 
     @staticmethod
     def _get_last_from_list(l, location):
@@ -211,7 +218,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
         self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
 
-    def reset(self):
+    def reset(self, high: Optional[float] = None, low: Optional[float] = None, terminal: Optional[bool] = False):
         self.high = 1.0
         self.low = 0.0
         self.history.reset(0, 0)

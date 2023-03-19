@@ -13,7 +13,8 @@ class AgentFactory:
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.agent_actions = np.arange(0, 1.05, 0.05)
         self.subject_actions = np.array([True, False])
-        self.thresholds_seq = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
+        # self.thresholds_seq = [0.0, 0.2, 0.5, 0.8]  # parameters to control threshold of agent
+        self.thresholds_seq = [0.2, 0.5, 0.8]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("include_subject_threshold")
 
