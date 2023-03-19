@@ -40,6 +40,8 @@ class SubIntentionalAgent(ABC):
         self.reset_belief()
         self.reset_solver()
         if terminal:
+            self.high = 1.0
+            self.low = 0.0
             self.history.reset(0, 0)
 
     @property
@@ -224,7 +226,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.history.reset(0, 0)
         self.reset_belief()
         self.reset_solver()
-        self.opponent_model.reset()
+        self.opponent_model.reset(terminal=terminal)
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         if iteration_number > 1:

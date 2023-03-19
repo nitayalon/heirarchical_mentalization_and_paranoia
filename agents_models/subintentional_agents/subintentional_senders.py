@@ -70,10 +70,10 @@ class RationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         return relevant_actions, q_values, probabilities
 
     def forward(self, action: Action, observation: Action):
-        if self.threshold == 0.0:
-            relevant_actions, q_values, probabilities = self._random_forward(action, observation)
-        else:
-            relevant_actions, q_values, probabilities = self.rational_forward(action, observation)
+        # if self.threshold == 0.0:
+        #     relevant_actions, q_values, probabilities = self._random_forward(action, observation)
+        # else:
+        relevant_actions, q_values, probabilities = self.rational_forward(action, observation)
         return relevant_actions, q_values, probabilities
 
     def update_bounds(self, action: Action, observation: Action):
