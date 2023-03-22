@@ -44,7 +44,10 @@ class AgentFactory:
 
     def dom_minus_one_constructor(self, agent_role):
         if agent_role == "sender":
-            agent = RationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
+            if self.config.subintentional_agent_type == "uniform":
+                agent = UniformRationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
+            else:
+                agent = SoftMaxRationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
         else:
             agent = BasicSubject(self.subject_actions, self.softmax_temp)
         return agent

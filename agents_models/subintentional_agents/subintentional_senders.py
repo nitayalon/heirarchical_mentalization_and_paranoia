@@ -11,6 +11,11 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
     def utility_function(self, action, observation):
         return action - self.threshold
 
+    def random_forward(self, action: Action, observation: Action):
+        q_values = self.potential_actions
+        probabilities = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
+        return self.potential_actions, q_values, probabilities
+
     def forward(self, action: Action, observation: Action):
         q_values = self.potential_actions
         probabilities = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
@@ -19,8 +24,18 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
     def update_seed(self, seed, number):
         return seed + number
 
+    def update_bounds(self, action: Action, observation: Action):
+        if action.value is None or observation.value is None:
+            return None
+        # If the subject accepted the offer the lower bound is updated
+        if observation.value:
+            self.low = action.value
+        # If the offer is rejected the upper bound is updated
+        else:
+            self.high = action.value
 
-class RationalRandomSubIntentionalSender(RandomSubIntentionalSender):
+
+class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
@@ -36,17 +51,6 @@ class RationalRandomSubIntentionalSender(RandomSubIntentionalSender):
             self._name = "DoM(-1)_RA"
         else:
             self._name = "DoM(-1)_RRA"
-
-    def _random_forward(self, action, observation):
-        """
-        Uniform distribution over all the actions
-        :param action:
-        :param observation:
-        :return:
-        """
-        q_values = self.potential_actions
-        probabilities = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
-        return self.potential_actions, q_values, probabilities
 
     def rational_forward(self, action: Action, observation: Action):
         """
@@ -70,18 +74,25 @@ class RationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         return relevant_actions, q_values, probabilities
 
     def forward(self, action: Action, observation: Action):
-        # if self.threshold == 0.0:
-        #     relevant_actions, q_values, probabilities = self._random_forward(action, observation)
-        # else:
-        relevant_actions, q_values, probabilities = self.rational_forward(action, observation)
+        # Random agents act fully random
+        if self.threshold == 0.0:
+            relevant_actions, q_values, probabilities = self.random_forward(action, observation)
+        # Rational random use different policies
+        else:
+            relevant_actions, q_values, probabilities = self.rational_forward(action, observation)
         return relevant_actions, q_values, probabilities
 
-    def update_bounds(self, action: Action, observation: Action):
-        if action.value is None or observation.value is None:
-            return None
-        # If the subject accepted the offer the lower bound is updated
-        if observation.value:
-            self.low = action.value
-        # If the offer is rejected the upper bound is updated
-        else:
-            self.high = action.value
+
+class UniformRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
+
+    def rational_forward(self, action: Action, observation: Action):
+        """
+        Uniform distribution over all the actions
+        :param action:
+        :param observation:
+        :return:
+        """
+        q_values = self.utility_function(self.potential_actions, None)
+        relevant_actions = self.potential_actions[np.where(q_values >= 0)]
+        probabilities = np.repeat(1 / len(relevant_actions), len(relevant_actions))
+        return self.potential_actions, q_values, probabilities
