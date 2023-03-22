@@ -19,9 +19,9 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         original_threshold = self.opponent_model.threshold
         for i in range(len(self.prior_belief[:, 0])):
             theta = self.prior_belief[:, 0][i]
-            # if theta == 0.0:
-            #     offer_likelihood[i] = 1 / len(self.opponent_model.potential_actions)
-            #     continue
+            if theta == 0.0:
+                offer_likelihood[i] = 1 / len(self.opponent_model.potential_actions)
+                continue
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
                 self.opponent_model.forward(last_observation, action)

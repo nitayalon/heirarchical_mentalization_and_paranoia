@@ -163,13 +163,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
             return None
         observation = self._get_last_from_list(self.opponent_model.history.observations, action_length)
         action = self._get_last_from_list(self.opponent_model.history.actions, action_length)
-        if action.value is None or observation.value is None:
-            low = 0.0
-            high = 1.0
-        else:
-            low = action.value if observation.value else 0.0
-            high = 1.0 if observation.value else action.value
-        self.opponent_model.reset(high, low)
+        self.opponent_model.reset(self.high, self.low)
 
     @staticmethod
     def _get_last_from_list(l, location):
@@ -224,6 +218,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.high = 1.0
         self.low = 0.0
         self.history.reset(0, 0)
+        self.environment_model.reset()
         self.reset_belief()
         self.reset_solver()
         self.opponent_model.reset(terminal=terminal)

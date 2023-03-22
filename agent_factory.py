@@ -15,7 +15,7 @@ class AgentFactory:
         self.subject_actions = np.array([True, False])
         self.thresholds_seq = [0.0, 0.1, 0.2, 0.4]  # parameters to control threshold of agent
         self.grid_size = 0
-        self.include_subject_threshold = self.config.get_from_env("include_subject_threshold")
+        self.include_subject_threshold = self.config.get_from_env("subintentional_type")
 
     def create_experiment_grid(self):
         subject_parameters = self.thresholds_seq

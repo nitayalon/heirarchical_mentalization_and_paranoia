@@ -69,30 +69,31 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         else:
             relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
                                                                               self.potential_actions < upper_bound))]
-        q_values = self.utility_function(relevant_actions, Action(None, False))
-        probabilities = self.softmax_transformation(q_values)
+        q_values, probabilities = self._compute_q_values_and_probabilities(relevant_actions)
         return relevant_actions, q_values, probabilities
 
     def forward(self, action: Action, observation: Action):
         # Random agents act fully random
         if self.threshold == 0.0:
-            relevant_actions, q_values, probabilities = self.random_forward(action, observation)
+            potential_actions, q_values, probabilities = self.random_forward(action, observation)
         # Rational random use different policies
         else:
-            relevant_actions, q_values, probabilities = self.rational_forward(action, observation)
-        return relevant_actions, q_values, probabilities
+            potential_actions, q_values, probabilities = self.rational_forward(action, observation)
+        return potential_actions, q_values, probabilities
+
+    def _compute_q_values_and_probabilities(self, relevant_actions):
+        q_values = self.utility_function(relevant_actions, Action(None, False))
+        probabilities = self.softmax_transformation(q_values)
+        return q_values, probabilities
 
 
-class UniformRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
+class UniformRationalRandomSubIntentionalSender(SoftMaxRationalRandomSubIntentionalSender):
 
-    def rational_forward(self, action: Action, observation: Action):
-        """
-        Uniform distribution over all the actions
-        :param action:
-        :param observation:
-        :return:
-        """
-        q_values = self.utility_function(self.potential_actions, None)
-        relevant_actions = self.potential_actions[np.where(q_values >= 0)]
+    def _compute_q_values_and_probabilities(self, filtered_actions):
+        q_values = self.utility_function(filtered_actions, None)
+        relevant_actions = filtered_actions[np.where(q_values >= 0)]
         probabilities = np.repeat(1 / len(relevant_actions), len(relevant_actions))
-        return self.potential_actions, q_values, probabilities
+        probabilities = np.pad(probabilities, (filtered_actions.size - probabilities.size,0), 'constant',
+                               constant_values=0)
+        return q_values, probabilities
+
