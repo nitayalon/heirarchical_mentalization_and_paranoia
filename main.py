@@ -58,11 +58,11 @@ if __name__ == "__main__":
             sender.reset(terminal=True)
             receiver.reset(terminal=True)
             experiment_name = config.experiment_name
-            output_directory_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
-            experiment_results.to_csv(config.simulation_results_dir + "/" + output_directory_name, index=False)
-            agents_q_values.to_csv(config.q_values_results_dir + "/" + output_directory_name, index=False)
-            export_beliefs_to_file(subject_belief, 'subject_beliefs', output_directory_name)
-            export_beliefs_to_file(agent_belief, 'agent_beliefs', output_directory_name)
+            output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
+            experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)
+            agents_q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
+            export_beliefs_to_file(subject_belief, 'subject_beliefs', output_file_name)
+            export_beliefs_to_file(agent_belief, 'agent_beliefs', output_file_name)
             print("#" * 10 + ' simulation over ' + "#" * 10, flush=True)
             i += 1
             print(f'{i / factory.grid_size * 100}% of trials completed', flush=True)
