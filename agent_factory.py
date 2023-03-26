@@ -38,8 +38,8 @@ class AgentFactory:
             agent = self.dom_minus_one_constructor(agent_role)
         if agent_dom_level == "DoM0":
             agent = self.dom_zero_constructor(agent_role)
-        # if agent_name == "DoM1":
-        #     agent = self.dom_one_constructor(agent_role)
+        if agent_dom_level == "DoM1":
+            agent = self.dom_one_constructor(agent_role)
         return agent
 
     def dom_minus_one_constructor(self, agent_role):
@@ -65,15 +65,17 @@ class AgentFactory:
                                            opponent_theta_hat_distribution, opponent_model, self.config.seed)
         return output_agent
 
-    # def dom_one_constructor(self, agent_role):
-    #     if agent_role == "worker":
-    #         opponent_model = self.tom_minus_one_constructor("worker")
-    #         opponent_theta_hat_distribution = self.budget
-    #         self_theta_hat_distribution = self.labor_costs
-    #     else:
-    #         opponent_model = self.tom_minus_one_constructor("manager")
-    #         opponent_theta_hat_distribution = self.labor_costs
-    #         self_theta_hat_distribution = self.budget
-    #     use_function_approximation = bool(self.config.get_from_general("use_function_approximation"))
-    #     return ToMOneAgent(agent_role, self.behavioural_model, use_function_approximation,
-    #                        opponent_model, opponent_theta_hat_distribution, self_theta_hat_distribution)
+    def dom_one_constructor(self, agent_role):
+        if agent_role == "sender":
+            opponent_model = self.dom_zero_constructor("receiver")
+            opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
+            # output_agent = DoMOneSender(self.agent_actions, self.config.softmax_temperature, None,
+            #                             opponent_theta_hat_distribution, opponent_model, self.config.seed)
+            output_agent = None
+        else:
+            opponent_model = self.dom_zero_constructor("sender")
+            opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
+            output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, None,
+                                           opponent_theta_hat_distribution, opponent_model, self.config.seed)
+        return output_agent
+
