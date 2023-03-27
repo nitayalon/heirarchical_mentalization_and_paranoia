@@ -49,7 +49,7 @@ class AgentFactory:
             else:
                 agent = SoftMaxRationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
         else:
-            agent = BasicSubject(self.subject_actions, self.softmax_temp)
+            agent = SubIntentionalReceiver(self.subject_actions, self.softmax_temp)
         return agent
 
     def dom_zero_constructor(self, agent_role):

@@ -1,6 +1,5 @@
-from agents_models.abstract_agents import *
-from IPOMCP_solver.Solver.ipomcp_solver import *
-
+from agents_models.subintentional_agents.subintentional_receiver import *
+import functools
 
 class TomZeroAgentBelief(DoMZeroBelief):
 
@@ -61,6 +60,47 @@ class ToMZeroAgentExplorationPolicy(DoMZeroExplorationPolicy):
         return initial_qvalues
 
 
+class DoMZeroSenderSolver(DoMZeroEnvironmentModel):
+    def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model: SubIntentionalAgent,
+                 reward_function, planning_horizon, discount_factor):
+        super().__init__(opponent_model, reward_function, belief_distribution)
+        self.actions = actions
+        self.belief = belief_distribution
+        self.opponent_model = opponent_model
+        self.utility_function = reward_function
+        self.planning_horizon = planning_horizon
+        self.discount_factor = discount_factor
+        self.action_node = None
+        self.surrogate_actions = [Action(value, False) for value in self.actions]
+        self.name = "tree_search"
+        self.tree = []
+
+    def plan(self, action, observation, iteration_number):
+        # Belief update via IRL
+        action_length = len(self.belief.history.actions)
+        observation_length = len(self.belief.history.observations)
+        self.belief.update_distribution(action, observation, iteration_number)
+        # Recursive tree spanning
+        q_values_array = []
+        for threshold in self.belief.belief_distribution[:, 0]:
+            # Reset nested model
+            self.reset_persona(threshold, action_length, observation_length,
+                               self.opponent_model.belief)
+            future_values = functools.partial(self.compute_expected_value_from_offer, observation=observation,
+                                              opponent_model=self.opponent_model,
+                                              iteration_number=iteration_number)
+            q_values = list(map(future_values, self.surrogate_actions))
+            q_values_array.append(q_values)
+        weighted_q_values = self.belief.belief_distribution[:, -1] @ np.array(q_values_array)
+        return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values]
+
+    def compute_expected_value_from_offer(self, action, observation, opponent_model, iteration_number):
+        # Compute trial reward
+        response, _, probabilities = opponent_model.forward(observation, action)
+        reward = self.utility_function(action.value, response) @ probabilities
+        return reward
+
+
 class DoMZeroSender(DoMZeroModel):
 
     def __init__(self,
@@ -77,7 +117,11 @@ class DoMZeroSender(DoMZeroModel):
         self.exploration_policy = ToMZeroAgentExplorationPolicy(self.potential_actions, self.utility_function,
                                                                 self.config.get_from_env("rollout_rejecting_bonus"),
                                                                 self.belief.belief_distribution[:, :2])
-        self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        # self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        self.solver = DoMZeroSenderSolver(self.potential_actions, self.belief, self.opponent_model,
+                                          self.utility_function,
+                                          float(self.config.get_from_env("planning_depth")),
+                                          float(self.config.get_from_env("discount_factor")))
         self.name = "DoM(0)_agent"
         self.alpha = 0.0
 
