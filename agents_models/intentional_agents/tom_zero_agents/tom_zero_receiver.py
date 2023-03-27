@@ -97,7 +97,7 @@ class DoMZeroReceiver(DoMZeroModel):
         :param observation: float - representing the current offer
         :return:
         """
-        game_reward = (1 - observation - self.threshold) * action
+        game_reward = (observation - self.threshold) * action
         self.history.rewards.append(game_reward)
         return game_reward
 

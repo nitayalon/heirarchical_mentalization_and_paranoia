@@ -13,4 +13,4 @@ environments:
     discount_factor: 0.95
     n_trials: 10
     endowment: 1.0
-    subintentional_type: uniform
+    subintentional_type: softmax

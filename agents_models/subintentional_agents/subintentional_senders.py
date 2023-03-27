@@ -9,7 +9,7 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         self.name = "DoM(-1)_RA"
 
     def utility_function(self, action, observation):
-        return action - self.threshold
+        return (1 - action) - self.threshold
 
     def random_forward(self, action: Action, observation: Action):
         q_values = self.potential_actions
@@ -29,10 +29,10 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
             return None
         # If the subject accepted the offer the lower bound is updated
         if observation.value:
-            self.low = action.value
+            self.high = min(action.value, 1.0-self.threshold)
         # If the offer is rejected the upper bound is updated
         else:
-            self.high = action.value
+            self.low = action.value
 
 
 class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
@@ -40,6 +40,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
         self._name = "DoM(-1)_RRA"
+        self.weight = 0.2
 
     @property
     def name(self):
@@ -52,6 +53,11 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         else:
             self._name = "DoM(-1)_RRA"
 
+    def compute_weights(self, offers, low_bound, up_bound):
+        w = np.logical_and(low_bound <= offers, offers <= up_bound)
+        w_prime = w + self.weight
+        return w_prime / np.sum(w_prime)
+
     def rational_forward(self, action: Action, observation: Action):
         """
         This method computes an interval of positive reward offers and returns a uniform distribution over them
@@ -61,16 +67,17 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         """
         upper_bound = np.round(self.high, 3)
         lower_bound = np.round(self.low, 3)
-        if lower_bound >= upper_bound:
-            lower_bound = np.round(upper_bound - 0.1, 3)
-        if upper_bound <= self.threshold:
-            relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
-                                                                              self.potential_actions <= self.threshold))]
-        else:
-            relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
-                                                                              self.potential_actions < upper_bound))]
-        q_values, probabilities = self._compute_q_values_and_probabilities(relevant_actions)
-        return relevant_actions, q_values, probabilities
+        # if lower_bound >= upper_bound:
+        #     lower_bound = np.round(upper_bound - 0.1, 3)
+        # if upper_bound <= self.threshold:
+        #     relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
+        #                                                                       self.potential_actions <= self.threshold))]
+        # else:
+        #     relevant_actions = self.potential_actions[np.where(np.logical_and(self.potential_actions >= lower_bound,
+        #                                                                       self.potential_actions < upper_bound))]
+        weights = self.compute_weights(self.potential_actions, lower_bound, upper_bound)
+        q_values, probabilities = self._compute_q_values_and_probabilities(self.potential_actions, weights)
+        return self.potential_actions, q_values, probabilities
 
     def forward(self, action: Action, observation: Action):
         # Random agents act fully random
@@ -81,15 +88,15 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
             potential_actions, q_values, probabilities = self.rational_forward(action, observation)
         return potential_actions, q_values, probabilities
 
-    def _compute_q_values_and_probabilities(self, relevant_actions):
-        q_values = self.utility_function(relevant_actions, Action(None, False))
+    def _compute_q_values_and_probabilities(self, relevant_actions, weights):
+        q_values = self.utility_function(relevant_actions, Action(None, False)) * weights
         probabilities = self.softmax_transformation(q_values)
         return q_values, probabilities
 
 
 class UniformRationalRandomSubIntentionalSender(SoftMaxRationalRandomSubIntentionalSender):
 
-    def _compute_q_values_and_probabilities(self, filtered_actions):
+    def _compute_q_values_and_probabilities(self, filtered_actions, weights):
         q_values = self.utility_function(filtered_actions, None)
         relevant_actions = filtered_actions[np.where(q_values >= 0)]
         probabilities = np.repeat(1 / len(relevant_actions), len(relevant_actions))

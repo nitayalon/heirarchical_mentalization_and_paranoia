@@ -8,7 +8,7 @@ class BasicSubject(SubIntentionalAgent):
         self._name = "DoM(-1)_Subject"
 
     def utility_function(self, action, observation):
-        return (1 - observation - self.threshold) * action
+        return (observation - self.threshold) * action
 
     def forward(self, action: Action, observation: Action):
         q_values = self.utility_function(self.potential_actions, observation.value)
