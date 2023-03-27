@@ -8,9 +8,10 @@ class TomZeroSubjectBelief(DoMZeroBelief):
     def __init__(self, intentional_threshold_belief, opponent_model, history: History):
         super().__init__(intentional_threshold_belief, opponent_model, history)
 
-    def compute_likelihood(self, action: Action, observation: Action, prior):
+    def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
         """
         Compute observation likelihood given opponent's type and last action
+        :param iteration_number:
         :param action:
         :param observation:
         :param prior:
@@ -26,7 +27,7 @@ class TomZeroSubjectBelief(DoMZeroBelief):
                 continue
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
-                self.opponent_model.forward(last_observation, action)
+                self.opponent_model.forward(last_observation, action, iteration_number)
             # If the observation is not in the feasible action set then it singles theta hat:
             observation_in_feasible_set = np.any(possible_opponent_actions == observation.value)
             if not observation_in_feasible_set:
@@ -92,7 +93,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         # Belief update via IRL
         action_length = len(self.belief.history.actions)
         observation_length = len(self.belief.history.observations)
-        self.belief.update_distribution(action, observation, iteration_number)
+        self.belief.update_distribution(action, observation, iteration_number-1)
         # Recursive tree spanning
         q_values_array = []
         for threshold in self.belief.belief_distribution[:, 0]:
@@ -142,7 +143,6 @@ class DoMZeroReceiver(DoMZeroModel):
         self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.potential_actions, self.utility_function,
                                                                   self.config.get_from_env("rollout_rejecting_bonus"),
                                                                   self.belief.belief_distribution[:, :2])
-        # self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
                                             self.utility_function,
                                             float(self.config.get_from_env("planning_depth")),

@@ -1,5 +1,4 @@
-from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
-from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
+from agents_models.intentional_agents.tom_one_agents.tom_one_receiver import *
 from agents_models.subintentional_agents.subintentional_senders import *
 from agents_models.subintentional_agents.subintentional_receiver import *
 
@@ -75,7 +74,7 @@ class AgentFactory:
         else:
             opponent_model = self.dom_zero_constructor("sender")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-            output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, None,
-                                           opponent_theta_hat_distribution, opponent_model, self.config.seed)
+            output_agent = DoMOneReceiver(self.subject_actions, self.config.softmax_temperature, None,
+                                          opponent_theta_hat_distribution, opponent_model, self.config.seed)
         return output_agent
 

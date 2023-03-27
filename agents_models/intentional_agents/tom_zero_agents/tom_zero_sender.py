@@ -1,14 +1,16 @@
 from agents_models.subintentional_agents.subintentional_receiver import *
 import functools
 
+
 class TomZeroAgentBelief(DoMZeroBelief):
 
     def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalAgent, history: History):
         super().__init__(intentional_threshold_belief, opponent_model, history)
 
-    def compute_likelihood(self, action, observation, prior):
+    def compute_likelihood(self, action, observation, prior, iteration_number=None):
         """
         Compute observation likelihood given opponent's type and last action
+        :param iteration_number:
         :param action:
         :param observation:
         :param prior:
@@ -21,7 +23,7 @@ class TomZeroAgentBelief(DoMZeroBelief):
             theta = self.prior_belief[:, 0][i]
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
-                self.opponent_model.forward(last_observation, action)
+                self.opponent_model.forward(last_observation, action, iteration_number)
             # If the observation is not in the feasible action set then it singles theta hat:
             observation_probability = probabilities[np.where(possible_opponent_actions == observation.value)]
             offer_likelihood[i] = observation_probability

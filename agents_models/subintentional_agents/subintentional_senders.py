@@ -16,7 +16,7 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         probabilities = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
         return self.potential_actions, q_values, probabilities
 
-    def forward(self, action: Action, observation: Action):
+    def forward(self, action: Action, observation: Action, iteration_number=None):
         q_values = self.potential_actions
         probabilities = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
         return self.potential_actions, q_values, probabilities
@@ -76,7 +76,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         q_values, probabilities = self._compute_q_values_and_probabilities(self.potential_actions, weights)
         return self.potential_actions, q_values, probabilities
 
-    def forward(self, action: Action, observation: Action):
+    def forward(self, action: Action, observation: Action, iteration_number=None):
         self.update_bounds(action, observation)
         # Random agents act fully random
         if self.threshold == 0.0:

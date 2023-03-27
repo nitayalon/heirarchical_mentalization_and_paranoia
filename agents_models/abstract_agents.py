@@ -71,13 +71,13 @@ class SubIntentionalAgent(ABC):
             iteration_number: Optional[int] = None) -> [float, np.array]:
         self.update_bounds(action, observation)
         seed = self.update_seed(seed, iteration_number)
-        relevant_actions, q_values, probabilities = self.forward(action, observation)
+        relevant_actions, q_values, probabilities = self.forward(action, observation, iteration_number)
         random_number_generator = np.random.default_rng(seed)
         optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
         return Action(optimal_offer, False), np.array([relevant_actions, q_values]).T
 
     @abstractmethod
-    def forward(self, action: Action, observation: Action):
+    def forward(self, action: Action, observation: Action, iteration_number=None):
         pass
 
     def update_bounds(self, action: Action, observation: Action):
@@ -107,7 +107,7 @@ class DoMZeroBelief(BeliefDistribution):
         super().__init__(intentional_threshold_belief, opponent_model, history)
         self.opponent_belief = None
 
-    def compute_likelihood(self, action, observation, prior):
+    def compute_likelihood(self, action, observation, prior, iteration_number=None):
         pass
 
     def update_distribution(self, action, observation, iteration_number):
@@ -121,7 +121,7 @@ class DoMZeroBelief(BeliefDistribution):
         if iteration_number <= 1:
             return None
         prior = np.copy(self.belief_distribution[:, -1])
-        probabilities = self.compute_likelihood(action, observation, prior)
+        probabilities = self.compute_likelihood(action, observation, prior, iteration_number)
         posterior = probabilities * prior
         self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
 
