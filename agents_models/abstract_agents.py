@@ -161,8 +161,6 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.opponent_model.threshold = persona
         if action_length == 0 and observation_length == 0:
             return None
-        observation = self._get_last_from_list(self.opponent_model.history.observations, action_length)
-        action = self._get_last_from_list(self.opponent_model.history.actions, action_length)
         self.opponent_model.reset(self.high, self.low)
 
     @staticmethod
@@ -241,7 +239,10 @@ class DoMZeroModel(SubIntentionalAgent):
         prng = np.random.default_rng(seed)
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
         actions = list(action_nodes.keys())
-        best_action = action_nodes[actions[best_action_idx]].action
+        if self.solver.name == "IPOMCP":
+            best_action = action_nodes[actions[best_action_idx]].action
+        else:
+            best_action = action_nodes[actions[best_action_idx]]
         self.environment_model.update_persona(observation, best_action)
         self.history.update_actions(best_action)
         self.environment_model.opponent_model.history.update_observations(best_action)

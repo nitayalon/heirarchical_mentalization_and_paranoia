@@ -1,3 +1,5 @@
+import numpy as np
+import functools
 from agents_models.abstract_agents import *
 
 
@@ -71,6 +73,59 @@ class ToMZeroSubjectExplorationPolicy(DoMZeroExplorationPolicy):
         return initial_qvalues
 
 
+class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
+    def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model,
+                 reward_function, planning_horizon, discount_factor):
+        super().__init__(opponent_model, reward_function, belief_distribution)
+        self.actions = actions
+        self.belief = belief_distribution
+        self.opponent_model = opponent_model
+        self.utility_function = reward_function
+        self.planning_horizon = planning_horizon
+        self.discount_factor = discount_factor
+        self.action_node = None
+        self.surrogate_actions = [Action(value, False) for value in self.actions]
+        self.name = "tree_search"
+        self.tree = []
+
+    def plan(self, action, observation, iteration_number):
+        # Belief update via IRL
+        action_length = len(self.belief.history.actions)
+        observation_length = len(self.belief.history.observations)
+        self.belief.update_distribution(action, observation, iteration_number)
+        # Recursive tree spanning
+        q_values_array = []
+        for threshold in self.belief.belief_distribution[:, 0]:
+            # Reset nested model
+            self.reset_persona(threshold, action_length, observation_length,
+                               self.opponent_model.belief)
+            future_values = functools.partial(self.recursive_tree_spanning, observation=observation,
+                                              opponent_model=self.opponent_model,
+                                              iteration_number=iteration_number)
+            q_values = list(map(future_values, self.surrogate_actions))
+            q_values_array.append(q_values)
+        weighted_q_values = self.belief.belief_distribution[:, -1] @ np.array(q_values_array)
+        return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values]
+
+    def recursive_tree_spanning(self, action, observation, opponent_model, iteration_number):
+        # Compute trial reward
+        reward = self.utility_function(action.value, observation.value)
+        if iteration_number >= self.planning_horizon:
+            return self.utility_function(action.value, observation.value)
+        # compute offers and probs given previous history
+        potential_actions, _, probabilities = opponent_model.forward(observation, action)
+        average_counter_offer_value = np.dot(potential_actions, probabilities).item()
+        average_counter_offer = Action(average_counter_offer_value, False)
+        # compute offers and probs given previous history
+        future_values = functools.partial(self.recursive_tree_spanning, observation=average_counter_offer,
+                                          opponent_model=self.opponent_model,
+                                          iteration_number=iteration_number + 1)
+        self.tree.append([self.opponent_model.threshold, iteration_number, action.value, observation.value,
+                          average_counter_offer_value])
+        q_values = list(map(future_values, self.surrogate_actions))
+        return reward + self.discount_factor * max(q_values)
+
+
 class DoMZeroReceiver(DoMZeroModel):
 
     def __init__(self,
@@ -87,7 +142,11 @@ class DoMZeroReceiver(DoMZeroModel):
         self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.potential_actions, self.utility_function,
                                                                   self.config.get_from_env("rollout_rejecting_bonus"),
                                                                   self.belief.belief_distribution[:, :2])
-        self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        # self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
+                                            self.utility_function,
+                                            float(self.config.get_from_env("planning_depth")),
+                                            float(self.config.get_from_env("discount_factor")))
         self.name = "DoM(0)_subject"
 
     def utility_function(self, action, observation, *args):

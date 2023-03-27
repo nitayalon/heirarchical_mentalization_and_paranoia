@@ -59,8 +59,8 @@ class EAT:
     def trial(trial_number, sender,  receiver, seed, offer, response):
         offer, agent_q_values = sender.act(seed, offer, response, trial_number)
         response, subject_q_values = receiver.act(seed, response, offer, trial_number + 1)
-        agent_reward = offer.value * response.value
-        subject_reward = (1-offer.value) * response.value
+        agent_reward = (1-offer.value) * response.value
+        subject_reward = offer.value * response.value
         # sender.update_history(offer, response, agent_reward)
         # receiver.update_history(response, offer, subject_reward)
         agent_q_values = pd.DataFrame(agent_q_values)
