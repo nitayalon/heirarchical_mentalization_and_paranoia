@@ -22,17 +22,18 @@ class AgentFactory:
         agent_parameters = self.thresholds_seq
         agent_grid_size = len(self.thresholds_seq)
         self.grid_size = agent_grid_size * subject_grid_size
-        return {"agent_parameters": agent_parameters,
-                "subject_parameters": subject_parameters}
+        return {"sender_parameters": agent_parameters,
+                "receiver_parameters": subject_parameters}
 
     @staticmethod
     def _create_prior_distribution(support):
         thresholds_probabilities = np.repeat(1 / len(support), len(support))
         return np.array([support, thresholds_probabilities]).T
 
-    def constructor(self, agent_role: str):
+    def constructor(self, agent_role: str, agent_dom_level: str = None):
         agent = None
-        agent_dom_level = self.config.get_agent_tom_level(agent_role)
+        if agent_dom_level is None:
+            agent_dom_level = self.config.get_agent_tom_level(agent_role)
         if agent_dom_level == "DoM-1":
             agent = self.dom_minus_one_constructor(agent_role)
         if agent_dom_level == "DoM0":
@@ -42,7 +43,7 @@ class AgentFactory:
         return agent
 
     def dom_minus_one_constructor(self, agent_role):
-        if agent_role == "sender":
+        if agent_role == "rational_sender":
             if self.config.subintentional_agent_type == "uniform":
                 agent = UniformRationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
             else:
@@ -52,27 +53,27 @@ class AgentFactory:
         return agent
 
     def dom_zero_constructor(self, agent_role):
-        if agent_role == "sender":
-            opponent_model = self.dom_minus_one_constructor("receiver")
+        if agent_role == "rational_sender":
+            opponent_model = self.dom_minus_one_constructor("rational_receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             output_agent = DoMZeroSender(self.agent_actions, self.config.softmax_temperature, None,
                                          opponent_theta_hat_distribution, opponent_model, self.config.seed)
         else:
-            opponent_model = self.dom_minus_one_constructor("sender")
+            opponent_model = self.dom_minus_one_constructor("rational_sender")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, None,
                                            opponent_theta_hat_distribution, opponent_model, self.config.seed)
         return output_agent
 
     def dom_one_constructor(self, agent_role):
-        if agent_role == "sender":
-            opponent_model = self.dom_zero_constructor("receiver")
+        if agent_role == "rational_sender":
+            opponent_model = self.dom_zero_constructor("rational_receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             # output_agent = DoMOneSender(self.agent_actions, self.config.softmax_temperature, None,
             #                             opponent_theta_hat_distribution, opponent_model, self.config.seed)
             output_agent = None
         else:
-            opponent_model = self.dom_zero_constructor("sender")
+            opponent_model = self.dom_zero_constructor("rational_sender")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             output_agent = DoMOneReceiver(self.subject_actions, self.config.softmax_temperature, None,
                                           opponent_theta_hat_distribution, opponent_model, self.config.seed)

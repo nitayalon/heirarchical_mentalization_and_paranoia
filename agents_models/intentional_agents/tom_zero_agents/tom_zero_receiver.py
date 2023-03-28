@@ -3,7 +3,7 @@ import functools
 from agents_models.abstract_agents import *
 
 
-class TomZeroSubjectBelief(DoMZeroBelief):
+class DomZeroReceiverBelief(DoMZeroBelief):
 
     def __init__(self, intentional_threshold_belief, opponent_model, history: History):
         super().__init__(intentional_threshold_belief, opponent_model, history)
@@ -39,9 +39,9 @@ class TomZeroSubjectBelief(DoMZeroBelief):
         return offer_likelihood
 
 
-class ToMZeroSubjectEnvironmentModel(DoMZeroEnvironmentModel):
+class DoMZeroReceiverEnvironmentModel(DoMZeroEnvironmentModel):
 
-    def __init__(self, opponent_model: SubIntentionalAgent, reward_function, belief_distribution: TomZeroSubjectBelief):
+    def __init__(self, opponent_model: SubIntentionalAgent, reward_function, belief_distribution: DomZeroReceiverBelief):
         super().__init__(opponent_model, reward_function, belief_distribution)
 
     def update_persona(self, observation, action):
@@ -52,7 +52,7 @@ class ToMZeroSubjectEnvironmentModel(DoMZeroEnvironmentModel):
         self.high = self.opponent_model.high
 
 
-class ToMZeroSubjectExplorationPolicy(DoMZeroExplorationPolicy):
+class DoMZeroReceiverExplorationPolicy(DoMZeroExplorationPolicy):
 
     def __init__(self, actions, reward_function, exploration_bonus, belief: np.array):
         super().__init__(actions, reward_function, exploration_bonus, belief)
@@ -89,11 +89,12 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.name = "tree_search"
         self.tree = []
 
-    def plan(self, action, observation, iteration_number):
+    def plan(self, action, observation, iteration_number, update_belief):
         # Belief update via IRL
         action_length = len(self.belief.history.actions)
         observation_length = len(self.belief.history.observations)
-        self.belief.update_distribution(action, observation, iteration_number-1)
+        if update_belief:
+            self.belief.update_distribution(action, observation, iteration_number)
         # Recursive tree spanning
         q_values_array = []
         for threshold in self.belief.belief_distribution[:, 0]:
@@ -137,11 +138,11 @@ class DoMZeroReceiver(DoMZeroModel):
                  opponent_model: SubIntentionalAgent,
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
-        self.belief = TomZeroSubjectBelief(prior_belief, self.opponent_model, self.history)
-        self.environment_model = ToMZeroSubjectEnvironmentModel(self.opponent_model, self.utility_function,
-                                                                self.belief)
-        self.exploration_policy = ToMZeroSubjectExplorationPolicy(self.potential_actions, self.utility_function,
-                                                                  self.config.get_from_env("rollout_rejecting_bonus"),
+        self.belief = DomZeroReceiverBelief(prior_belief, self.opponent_model, self.history)
+        self.environment_model = DoMZeroReceiverEnvironmentModel(self.opponent_model, self.utility_function,
+                                                                 self.belief)
+        self.exploration_policy = DoMZeroReceiverExplorationPolicy(self.potential_actions, self.utility_function,
+                                                                   self.config.get_from_env("rollout_rejecting_bonus"),
                                                                   self.belief.belief_distribution[:, :2])
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
                                             self.utility_function,

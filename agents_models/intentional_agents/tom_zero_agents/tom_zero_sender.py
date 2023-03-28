@@ -77,11 +77,12 @@ class DoMZeroSenderSolver(DoMZeroEnvironmentModel):
         self.name = "tree_search"
         self.tree = []
 
-    def plan(self, action, observation, iteration_number):
+    def plan(self, action, observation, iteration_number, update_belief):
         # Belief update via IRL
         action_length = len(self.belief.history.actions)
         observation_length = len(self.belief.history.observations)
-        self.belief.update_distribution(action, observation, iteration_number)
+        if update_belief:
+            self.belief.update_distribution(action, observation, iteration_number)
         # Recursive tree spanning
         q_values_array = []
         for threshold in self.belief.belief_distribution[:, 0]:

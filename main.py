@@ -23,30 +23,41 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default='6431', metavar='N',
                         help='set simulation seed (default: 6431)')
     parser.add_argument('--sender_tom', type=str, default='DoM0', metavar='N',
-                        help='set sender tom level (default: DoM0)')
+                        help='set rational_sender tom level (default: DoM0)')
     parser.add_argument('--receiver_tom', type=str, default='DoM0', metavar='N',
-                        help='set receiver tom level (default: DoM0)')
+                        help='set rational_receiver tom level (default: DoM0)')
     parser.add_argument('--softmax_temp', type=float, default='0.05', metavar='N',
                         help='set softmax temp (default: 0.05)')
     parser.add_argument('--sender_threshold', type=float, default='0.5', metavar='N',
-                        help='set sender threshold (default: 0.5)')
+                        help='set rational_sender threshold (default: 0.5)')
     parser.add_argument('--receiver_alpha', type=float, default='0.5', metavar='N',
-                        help='set receiver reward mixing probability (default: 0.5)')
+                        help='set rational_receiver reward mixing probability (default: 0.5)')
     args = parser.parse_args()
     config = init_config(args.environment, args)
     factory = AgentFactory()
-    sender = factory.constructor("sender")
-    receiver = factory.constructor("receiver")
+    rational_sender = factory.constructor("rational_sender")
+    random_sender = factory.constructor("rational_sender")
+    rational_receiver = factory.constructor("rational_receiver", "DoM-1")
+    random_receiver = factory.constructor("rational_receiver", "DoM-1")
     experiment_data = factory.create_experiment_grid()
     report_point = factory.grid_size
-    agent_parameters = experiment_data["agent_parameters"]
-    subject_parameters = experiment_data["subject_parameters"]
+    sender_parameters = experiment_data["sender_parameters"]
+    receiver_parameters = experiment_data["receiver_parameters"]
     i = 0
-    for subject_param in subject_parameters:
-        for agent_param in agent_parameters:
+    for receiver_threshold in receiver_parameters:
+        for sender_threshold in sender_parameters:
+            # set random agents
+            if receiver_threshold == 0:
+                receiver = random_receiver
+            else:
+                receiver = rational_receiver
+            if sender_threshold == 0:
+                sender = random_sender
+            else:
+                sender = rational_sender
             # Update individual parameters
-            receiver.threshold = subject_param
-            sender.threshold = agent_param
+            receiver.threshold = receiver_threshold
+            sender.threshold = sender_threshold
             # Initial experiment name
             experiment_name = set_experiment_name(receiver.threshold, sender.threshold)
             config.new_experiment_name(experiment_name)

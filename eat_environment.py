@@ -61,14 +61,14 @@ class EAT:
         response, subject_q_values = receiver.act(seed, response, offer, trial_number + 1)
         agent_reward = (1-offer.value) * response.value
         subject_reward = offer.value * response.value
-        # sender.update_history(offer, response, agent_reward)
-        # receiver.update_history(response, offer, subject_reward)
+        # rational_sender.update_history(offer, response, agent_reward)
+        # rational_receiver.update_history(response, offer, subject_reward)
         agent_q_values = pd.DataFrame(agent_q_values)
-        agent_q_values['sender'] = sender.name
+        agent_q_values['rational_sender'] = sender.name
         agent_q_values['parameter'] = sender.threshold
         agent_q_values['trial'] = trial_number
         subject_q_values = pd.DataFrame(subject_q_values)
-        subject_q_values['sender'] = receiver.name
+        subject_q_values['rational_sender'] = receiver.name
         subject_q_values['parameter'] = receiver.threshold
         subject_q_values['trial'] = trial_number
         q_values = pd.concat([agent_q_values, subject_q_values])
