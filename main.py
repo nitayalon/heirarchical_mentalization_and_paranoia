@@ -36,8 +36,8 @@ if __name__ == "__main__":
     config = init_config(args.environment, args)
     factory = AgentFactory()
     rational_sender = factory.constructor("rational_sender")
-    random_sender = factory.constructor("rational_sender")
-    rational_receiver = factory.constructor("rational_receiver", "DoM-1")
+    random_sender = factory.constructor("rational_sender", "DoM-1")
+    rational_receiver = factory.constructor("rational_receiver")
     random_receiver = factory.constructor("rational_receiver", "DoM-1")
     experiment_data = factory.create_experiment_grid()
     report_point = factory.grid_size

@@ -148,7 +148,6 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.high = high
 
     def reset(self):
-        self.opponent_model.reset(1.0, 0.0)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -220,10 +219,11 @@ class DoMZeroModel(SubIntentionalAgent):
         self.high = 1.0
         self.low = 0.0
         self.history.reset(action_length, observation_length)
+        self.opponent_model.reset(1.0, 0.0, terminal=terminal)
         self.environment_model.reset()
         self.reset_belief()
         self.reset_solver()
-        self.opponent_model.reset(terminal=terminal)
+        # self.opponent_model.reset(terminal=terminal)
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         if iteration_number > 1:

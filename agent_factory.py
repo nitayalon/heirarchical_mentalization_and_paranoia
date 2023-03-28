@@ -1,4 +1,4 @@
-from agents_models.intentional_agents.tom_one_agents.tom_one_receiver import *
+from agents_models.intentional_agents.tom_one_agents.tom_one_agents import *
 from agents_models.subintentional_agents.subintentional_senders import *
 from agents_models.subintentional_agents.subintentional_receiver import *
 
@@ -12,7 +12,8 @@ class AgentFactory:
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.agent_actions = np.arange(0, 1.05, 0.05)
         self.subject_actions = np.array([True, False])
-        self.thresholds_seq = [0.0, 0.1, 0.2, 0.4]  # parameters to control threshold of agent
+        self.include_random = bool(self.config.get_from_general("include_random"))
+        self.thresholds_seq = [0.0, 0.1, 0.2, 0.4] if self.include_random else [0.1, 0.2, 0.4]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
 
@@ -69,9 +70,8 @@ class AgentFactory:
         if agent_role == "rational_sender":
             opponent_model = self.dom_zero_constructor("rational_receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-            # output_agent = DoMOneSender(self.agent_actions, self.config.softmax_temperature, None,
-            #                             opponent_theta_hat_distribution, opponent_model, self.config.seed)
-            output_agent = None
+            output_agent = DoMOneSender(self.agent_actions, self.config.softmax_temperature, None,
+                                        opponent_theta_hat_distribution, opponent_model, self.config.seed)
         else:
             opponent_model = self.dom_zero_constructor("rational_sender")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)

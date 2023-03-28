@@ -3,7 +3,7 @@ from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
 from typing import Optional, Union
 
 
-class DomOneReceiverBelief(DomZeroReceiverBelief):
+class DoMOneBelief(DoMZeroBelief):
     def __init__(self, intentional_threshold_belief, opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
                  history: History):
         super().__init__(intentional_threshold_belief, opponent_model, history)
@@ -56,8 +56,8 @@ class DomOneReceiverBelief(DomZeroReceiverBelief):
         return offer_likelihood
 
 
-class DoMOneReceiverEnvironmentModel(DoMZeroReceiverEnvironmentModel):
-    def __init__(self, opponent_model: DoMZeroSender, reward_function, belief_distribution: DomOneReceiverBelief):
+class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
+    def __init__(self, opponent_model: DoMZeroSender, reward_function, belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, belief_distribution)
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
@@ -68,13 +68,37 @@ class DoMOneReceiverEnvironmentModel(DoMZeroReceiverEnvironmentModel):
         self.opponent_model.belief.belief_distribution = nested_beliefs
 
 
+class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
+    def __init__(self, opponent_model: DoMZeroSender, reward_function, belief_distribution: DoMOneBelief):
+        super().__init__(opponent_model, reward_function, belief_distribution)
+
+    def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
+        self.opponent_model.threshold = persona
+        self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
+        self.opponent_model.belief.belief_distribution = nested_beliefs
+
+
 class DoMOneReceiver(DoMZeroReceiver):
+
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
                  prior_belief: np.array,
                  opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
-        self.environment_model = DoMOneReceiverEnvironmentModel(self.opponent_model, self.utility_function,
-                                                                self.belief)
-        self.belief = DomOneReceiverBelief(prior_belief, self.opponent_model, self.history)
+        self.environment_model = DoMOneEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
+        self.belief = DoMOneBelief(prior_belief, self.opponent_model, self.history)
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+
+
+class DoMOneSender(DoMZeroSender):
+
+    def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
+                 prior_belief: np.array,
+                 opponent_model: Optional[Union[DoMZeroReceiver, SubIntentionalAgent]],
+                 seed: int):
+        super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
+        self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
+        self.belief = DoMOneBelief(prior_belief, self.opponent_model, self.history)
+        self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+
+

@@ -8,6 +8,8 @@ class SubIntentionalReceiver(SubIntentionalAgent):
         self._name = "DoM(-1)_Subject"
 
     def utility_function(self, action, observation):
+        if self.threshold == 0:
+            return np.array([1, 1])
         return (observation - self.threshold) * action
 
     def forward(self, action: Action, observation: Action, iteration_number=None):

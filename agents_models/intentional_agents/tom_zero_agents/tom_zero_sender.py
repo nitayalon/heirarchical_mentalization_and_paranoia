@@ -2,7 +2,7 @@ from agents_models.subintentional_agents.subintentional_receiver import *
 import functools
 
 
-class TomZeroAgentBelief(DoMZeroBelief):
+class DoMZeroSenderBelief(DoMZeroBelief):
 
     def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalAgent, history: History):
         super().__init__(intentional_threshold_belief, opponent_model, history)
@@ -31,23 +31,25 @@ class TomZeroAgentBelief(DoMZeroBelief):
         return offer_likelihood
 
 
-class ToMZeroAgentEnvironmentModel(DoMZeroEnvironmentModel):
+class DoMZeroSenderEnvironmentModel(DoMZeroEnvironmentModel):
 
     def __init__(self, opponent_model: SubIntentionalAgent, reward_function,
-                 belief_distribution: TomZeroAgentBelief):
+                 belief_distribution: DoMZeroSenderBelief):
         super().__init__(opponent_model, reward_function, belief_distribution)
 
 
-class ToMZeroAgentExplorationPolicy(DoMZeroExplorationPolicy):
+class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
 
     def __init__(self, actions, reward_function, exploration_bonus, belief: np.array):
         super().__init__(actions, reward_function, exploration_bonus, belief)
 
     def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool, iteration_number: int):
-        # if the last offer was rejected - we should narrow down the search space
-        potential_actions = self.actions
-        if not observation and not np.all(False == (self.actions < last_action)):
-            potential_actions = self.actions[self.actions < last_action]
+        # if the last offer was accepted - we can offer less (if we can)
+        if observation:
+            potential_actions = self.actions[np.where(last_action >= self.actions)]
+        # if the last offer was rejected - we should offer more (if we can)
+        else:
+            potential_actions = self.actions[np.where(last_action < self.actions)]
         expected_reward_from_offer = self.reward_function(potential_actions, True) * \
                                      (interactive_state.persona < (1 - potential_actions))
         optimal_action_idx = np.argmax(expected_reward_from_offer)
@@ -115,10 +117,10 @@ class DoMZeroSender(DoMZeroModel):
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.config = get_config()
-        self.belief = TomZeroAgentBelief(prior_belief, self.opponent_model, self.history)
-        self.environment_model = ToMZeroAgentEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
-        self.exploration_policy = ToMZeroAgentExplorationPolicy(self.potential_actions, self.utility_function,
-                                                                self.config.get_from_env("rollout_rejecting_bonus"),
+        self.belief = DoMZeroSenderBelief(prior_belief, self.opponent_model, self.history)
+        self.environment_model = DoMZeroSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
+        self.exploration_policy = DoMZeroSenderExplorationPolicy(self.potential_actions, self.utility_function,
+                                                                 self.config.get_from_env("rollout_rejecting_bonus"),
                                                                 self.belief.belief_distribution[:, :2])
         # self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.solver = DoMZeroSenderSolver(self.potential_actions, self.belief, self.opponent_model,
