@@ -3,15 +3,15 @@ general:
   results_folder: "data/agent_subject/"
   report_ipocmp_statistics: False
   output_planning_tree: False
+  include_random: True
 
 environments:
   basic_task:
+    n_trials: 5
+    planning_depth: 5
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
-    planning_depth: 6
-    mcts_number_of_iterations: 6000
+    mcts_number_of_iterations: 3000
     discount_factor: 0.95
-    n_trials: 10
     endowment: 1.0
-    name: no_subject_threshold
-    include_subject_threshold: False
+    subintentional_type: softmax
