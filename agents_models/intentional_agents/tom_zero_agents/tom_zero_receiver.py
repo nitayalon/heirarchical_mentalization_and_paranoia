@@ -148,7 +148,7 @@ class DoMZeroReceiver(DoMZeroModel):
                                             self.utility_function,
                                             float(self.config.get_from_env("planning_depth")),
                                             float(self.config.get_from_env("discount_factor")))
-        self.name = "DoM(0)_subject"
+        self.name = "DoM(0)_receiver"
 
     def utility_function(self, action, observation, *args):
         """

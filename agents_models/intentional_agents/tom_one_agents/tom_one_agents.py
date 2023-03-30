@@ -88,6 +88,7 @@ class DoMOneReceiver(DoMZeroReceiver):
         self.environment_model = DoMOneEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
         self.belief = DoMOneBelief(prior_belief, self.opponent_model, self.history)
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        self.name = "DoM(1)_receiver"
 
 
 class DoMOneSender(DoMZeroSender):
@@ -100,5 +101,6 @@ class DoMOneSender(DoMZeroSender):
         self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
         self.belief = DoMOneBelief(prior_belief, self.opponent_model, self.history)
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        self.name = "DoM(1)_sender"
 
 
