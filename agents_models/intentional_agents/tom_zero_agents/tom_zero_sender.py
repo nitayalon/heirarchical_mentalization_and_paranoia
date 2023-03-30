@@ -1,3 +1,5 @@
+import numpy as np
+
 from agents_models.subintentional_agents.subintentional_receiver import *
 import functools
 
@@ -97,7 +99,8 @@ class DoMZeroSenderSolver(DoMZeroEnvironmentModel):
             q_values = list(map(future_values, self.surrogate_actions))
             q_values_array.append(q_values)
         weighted_q_values = self.belief.belief_distribution[:, -1] @ np.array(q_values_array)
-        return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values]
+        n_visits = np.repeat(10, self.actions.size)
+        return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values, n_visits]
 
     def compute_expected_value_from_offer(self, action, observation, opponent_model, iteration_number):
         # Compute trial reward
