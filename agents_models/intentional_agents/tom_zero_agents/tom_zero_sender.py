@@ -127,7 +127,7 @@ class DoMZeroSender(DoMZeroModel):
                                           self.utility_function,
                                           float(self.config.get_from_env("planning_depth")),
                                           float(self.config.get_from_env("discount_factor")))
-        self.name = "DoM(0)_agent"
+        self.name = "DoM(0)_sender"
         self.alpha = 0.0
 
     def utility_function(self, action, observation, *args):

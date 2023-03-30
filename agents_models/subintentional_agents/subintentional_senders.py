@@ -54,9 +54,9 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
     @name.setter
     def name(self, threshold):
         if threshold == 0.0:
-            self._name = "DoM(-1)_RA"
+            self._name = "DoM(-1)_Random"
         else:
-            self._name = "DoM(-1)_RRA"
+            self._name = "DoM(-1)_Rational"
 
     def compute_weights(self, offers, low_bound, up_bound):
         w = np.logical_and(low_bound < offers, offers <= up_bound)

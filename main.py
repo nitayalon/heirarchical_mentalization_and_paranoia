@@ -12,8 +12,8 @@ def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory
         table.to_csv(os.path.join(outdir, output_directory), index=False)
 
 
-def set_experiment_name(subject_threshold, agent_threshold):
-    return f'subject_gamma_{subject_threshold}_agent_gamma_{agent_threshold}'
+def set_experiment_name(receiver_threshold, sender_threshold):
+    return f'receiver_gamma_{receiver_threshold}_sender_gamma_{sender_threshold}'
 
 
 if __name__ == "__main__":
@@ -30,8 +30,8 @@ if __name__ == "__main__":
                         help='set softmax temp (default: 0.05)')
     parser.add_argument('--sender_threshold', type=float, default='0.5', metavar='N',
                         help='set rational_sender threshold (default: 0.5)')
-    parser.add_argument('--receiver_alpha', type=float, default='0.5', metavar='N',
-                        help='set rational_receiver reward mixing probability (default: 0.5)')
+    parser.add_argument('--receiver_threshold', type=float, default='0.5', metavar='N',
+                        help='set rational_receiver threshold (default: 0.5)')
     args = parser.parse_args()
     config = init_config(args.environment, args)
     factory = AgentFactory()
@@ -46,15 +46,15 @@ if __name__ == "__main__":
     i = 0
     for receiver_threshold in receiver_parameters:
         for sender_threshold in sender_parameters:
-            # set random agents
-            if receiver_threshold == 0:
-                receiver = random_receiver
-            else:
-                receiver = rational_receiver
+            # set random senders
             if sender_threshold == 0:
                 sender = random_sender
             else:
                 sender = rational_sender
+            if receiver_threshold == 0:
+                receiver = random_receiver
+            else:
+                receiver = rational_receiver
             # Update individual parameters
             receiver.threshold = receiver_threshold
             sender.threshold = sender_threshold
@@ -64,16 +64,16 @@ if __name__ == "__main__":
             print(f'Sender parameters: gamma = {sender.threshold}', flush=True)
             print(f'Receiver parameters: gamma = {receiver.threshold}', flush=True)
             eat_task_simulator = EAT(config.seed)
-            experiment_results, agents_q_values, subject_belief, agent_belief = \
+            experiment_results, senders_q_values, receiver_belief, sender_belief = \
                 eat_task_simulator.simulate_task(sender, receiver, receiver.threshold, sender.threshold)
             sender.reset(terminal=True)
             receiver.reset(terminal=True)
             experiment_name = config.experiment_name
             output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)
-            agents_q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
-            export_beliefs_to_file(subject_belief, 'subject_beliefs', output_file_name)
-            export_beliefs_to_file(agent_belief, 'agent_beliefs', output_file_name)
+            senders_q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
+            export_beliefs_to_file(receiver_belief, 'receiver_beliefs', output_file_name)
+            export_beliefs_to_file(sender_belief, 'sender_beliefs', output_file_name)
             print("#" * 10 + ' simulation over ' + "#" * 10, flush=True)
             i += 1
             print(f'{i / factory.grid_size * 100}% of trials completed', flush=True)
