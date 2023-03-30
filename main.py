@@ -64,14 +64,14 @@ if __name__ == "__main__":
             print(f'Sender parameters: gamma = {sender.threshold}', flush=True)
             print(f'Receiver parameters: gamma = {receiver.threshold}', flush=True)
             eat_task_simulator = EAT(config.seed)
-            experiment_results, senders_q_values, receiver_belief, sender_belief = \
+            experiment_results, q_values, receiver_belief, sender_belief = \
                 eat_task_simulator.simulate_task(sender, receiver, receiver.threshold, sender.threshold)
             sender.reset(terminal=True)
             receiver.reset(terminal=True)
             experiment_name = config.experiment_name
             output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
             experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)
-            senders_q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
+            q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
             export_beliefs_to_file(receiver_belief, 'receiver_beliefs', output_file_name)
             export_beliefs_to_file(sender_belief, 'sender_beliefs', output_file_name)
             print("#" * 10 + ' simulation over ' + "#" * 10, flush=True)

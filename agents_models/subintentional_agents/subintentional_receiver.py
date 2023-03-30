@@ -5,7 +5,7 @@ class SubIntentionalReceiver(SubIntentionalAgent):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
-        self._name = "DoM(-1)_Subject"
+        self.name = "DoM(-1)_receiver"
 
     def utility_function(self, action, observation):
         if self.threshold == 0:
