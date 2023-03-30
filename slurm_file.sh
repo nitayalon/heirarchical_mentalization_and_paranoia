@@ -34,4 +34,4 @@ RECEIVER_TOM=DoM1
 SENDER_TOM=DoM1
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
-time singularity exec ${CONTAINER_PATH} python main.py  --environment $ENV --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --sender_threshold $SENDER_TOM --receiver_tom  $RECEIVER_TOM
+time singularity exec ${CONTAINER_PATH} python main.py  --environment $ENV --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --sender_tom $SENDER_TOM --receiver_tom  $RECEIVER_TOM

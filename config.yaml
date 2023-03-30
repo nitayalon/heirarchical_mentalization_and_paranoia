@@ -7,8 +7,8 @@ general:
 
 environments:
   basic_task:
-    n_trials: 5
-    planning_depth: 5
+    n_trials: 10
+    planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
     mcts_number_of_iterations: 3000
