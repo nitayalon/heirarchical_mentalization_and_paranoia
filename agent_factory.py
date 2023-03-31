@@ -13,7 +13,7 @@ class AgentFactory:
         self.agent_actions = np.arange(0, 1.05, 0.05)
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
-        self.thresholds_seq = [0.0, 0.1, 0.2, 0.4] if self.include_random else [0.1, 0.2, 0.4]  # parameters to control threshold of agent
+        self.thresholds_seq = [0.0, 0.1, 0.3, 0.5] if self.include_random else [0.1, 0.3, 0.5]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
 
