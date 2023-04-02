@@ -1,18 +1,18 @@
-import numpy as np
-
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
 from typing import Optional, Union
 
 
 class DoMOneBelief(DoMZeroBelief):
-    def __init__(self, belief_distribution_support, zero_level_belief, opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
+    def __init__(self, belief_distribution_support, zero_level_belief, include_persona_inference: bool,
+                 opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
                  history: History):
         super().__init__(belief_distribution_support, zero_level_belief, opponent_model, history)
         self.nested_belief = opponent_model.belief.belief_distribution
         # Because there's no observation uncertainty the DoM(1) belief about the DoM(0) belief is its belief
         self.prior_belief = opponent_model.belief.belief_distribution
         self.belief_distribution = self.prior_belief
+        self.include_persona_inference = include_persona_inference
 
     def update_distribution(self, action, observation, iteration_number):
         """
@@ -25,10 +25,11 @@ class DoMOneBelief(DoMZeroBelief):
         if iteration_number <= 1:
             return None
         prior = np.copy(self.belief_distribution[-1, :])
-        # Compute P(observation|action, history)
         likelihood = self.compute_likelihood(action, observation, prior, iteration_number)
-        posterior = likelihood * prior
-        self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
+        if self.include_persona_inference:
+            # Compute P(observation|action, history)
+            posterior = likelihood * prior
+            self.belief_distribution = np.vstack([self.belief_distribution, posterior / posterior.sum()])
         # Store nested belief
         self.nested_belief = self.opponent_model.belief.belief_distribution
 
@@ -45,20 +46,22 @@ class DoMOneBelief(DoMZeroBelief):
         offer_likelihood = np.empty_like(prior)
         original_threshold = self.opponent_model.threshold
         # update nested belief
-        self.opponent_model.belief.update_distribution(last_observation, action, iteration_number-1)
-        for i in range(len(self.prior_belief[:, 0])):
-            theta = self.prior_belief[:, 0][i]
-            if theta == 0.0:
-                offer_likelihood[i] = 1 / len(self.opponent_model.potential_actions)
-                continue
-            self.opponent_model.threshold = theta
-            actions, q_values, softmax_transformation, mcts_tree = \
-                self.opponent_model.forward(last_observation, action, iteration_number-1, False)
-            # If the observation is not in the feasible action set then it singles theta hat:
-            observation_probability = softmax_transformation[np.where(self.opponent_model.potential_actions == observation.value)]
-            offer_likelihood[i] = observation_probability
-        self.opponent_model.threshold = original_threshold
-        return offer_likelihood
+        self.opponent_model.belief.update_distribution(last_observation, action, iteration_number)
+        if self.include_persona_inference:
+            for i in range(len(self.support)):
+                theta = self.support[i]
+                if theta == 0.0:
+                    offer_likelihood[i] = 1 / len(self.opponent_model.potential_actions)
+                    continue
+                self.opponent_model.threshold = theta
+                actions, q_values, softmax_transformation, mcts_tree = \
+                    self.opponent_model.forward(last_observation, action, iteration_number-1, False)
+                # If the observation is not in the feasible action set then it singles theta hat:
+                observation_probability = softmax_transformation[np.where(self.opponent_model.potential_actions == observation.value)]
+                offer_likelihood[i] = observation_probability
+            self.opponent_model.threshold = original_threshold
+            return offer_likelihood
+        return None
 
     def sample(self, rng_key, n_samples):
         """
@@ -104,7 +107,8 @@ class DoMOneReceiver(DoMZeroReceiver):
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.environment_model = DoMOneEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
-        self.belief = DoMOneBelief(prior_belief, self.opponent_model, self.history)
+        self.belief = DoMOneBelief(self.opponent_model.belief.support, self.opponent_model.belief.belief_distribution,
+                                   True, self.opponent_model, self.history)
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(1)_receiver"
 
@@ -117,7 +121,7 @@ class DoMOneSender(DoMZeroSender):
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.belief = DoMOneBelief(self.opponent_model.belief.support, self.opponent_model.belief.belief_distribution,
-                                   self.opponent_model, self.history)
+                                   False, self.opponent_model, self.history)
         self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
         self.exploration_policy = DoMZeroSenderExplorationPolicy(self.potential_actions, self.utility_function,
                                                                  self.config.get_from_env("rollout_rejecting_bonus"),
