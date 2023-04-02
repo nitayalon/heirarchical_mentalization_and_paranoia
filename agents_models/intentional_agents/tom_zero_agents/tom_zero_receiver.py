@@ -54,8 +54,8 @@ class DoMZeroReceiverEnvironmentModel(DoMZeroEnvironmentModel):
 
 class DoMZeroReceiverExplorationPolicy(DoMZeroExplorationPolicy):
 
-    def __init__(self, actions, reward_function, exploration_bonus, belief: np.array):
-        super().__init__(actions, reward_function, exploration_bonus, belief)
+    def __init__(self, actions, reward_function, exploration_bonus, belief: np.array, type_support: np.array):
+        super().__init__(actions, reward_function, exploration_bonus, belief, type_support)
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float,
                iteration_number: int):

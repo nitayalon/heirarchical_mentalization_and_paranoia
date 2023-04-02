@@ -181,14 +181,16 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
 
 
 class DoMZeroExplorationPolicy:
-    def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array):
-        self.belief = belief
+    def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array,
+                 type_support: np.array):
         self.actions = actions
         self.reward_function = reward_function
         self.exploration_bonus = exploration_bonus
+        self.belief = belief
+        self.support = type_support
 
     def update_belief(self, belief: np.array):
-        if belief[:, -1].sum() != 1:
+        if belief.sum() != 1:
             return None
         self.belief = belief
 
