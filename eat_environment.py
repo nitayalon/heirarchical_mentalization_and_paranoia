@@ -11,11 +11,11 @@ class EAT:
         self.endowment = float(self.config.get_from_env("endowment"))
         self.trail_results = []
 
-    def export_beliefs(self, beliefs: Optional[np.array], agent_name: str,
+    def export_beliefs(self, beliefs: Optional[np.array], support, agent_name: str,
                        receiver_threshold: str, agent_threshold: str):
         beliefs_df = None
-        if beliefs is not None:
-            beliefs_df = pd.DataFrame(beliefs.T[1:, ], columns=beliefs.T[0, ])
+        if not pd.isna(beliefs).all():
+            beliefs_df = pd.DataFrame(beliefs, columns=support)
             beliefs_df['agent_name'] = agent_name
             beliefs_df['seed'] = self.seed
             beliefs_df['trial_number'] = np.arange(0, beliefs_df.shape[0], 1)
@@ -49,9 +49,12 @@ class EAT:
         agents_q_values['seed'] = self.seed
         agents_q_values = self.add_experiment_data_to_df(agents_q_values, receiver_threshold,
                                                          sender_threshold)
-        receiver_belief = self.export_beliefs(receiver.belief.belief_distribution, receiver.name,
+        receiver_belief = self.export_beliefs(receiver.belief.belief_distribution,
+                                              receiver.belief.support,
+                                              receiver.name,
                                              receiver_threshold,  sender_threshold)
-        sender_belief = self.export_beliefs(sender.belief.belief_distribution, sender.name,
+        sender_belief = self.export_beliefs(sender.belief.belief_distribution,
+                                            receiver.belief.support, sender.name,
                                            receiver_threshold, sender_threshold)
         return experiment_results, agents_q_values, receiver_belief, sender_belief
 

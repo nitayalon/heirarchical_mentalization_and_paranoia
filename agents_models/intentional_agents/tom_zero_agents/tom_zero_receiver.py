@@ -5,8 +5,8 @@ from agents_models.abstract_agents import *
 
 class DomZeroReceiverBelief(DoMZeroBelief):
 
-    def __init__(self, intentional_threshold_belief, opponent_model, history: History):
-        super().__init__(intentional_threshold_belief, opponent_model, history)
+    def __init__(self, support, zero_level_belief, opponent_model, history: History):
+        super().__init__(support, zero_level_belief, opponent_model, history)
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
         """
@@ -20,8 +20,8 @@ class DomZeroReceiverBelief(DoMZeroBelief):
         last_observation = self.history.get_last_observation()
         offer_likelihood = np.empty_like(prior)
         original_threshold = self.opponent_model.threshold
-        for i in range(len(self.prior_belief[:, 0])):
-            theta = self.prior_belief[:, 0][i]
+        for i in range(len(self.support)):
+            theta = self.support[i]
             if theta == 0.0:
                 offer_likelihood[i] = 1 / len(self.opponent_model.potential_actions)
                 continue
@@ -97,7 +97,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
             self.belief.update_distribution(action, observation, iteration_number)
         # Recursive tree spanning
         q_values_array = []
-        for threshold in self.belief.belief_distribution[:, 0]:
+        for threshold in self.belief.support:
             # Reset nested model
             self.reset_persona(threshold, action_length, observation_length,
                                self.opponent_model.belief)
@@ -106,7 +106,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                               iteration_number=iteration_number)
             q_values = list(map(future_values, self.surrogate_actions))
             q_values_array.append(q_values)
-        weighted_q_values = self.belief.belief_distribution[:, -1] @ np.array(q_values_array)
+        weighted_q_values = self.belief.belief_distribution[-1, :] @ np.array(q_values_array)
         n_visits = np.repeat(10, self.actions.size)
         return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values, n_visits]
 
@@ -139,12 +139,9 @@ class DoMZeroReceiver(DoMZeroModel):
                  opponent_model: SubIntentionalAgent,
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
-        self.belief = DomZeroReceiverBelief(prior_belief, self.opponent_model, self.history)
+        self.belief = DomZeroReceiverBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)
         self.environment_model = DoMZeroReceiverEnvironmentModel(self.opponent_model, self.utility_function,
                                                                  self.belief)
-        self.exploration_policy = DoMZeroReceiverExplorationPolicy(self.potential_actions, self.utility_function,
-                                                                   self.config.get_from_env("rollout_rejecting_bonus"),
-                                                                  self.belief.belief_distribution[:, :2])
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
                                             self.utility_function,
                                             float(self.config.get_from_env("planning_depth")),

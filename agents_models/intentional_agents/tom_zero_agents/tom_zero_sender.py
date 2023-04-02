@@ -6,8 +6,8 @@ import functools
 
 class DoMZeroSenderBelief(DoMZeroBelief):
 
-    def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalAgent, history: History):
-        super().__init__(intentional_threshold_belief, opponent_model, history)
+    def __init__(self, zero_level_belief, opponent_model: SubIntentionalAgent, history: History):
+        super().__init__(zero_level_belief, opponent_model, history)
 
     def compute_likelihood(self, action, observation, prior, iteration_number=None):
         """

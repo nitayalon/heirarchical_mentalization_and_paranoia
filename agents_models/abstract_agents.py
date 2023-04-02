@@ -7,7 +7,7 @@ import os
 class SubIntentionalBelief(BeliefDistribution):
 
     def __init__(self, history: History):
-        super().__init__(None, None, history)
+        super().__init__(None, None, None, history)
 
     def get_current_belief(self):
         return None
@@ -97,13 +97,14 @@ class SubIntentionalAgent(ABC):
 
 class DoMZeroBelief(BeliefDistribution):
 
-    def __init__(self, intentional_threshold_belief: np.array, opponent_model: Optional[SubIntentionalAgent],
+    def __init__(self, support, zero_level_belief: Optional[np.array],
+                 opponent_model: Optional[SubIntentionalAgent],
                  history: History):
         """
-        :param intentional_threshold_belief: np.array - represents the prior belief about the sender_parameters
+        :param zero_level_belief: np.array - represents the prior belief about the sender_parameters
         :param opponent_model:
         """
-        super().__init__(intentional_threshold_belief, opponent_model, history)
+        super().__init__(support, zero_level_belief, opponent_model, history)
         self.opponent_belief = None
 
     def compute_likelihood(self, action, observation, prior, iteration_number=None):
@@ -119,10 +120,10 @@ class DoMZeroBelief(BeliefDistribution):
         """
         if iteration_number <= 1:
             return None
-        prior = np.copy(self.belief_distribution[:, -1])
+        prior = np.copy(self.belief_distribution[-1, :])
         probabilities = self.compute_likelihood(action, observation, prior, iteration_number)
         posterior = probabilities * prior
-        self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
+        self.belief_distribution = np.vstack([self.belief_distribution, posterior / posterior.sum()])
 
     def sample(self, rng_key, n_samples):
         probabilities = self.belief_distribution[:, -1]
@@ -208,7 +209,7 @@ class DoMZeroModel(SubIntentionalAgent):
                  seed: int):
         super().__init__(actions, softmax_temp, threshold)
         self.opponent_model = opponent_model
-        self.belief = DoMZeroBelief(prior_belief, self.opponent_model, self.history)  # type: DoMZeroBelief
+        self.belief = DoMZeroBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)  # type: DoMZeroBelief
         self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
         self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
 

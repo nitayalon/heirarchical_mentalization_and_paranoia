@@ -1,13 +1,18 @@
+import numpy as np
+
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
 from typing import Optional, Union
 
 
 class DoMOneBelief(DoMZeroBelief):
-    def __init__(self, intentional_threshold_belief, opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
+    def __init__(self, zero_level_belief, opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
                  history: History):
-        super().__init__(intentional_threshold_belief, opponent_model, history)
-        self.nested_belief = None
+        super().__init__(zero_level_belief, opponent_model, history)
+        self.nested_belief = opponent_model.belief.belief_distribution
+        # Because there's no observation uncertainty the DoM(1) belief about the DoM(0) belief is its belief
+        self.prior_belief = opponent_model.belief.belief_distribution
+        self.belief_distribution = self.prior_belief
 
     def update_distribution(self, action, observation, iteration_number):
         """
@@ -55,6 +60,18 @@ class DoMOneBelief(DoMZeroBelief):
         self.opponent_model.threshold = original_threshold
         return offer_likelihood
 
+    def sample(self, rng_key, n_samples):
+        """
+        Sample nested beliefs
+        :param rng_key:
+        :param n_samples:
+        :return:
+        """
+        probabilities = 1.0
+        rng_generator = np.random.default_rng(rng_key)
+        particles = rng_generator.choice(self.belief_distribution, size=n_samples, p=probabilities)
+        return self.opponent_model.belief.belief_distribution
+
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
     def __init__(self, opponent_model: DoMZeroSender, reward_function, belief_distribution: DoMOneBelief):
@@ -99,7 +116,7 @@ class DoMOneSender(DoMZeroSender):
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
-        self.belief = DoMOneBelief(prior_belief, self.opponent_model, self.history)
+        self.belief = DoMOneBelief(None, self.opponent_model, self.history)
         self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
         self.name = "DoM(1)_sender"
 
