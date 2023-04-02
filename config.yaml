@@ -15,4 +15,4 @@ environments:
     discount_factor: 0.95
     endowment: 1.0
     subintentional_type: softmax
-    subintentional_weight: -0.5
+    subintentional_weight: -0.8

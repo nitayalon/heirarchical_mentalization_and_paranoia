@@ -46,7 +46,7 @@ class DoMZeroReceiverEnvironmentModel(DoMZeroEnvironmentModel):
 
     def update_persona(self, observation, action):
         self.opponent_model.low = self.low
-        self.opponent_model.high = self.high
+        self.opponent_model._high = self.high
         self.opponent_model.update_bounds(observation, action)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high

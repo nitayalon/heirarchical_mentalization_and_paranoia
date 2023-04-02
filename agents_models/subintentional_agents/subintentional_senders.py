@@ -29,14 +29,14 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
             return None
         # If the subject accepted the offer the upper bound is updated
         if observation.value:
-            self.high = min(action.value, 1.0-self.threshold)
+            self._high = min(action.value, 1.0-self.threshold)
         # If the offer is rejected the upper bound is updated
         else:
             self.low = action.value
         # If the opponent plays tricks with us
-        if self.high < self.low:
-            temp = self.high
-            self.high = self.low
+        if self._high < self.low:
+            temp = self._high
+            self._high = self.low
             self.low = temp
 
 

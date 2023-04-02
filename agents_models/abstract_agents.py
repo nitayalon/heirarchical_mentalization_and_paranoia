@@ -29,7 +29,7 @@ class SubIntentionalAgent(ABC):
         self.potential_actions = actions
         self._threshold = threshold
         self.softmax_temp = softmax_temp
-        self.high = 1.0
+        self._high = 1-self.threshold if threshold is not None else 1.0
         self.low = 0.0
         self.name = None
         self.history = History()
@@ -37,14 +37,18 @@ class SubIntentionalAgent(ABC):
         self._alpha = None
 
     def reset(self, high: Optional[float] = None, low: Optional[float] = None, terminal: Optional[bool] = False):
-        self.high = high
+        self._high = high
         self.low = low
         self.reset_belief()
         self.reset_solver()
         if terminal:
-            self.high = 1.0
+            self._high = 1-self.threshold
             self.low = 0.0
             self.history.reset(0, 0)
+
+    @property
+    def high(self):
+        return self._high
 
     @property
     def threshold(self):
@@ -53,14 +57,7 @@ class SubIntentionalAgent(ABC):
     @threshold.setter
     def threshold(self, gamma):
         self._threshold = gamma
-
-    @property
-    def alpha(self):
-        return self._alpha
-
-    @alpha.setter
-    def alpha(self, alpha):
-        self._alpha = alpha
+        self._high = 1 - gamma if gamma is not None else 1.0
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
@@ -218,7 +215,7 @@ class DoMZeroModel(SubIntentionalAgent):
     def reset(self, high: Optional[float] = None, low: Optional[float] = None,
               action_length: Optional[float] = 0, observation_length: Optional[float] = 0,
               terminal: Optional[bool] = False):
-        self.high = 1.0
+        self._high = 1.0
         self.low = 0.0
         self.history.reset(action_length, observation_length)
         self.opponent_model.reset(1.0, 0.0, terminal=terminal)
@@ -233,7 +230,6 @@ class DoMZeroModel(SubIntentionalAgent):
             self.opponent_model.history.update_actions(observation)
         action_nodes, q_values, softmax_transformation, mcts_tree = self.forward(action, observation, iteration_number)
         if self.config.output_planning_tree:
-            mcts_tree["alpha"] = self.alpha
             mcts_tree["softmax_temp"] = self.softmax_temp
             mcts_tree["agent_type"] = self.name
             mcts_tree_output_name = os.path.join(self.config.planning_results_dir,
