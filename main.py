@@ -38,42 +38,35 @@ if __name__ == "__main__":
     rational_sender = factory.constructor("rational_sender")
     random_sender = factory.constructor("rational_sender", "DoM-1")
     rational_receiver = factory.constructor("rational_receiver")
-    random_receiver = factory.constructor("rational_receiver", "DoM-1")
     experiment_data = factory.create_experiment_grid()
     report_point = factory.grid_size
     sender_parameters = experiment_data["sender_parameters"]
-    receiver_parameters = experiment_data["receiver_parameters"]
     i = 0
-    for receiver_threshold in receiver_parameters:
-        for sender_threshold in sender_parameters:
-            # set random senders
-            if sender_threshold == 0:
-                sender = random_sender
-            else:
-                sender = rational_sender
-            if receiver_threshold == 0:
-                receiver = random_receiver
-            else:
-                receiver = rational_receiver
-            # Update individual parameters
-            receiver.threshold = receiver_threshold
-            sender.threshold = sender_threshold
-            # Initial experiment name
-            experiment_name = set_experiment_name(receiver.threshold, sender.threshold)
-            config.new_experiment_name(experiment_name)
-            print(f'Sender parameters: gamma = {sender.threshold}', flush=True)
-            print(f'Receiver parameters: gamma = {receiver.threshold}', flush=True)
-            eat_task_simulator = EAT(config.seed)
-            experiment_results, q_values, receiver_belief, sender_belief = \
-                eat_task_simulator.simulate_task(sender, receiver, receiver.threshold, sender.threshold)
-            sender.reset(terminal=True)
-            receiver.reset(terminal=True)
-            experiment_name = config.experiment_name
-            output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
-            experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)
-            q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
-            export_beliefs_to_file(receiver_belief, 'receiver_beliefs', output_file_name)
-            export_beliefs_to_file(sender_belief, 'sender_beliefs', output_file_name)
-            print("#" * 10 + ' simulation over ' + "#" * 10, flush=True)
-            i += 1
-            print(f'{i / factory.grid_size * 100}% of trials completed', flush=True)
+    for sender_threshold in sender_parameters:
+        # set random senders
+        if sender_threshold == 0:
+            sender = random_sender
+        else:
+            sender = rational_sender
+        receiver = rational_receiver
+        # Update individual parameters
+        sender.threshold = sender_threshold
+        # Initial experiment name
+        experiment_name = set_experiment_name(receiver.threshold, sender.threshold)
+        config.new_experiment_name(experiment_name)
+        print(f'Sender parameters: gamma = {sender.threshold}', flush=True)
+        print(f'Receiver parameters: gamma = {receiver.threshold}', flush=True)
+        eat_task_simulator = EAT(config.seed)
+        experiment_results, q_values, receiver_belief, sender_belief = \
+            eat_task_simulator.simulate_task(sender, receiver, receiver.threshold, sender.threshold)
+        sender.reset(terminal=True)
+        receiver.reset(terminal=True)
+        experiment_name = config.experiment_name
+        output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
+        experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)
+        q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
+        export_beliefs_to_file(receiver_belief, 'receiver_beliefs', output_file_name)
+        export_beliefs_to_file(sender_belief, 'sender_beliefs', output_file_name)
+        print("#" * 10 + ' simulation over ' + "#" * 10, flush=True)
+        i += 1
+        print(f'{i / factory.grid_size * 100}% of trials completed', flush=True)

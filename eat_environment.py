@@ -24,8 +24,8 @@ class EAT:
 
     @staticmethod
     def add_experiment_data_to_df(df: pd.DataFrame, subject_threshold: str, agent_threshold: str) -> pd.DataFrame:
-        df['subject_threshold'] = subject_threshold
-        df['agent_threshold'] = agent_threshold
+        df['receiver_threshold'] = subject_threshold
+        df['sender_threshold'] = agent_threshold
         return df
 
     def simulate_task(self, sender, receiver, subject_threshold: str, agent_threshold: str) -> \
@@ -61,8 +61,6 @@ class EAT:
         response, subject_q_values = receiver.act(seed, response, offer, trial_number + 1)
         agent_reward = (1-offer.value) * response.value
         subject_reward = offer.value * response.value
-        # rational_sender.update_history(offer, response, agent_reward)
-        # rational_receiver.update_history(response, offer, subject_reward)
         agent_q_values = pd.DataFrame(agent_q_values)
         agent_q_values['agent_name'] = sender.name
         agent_q_values['parameter'] = sender.threshold

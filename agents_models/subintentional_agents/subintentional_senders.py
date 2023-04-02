@@ -42,10 +42,10 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
 
 class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
 
-    def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
+    def __init__(self, actions, softmax_temp: float, penalty: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
         self._name = "DoM(-1)_RRA"
-        self.weight = 0.5
+        self.penalty = penalty
 
     @property
     def name(self):
@@ -58,10 +58,10 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         else:
             self._name = "DoM(-1)_Rational"
 
-    def compute_weights(self, offers, low_bound, up_bound):
-        w = np.logical_and(low_bound < offers, offers <= up_bound)
-        w_prime = w + self.weight
-        return w_prime / np.sum(w_prime)
+    def _compute_weights(self, offers, low_bound, up_bound):
+        w = np.logical_not(np.logical_and(low_bound < offers, offers <= up_bound))
+        w_prime = self.penalty * w
+        return w_prime
 
     def rational_forward(self, action: Action, observation: Action):
         """
@@ -72,7 +72,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         """
         upper_bound = np.round(self.high, 3)
         lower_bound = np.round(self.low, 3)
-        weights = self.compute_weights(self.potential_actions, lower_bound, upper_bound)
+        weights = self._compute_weights(self.potential_actions, lower_bound, upper_bound)
         q_values, probabilities = self._compute_q_values_and_probabilities(self.potential_actions, weights)
         return self.potential_actions, q_values, probabilities
 
@@ -87,7 +87,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         return potential_actions, q_values, probabilities
 
     def _compute_q_values_and_probabilities(self, relevant_actions, weights):
-        q_values = self.utility_function(relevant_actions, Action(None, False)) * weights
+        q_values = self.utility_function(relevant_actions, Action(None, False)) + weights
         probabilities = self.softmax_transformation(q_values)
         return q_values, probabilities
 
