@@ -7,8 +7,11 @@ class EAT:
     def __init__(self, seed):
         self.config = get_config()
         self.n_trails = int(self.config.get_from_env("n_trials"))
-        self.seed = seed
         self.endowment = float(self.config.get_from_env("endowment"))
+        self.seed = seed
+        self.trail_results = []
+
+    def reset(self):
         self.trail_results = []
 
     def export_beliefs(self, beliefs: Optional[np.array], support, agent_name: str,

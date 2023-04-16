@@ -42,9 +42,13 @@ if __name__ == "__main__":
     report_point = factory.grid_size
     sender_parameters = experiment_data["sender_parameters"]
     i = 0
+    eat_task_simulator = EAT(config.seed)
     for sender_threshold in sender_parameters:
         # set random senders
+        eat_task_simulator.reset()
         if sender_threshold == 0:
+            if config.get_from_general("skip_random"):
+                continue
             sender = random_sender
         else:
             sender = rational_sender
@@ -56,7 +60,6 @@ if __name__ == "__main__":
         config.new_experiment_name(experiment_name)
         print(f'Sender parameters: gamma = {sender.threshold}', flush=True)
         print(f'Receiver parameters: gamma = {receiver.threshold}', flush=True)
-        eat_task_simulator = EAT(config.seed)
         experiment_results, q_values, receiver_belief, sender_belief = \
             eat_task_simulator.simulate_task(sender, receiver, receiver.threshold, sender.threshold)
         sender.reset(terminal=True)

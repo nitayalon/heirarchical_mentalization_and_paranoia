@@ -232,7 +232,7 @@ class DoMZeroModel(SubIntentionalAgent):
             self.history.update_observations(observation)
             self.opponent_model.history.update_actions(observation)
         action_nodes, q_values, softmax_transformation, mcts_tree = self.forward(action, observation, iteration_number)
-        if self.config.output_planning_tree:
+        if mcts_tree is not None:
             mcts_tree["softmax_temp"] = self.softmax_temp
             mcts_tree["agent_type"] = self.name
             mcts_tree_output_name = os.path.join(self.config.planning_results_dir,
