@@ -41,8 +41,8 @@ class DomZeroReceiverBelief(DoMZeroBelief):
 
 class DoMZeroReceiverEnvironmentModel(DoMZeroEnvironmentModel):
 
-    def __init__(self, opponent_model: SubIntentionalAgent, reward_function, belief_distribution: DomZeroReceiverBelief):
-        super().__init__(opponent_model, reward_function, belief_distribution)
+    def __init__(self, opponent_model: SubIntentionalAgent, reward_function, actions, belief_distribution: DomZeroReceiverBelief):
+        super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
     def update_persona(self, observation, action):
         self.opponent_model.low = self.low
@@ -77,7 +77,7 @@ class DoMZeroReceiverExplorationPolicy(DoMZeroExplorationPolicy):
 class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
     def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model,
                  reward_function, planning_horizon, discount_factor):
-        super().__init__(opponent_model, reward_function, belief_distribution)
+        super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.actions = actions
         self.belief = belief_distribution
         self.opponent_model = opponent_model
@@ -141,6 +141,7 @@ class DoMZeroReceiver(DoMZeroModel):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.belief = DomZeroReceiverBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)
         self.environment_model = DoMZeroReceiverEnvironmentModel(self.opponent_model, self.utility_function,
+                                                                 actions,
                                                                  self.belief)
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
                                             self.utility_function,
@@ -148,7 +149,7 @@ class DoMZeroReceiver(DoMZeroModel):
                                             float(self.config.get_from_env("discount_factor")))
         self.name = "DoM(0)_receiver"
 
-    def utility_function(self, action, observation, *args):
+    def utility_function(self, observation, action, *args):
         """
 
         :param action: bool - either True for accepting the offer or False for rejecting it

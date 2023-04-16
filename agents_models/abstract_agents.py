@@ -72,8 +72,10 @@ class SubIntentionalAgent(ABC):
         seed = self.update_seed(seed, iteration_number)
         relevant_actions, q_values, probabilities = self.forward(action, observation, iteration_number)
         random_number_generator = np.random.default_rng(seed)
-        optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
-        return Action(optimal_offer, False), np.array([relevant_actions, q_values]).T
+        optimal_action_idx = random_number_generator.choice(len(relevant_actions), p=probabilities)
+        optimal_offer = relevant_actions[optimal_action_idx]
+        probability = probabilities[optimal_action_idx]
+        return Action(optimal_offer, False), probability, np.array([relevant_actions, q_values]).T, probabilities
 
     @abstractmethod
     def forward(self, action: Action, observation: Action, iteration_number=None):
@@ -139,10 +141,14 @@ class DoMZeroBelief(BeliefDistribution):
 class DoMZeroEnvironmentModel(EnvironmentModel):
 
     def __init__(self, opponent_model: SubIntentionalAgent,
-                 reward_function, belief_distribution: DoMZeroBelief,
+                 reward_function,
+                 actions: np.array,
+                 belief_distribution: DoMZeroBelief,
                  low=0.0, high=1.0):
         super().__init__(opponent_model, belief_distribution)
         self.reward_function = reward_function
+        self.actions = actions
+        self.surrogate_actions = [Action(value, False) for value in self.actions]
         self.opponent_model = opponent_model
         self.low = low
         self.high = high
@@ -170,11 +176,12 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        counter_offer, q_values = self.opponent_model.act(seed, observation, action, iteration_number)
+        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
+                                                                                                    action, iteration_number)
         reward = self.reward_function(action.value, observation.value, counter_offer.value)
         interactive_state.state.terminal = interactive_state.state.name == 10
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        return interactive_state, counter_offer, reward
+        return interactive_state, counter_offer, reward, observation_probability
 
     def update_persona(self, observation, action):
         pass
@@ -212,7 +219,7 @@ class DoMZeroModel(SubIntentionalAgent):
         super().__init__(actions, softmax_temp, threshold)
         self.opponent_model = opponent_model
         self.belief = DoMZeroBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)  # type: DoMZeroBelief
-        self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
+        self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, actions, self.belief)
         self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
 
     def reset(self, high: Optional[float] = None, low: Optional[float] = None,
@@ -242,6 +249,7 @@ class DoMZeroModel(SubIntentionalAgent):
         prng = np.random.default_rng(seed)
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
         actions = list(action_nodes.keys())
+        action_probability = softmax_transformation[best_action_idx]
         if self.solver.name == "IPOMCP":
             best_action = action_nodes[actions[best_action_idx]].action
         else:
@@ -251,7 +259,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.environment_model.opponent_model.history.update_observations(best_action)
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
-        return best_action, q_values[:, :-1]
+        return best_action, action_probability, q_values[:, :-1], softmax_transformation
 
     def forward(self, action=None, observation=None, iteration_number=None, update_belief=True):
         actions, mcts_tree, q_values = self.solver.plan(action, observation, iteration_number, update_belief)

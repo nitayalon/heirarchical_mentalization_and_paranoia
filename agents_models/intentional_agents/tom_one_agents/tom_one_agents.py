@@ -1,3 +1,5 @@
+import numpy as np
+
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
 from typing import Optional, Union
@@ -78,8 +80,10 @@ class DoMOneBelief(DoMZeroBelief):
 
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
-    def __init__(self, opponent_model: DoMZeroSender, reward_function, belief_distribution: DoMOneBelief):
-        super().__init__(opponent_model, reward_function, belief_distribution)
+    def __init__(self, opponent_model: DoMZeroSender, reward_function,
+                 actions: np.array,
+                 belief_distribution: DoMOneBelief):
+        super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
         self.opponent_model.threshold = persona
@@ -90,13 +94,24 @@ class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
 
 
 class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
-    def __init__(self, opponent_model: DoMZeroSender, reward_function, belief_distribution: DoMOneBelief):
-        super().__init__(opponent_model, reward_function, belief_distribution)
+    def __init__(self, opponent_model: DoMZeroSender, reward_function, actions: np.array,
+                 belief_distribution: DoMOneBelief):
+        super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
         self.opponent_model.threshold = persona
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
+
+    def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
+             iteration_number: int):
+        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
+                                                                                                    action, iteration_number)
+        reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
+                 self.reward_function(action.value, observation.value, not counter_offer.value) * (1-observation_probability)
+        interactive_state.state.terminal = interactive_state.state.name == 10
+        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
+        return interactive_state, counter_offer, reward, observation_probability
 
 
 class DoMOneReceiver(DoMZeroReceiver):
@@ -122,7 +137,9 @@ class DoMOneSender(DoMZeroSender):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.belief = DoMOneBelief(self.opponent_model.belief.support, self.opponent_model.belief.belief_distribution,
                                    False, self.opponent_model, self.history)
-        self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
+        self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function,
+                                                              actions,
+                                                              self.belief)
         self.exploration_policy = DoMZeroSenderExplorationPolicy(self.potential_actions, self.utility_function,
                                                                  self.config.get_from_env("rollout_rejecting_bonus"),
                                                                  self.belief.belief_distribution,

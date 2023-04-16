@@ -41,8 +41,9 @@ class EAT:
             offer, response, trial_results, q_values = self.trial(trial_number, sender, receiver, seed, offer, response)
             self.trail_results.append(trial_results)
             q_values_list.append(q_values)
-        experiment_results = pd.DataFrame(self.trail_results, columns=['offer', 'response', 'sender_reward',
-                                                                       'receiver_reward'])
+        experiment_results = pd.DataFrame(self.trail_results, columns=['offer', 'offer_probability',
+                                                                       'response', 'response_probability',
+                                                                       'sender_reward', 'receiver_reward'])
         experiment_results['trial_number'] = np.arange(1, self.n_trails+1, 1)
         experiment_results['seed'] = self.seed
         experiment_results = self.add_experiment_data_to_df(experiment_results, receiver_threshold,
@@ -63,8 +64,8 @@ class EAT:
 
     @staticmethod
     def trial(trial_number, sender,  receiver, seed, offer, response):
-        offer, sender_q_values = sender.act(seed, offer, response, trial_number)
-        response, receiver_q_values = receiver.act(seed, response, offer, trial_number + 1)
+        offer, offer_probability, sender_q_values, sender_policy = sender.act(seed, offer, response, trial_number)
+        response, response_probability , receiver_q_values, receiver_policy = receiver.act(seed, response, offer, trial_number + 1)
         sender_reward = (1-offer.value) * response.value
         receiver_reward = offer.value * response.value
         sender_q_values = pd.DataFrame(sender_q_values)
@@ -76,5 +77,7 @@ class EAT:
         receiver_q_values['parameter'] = receiver.threshold
         receiver_q_values['trial'] = trial_number
         q_values = pd.concat([sender_q_values, receiver_q_values])
-        return offer, response, np.array([offer.value, response.value, sender_reward, receiver_reward]), q_values
+        return offer, response, np.array([offer.value, offer_probability,
+                                          response.value, response_probability,
+                                          sender_reward, receiver_reward]), q_values
 

@@ -36,8 +36,9 @@ class DoMZeroSenderBelief(DoMZeroBelief):
 class DoMZeroSenderEnvironmentModel(DoMZeroEnvironmentModel):
 
     def __init__(self, opponent_model: SubIntentionalAgent, reward_function,
+                 actions: np.array,
                  belief_distribution):
-        super().__init__(opponent_model, reward_function, belief_distribution)
+        super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
 
 class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
@@ -74,7 +75,7 @@ class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
 class DoMZeroSenderSolver(DoMZeroEnvironmentModel):
     def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model: SubIntentionalAgent,
                  reward_function, planning_horizon, discount_factor):
-        super().__init__(opponent_model, reward_function, belief_distribution)
+        super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.actions = actions
         self.belief = belief_distribution
         self.opponent_model = opponent_model
@@ -126,7 +127,8 @@ class DoMZeroSender(DoMZeroModel):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.config = get_config()
         self.belief = DoMZeroSenderBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)
-        self.environment_model = DoMZeroSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
+        self.environment_model = DoMZeroSenderEnvironmentModel(self.opponent_model, self.utility_function,
+                                                               actions, self.belief)
         self.solver = DoMZeroSenderSolver(self.potential_actions, self.belief, self.opponent_model,
                                           self.utility_function,
                                           float(self.config.get_from_env("planning_depth")),
