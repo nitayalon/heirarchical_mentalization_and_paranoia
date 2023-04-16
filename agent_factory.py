@@ -10,10 +10,12 @@ class AgentFactory:
         # Load environmental parameters
         self.softmax_temp = float(self.config.softmax_temperature)
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
-        self.agent_actions = np.arange(0, 1.05, 0.05)
+        self.subintentional_weight = float(self.config.get_from_env("subintentional_weight"))
+        self.agent_actions = np.round(np.arange(0, 1.05, 0.05),3)
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
-        self.thresholds_seq = [0.0, 0.1, 0.3, 0.5] if self.include_random else [0.1, 0.3, 0.5]  # parameters to control threshold of agent
+        self._thresholds = [0.1, 0.5]
+        self.thresholds_seq = [0.0, 0.1, 0.5] if self.include_random else [0.1, 0.5]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
 
@@ -46,9 +48,11 @@ class AgentFactory:
     def dom_minus_one_constructor(self, agent_role):
         if agent_role == "rational_sender":
             if self.config.subintentional_agent_type == "uniform":
-                agent = UniformRationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
+                agent = UniformRationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp,
+                                                                  self.subintentional_weight)
             else:
-                agent = SoftMaxRationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp)
+                agent = SoftMaxRationalRandomSubIntentionalSender(self.agent_actions, self.softmax_temp,
+                                                                  self.subintentional_weight)
         else:
             agent = SubIntentionalReceiver(self.subject_actions, self.softmax_temp)
         return agent
@@ -57,12 +61,12 @@ class AgentFactory:
         if agent_role == "rational_sender":
             opponent_model = self.dom_minus_one_constructor("rational_receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-            output_agent = DoMZeroSender(self.agent_actions, self.config.softmax_temperature, None,
+            output_agent = DoMZeroSender(self.agent_actions, self.config.softmax_temperature, 0.0,
                                          opponent_theta_hat_distribution, opponent_model, self.config.seed)
         else:
             opponent_model = self.dom_minus_one_constructor("rational_sender")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-            output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, None,
+            output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, 0.0,
                                            opponent_theta_hat_distribution, opponent_model, self.config.seed)
         return output_agent
 

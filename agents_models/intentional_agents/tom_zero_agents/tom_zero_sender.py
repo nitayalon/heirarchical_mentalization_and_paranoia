@@ -6,8 +6,8 @@ import functools
 
 class DoMZeroSenderBelief(DoMZeroBelief):
 
-    def __init__(self, intentional_threshold_belief, opponent_model: SubIntentionalAgent, history: History):
-        super().__init__(intentional_threshold_belief, opponent_model, history)
+    def __init__(self, support, zero_level_belief, opponent_model: SubIntentionalAgent, history: History):
+        super().__init__(support, zero_level_belief, opponent_model, history)
 
     def compute_likelihood(self, action, observation, prior, iteration_number=None):
         """
@@ -36,14 +36,15 @@ class DoMZeroSenderBelief(DoMZeroBelief):
 class DoMZeroSenderEnvironmentModel(DoMZeroEnvironmentModel):
 
     def __init__(self, opponent_model: SubIntentionalAgent, reward_function,
-                 belief_distribution: DoMZeroSenderBelief):
-        super().__init__(opponent_model, reward_function, belief_distribution)
+                 actions: np.array,
+                 belief_distribution):
+        super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
 
 class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
 
-    def __init__(self, actions, reward_function, exploration_bonus, belief: np.array):
-        super().__init__(actions, reward_function, exploration_bonus, belief)
+    def __init__(self, actions, reward_function, exploration_bonus, belief: np.array, type_support: np.array):
+        super().__init__(actions, reward_function, exploration_bonus, belief, type_support)
 
     def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool, iteration_number: int):
         # if the last offer was accepted - we can offer less (if we can)
@@ -61,15 +62,20 @@ class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
 
     def init_q_values(self, observation: Action):
         reward_from_action = self.reward_function(self.actions, True)
-        acceptance_probability = np.dot((self.belief[:, 0][:, np.newaxis] <= (1-self.actions)).T, self.belief[:, 1])
+        acceptance_probability = self.acceptance_probability_per_type(self.belief[-1, :])
         initial_qvalues = np.multiply(reward_from_action, acceptance_probability)
         return initial_qvalues
+
+    def acceptance_probability_per_type(self, belief):
+        accept_reject_by_type = self.actions[:, np.newaxis] >= self.support
+        probability_by_action = np.sum(accept_reject_by_type/accept_reject_by_type.shape[1], axis=1)
+        return probability_by_action
 
 
 class DoMZeroSenderSolver(DoMZeroEnvironmentModel):
     def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model: SubIntentionalAgent,
                  reward_function, planning_horizon, discount_factor):
-        super().__init__(opponent_model, reward_function, belief_distribution)
+        super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.actions = actions
         self.belief = belief_distribution
         self.opponent_model = opponent_model
@@ -120,12 +126,9 @@ class DoMZeroSender(DoMZeroModel):
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.config = get_config()
-        self.belief = DoMZeroSenderBelief(prior_belief, self.opponent_model, self.history)
-        self.environment_model = DoMZeroSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
-        self.exploration_policy = DoMZeroSenderExplorationPolicy(self.potential_actions, self.utility_function,
-                                                                 self.config.get_from_env("rollout_rejecting_bonus"),
-                                                                self.belief.belief_distribution[:, :2])
-        # self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        self.belief = DoMZeroSenderBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)
+        self.environment_model = DoMZeroSenderEnvironmentModel(self.opponent_model, self.utility_function,
+                                                               actions, self.belief)
         self.solver = DoMZeroSenderSolver(self.potential_actions, self.belief, self.opponent_model,
                                           self.utility_function,
                                           float(self.config.get_from_env("planning_depth")),

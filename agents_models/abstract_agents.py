@@ -1,3 +1,5 @@
+import numpy as np
+
 from IPOMCP_solver.Solver.ipomcp_solver import *
 import os
 
@@ -5,7 +7,7 @@ import os
 class SubIntentionalBelief(BeliefDistribution):
 
     def __init__(self, history: History):
-        super().__init__(None, None, history)
+        super().__init__(None, None, None, history)
 
     def get_current_belief(self):
         return None
@@ -27,7 +29,7 @@ class SubIntentionalAgent(ABC):
         self.potential_actions = actions
         self._threshold = threshold
         self.softmax_temp = softmax_temp
-        self.high = 1.0
+        self._high = 1-self.threshold if threshold is not None else 1.0
         self.low = 0.0
         self.name = None
         self.history = History()
@@ -35,14 +37,18 @@ class SubIntentionalAgent(ABC):
         self._alpha = None
 
     def reset(self, high: Optional[float] = None, low: Optional[float] = None, terminal: Optional[bool] = False):
-        self.high = high
+        self._high = high
         self.low = low
         self.reset_belief()
         self.reset_solver()
         if terminal:
-            self.high = 1.0
+            self._high = 1-self.threshold
             self.low = 0.0
             self.history.reset(0, 0)
+
+    @property
+    def high(self):
+        return self._high
 
     @property
     def threshold(self):
@@ -51,14 +57,7 @@ class SubIntentionalAgent(ABC):
     @threshold.setter
     def threshold(self, gamma):
         self._threshold = gamma
-
-    @property
-    def alpha(self):
-        return self._alpha
-
-    @alpha.setter
-    def alpha(self, alpha):
-        self._alpha = alpha
+        self._high = 1 - gamma if gamma is not None else 1.0
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
@@ -73,8 +72,10 @@ class SubIntentionalAgent(ABC):
         seed = self.update_seed(seed, iteration_number)
         relevant_actions, q_values, probabilities = self.forward(action, observation, iteration_number)
         random_number_generator = np.random.default_rng(seed)
-        optimal_offer = random_number_generator.choice(relevant_actions, p=probabilities)
-        return Action(optimal_offer, False), np.array([relevant_actions, q_values]).T
+        optimal_action_idx = random_number_generator.choice(len(relevant_actions), p=probabilities)
+        optimal_offer = relevant_actions[optimal_action_idx]
+        probability = probabilities[optimal_action_idx]
+        return Action(optimal_offer, False), probability, np.array([relevant_actions, q_values]).T, probabilities
 
     @abstractmethod
     def forward(self, action: Action, observation: Action, iteration_number=None):
@@ -98,13 +99,14 @@ class SubIntentionalAgent(ABC):
 
 class DoMZeroBelief(BeliefDistribution):
 
-    def __init__(self, intentional_threshold_belief: np.array, opponent_model: Optional[SubIntentionalAgent],
+    def __init__(self, support, zero_level_belief: Optional[np.array],
+                 opponent_model: Optional[SubIntentionalAgent],
                  history: History):
         """
-        :param intentional_threshold_belief: np.array - represents the prior belief about the sender_parameters
+        :param zero_level_belief: np.array - represents the prior belief about the sender_parameters
         :param opponent_model:
         """
-        super().__init__(intentional_threshold_belief, opponent_model, history)
+        super().__init__(support, zero_level_belief, opponent_model, history)
         self.opponent_belief = None
 
     def compute_likelihood(self, action, observation, prior, iteration_number=None):
@@ -120,10 +122,10 @@ class DoMZeroBelief(BeliefDistribution):
         """
         if iteration_number <= 1:
             return None
-        prior = np.copy(self.belief_distribution[:, -1])
+        prior = np.copy(self.belief_distribution[-1, :])
         probabilities = self.compute_likelihood(action, observation, prior, iteration_number)
         posterior = probabilities * prior
-        self.belief_distribution = np.c_[self.belief_distribution, posterior / posterior.sum()]
+        self.belief_distribution = np.vstack([self.belief_distribution, posterior / posterior.sum()])
 
     def sample(self, rng_key, n_samples):
         probabilities = self.belief_distribution[:, -1]
@@ -139,10 +141,14 @@ class DoMZeroBelief(BeliefDistribution):
 class DoMZeroEnvironmentModel(EnvironmentModel):
 
     def __init__(self, opponent_model: SubIntentionalAgent,
-                 reward_function, belief_distribution: DoMZeroBelief,
+                 reward_function,
+                 actions: np.array,
+                 belief_distribution: DoMZeroBelief,
                  low=0.0, high=1.0):
         super().__init__(opponent_model, belief_distribution)
         self.reward_function = reward_function
+        self.actions = actions
+        self.surrogate_actions = [Action(value, False) for value in self.actions]
         self.opponent_model = opponent_model
         self.low = low
         self.high = high
@@ -170,25 +176,28 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        counter_offer, q_values = self.opponent_model.act(seed, observation, action, iteration_number)
+        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
+                                                                                                    action, iteration_number)
         reward = self.reward_function(action.value, observation.value, counter_offer.value)
         interactive_state.state.terminal = interactive_state.state.name == 10
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        return interactive_state, counter_offer, reward
+        return interactive_state, counter_offer, reward, observation_probability
 
     def update_persona(self, observation, action):
         pass
 
 
 class DoMZeroExplorationPolicy:
-    def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array):
-        self.belief = belief
+    def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array,
+                 type_support: np.array):
         self.actions = actions
         self.reward_function = reward_function
         self.exploration_bonus = exploration_bonus
+        self.belief = belief
+        self.support = type_support
 
     def update_belief(self, belief: np.array):
-        if belief[:, -1].sum() != 1:
+        if belief.sum() != 1:
             return None
         self.belief = belief
 
@@ -209,14 +218,14 @@ class DoMZeroModel(SubIntentionalAgent):
                  seed: int):
         super().__init__(actions, softmax_temp, threshold)
         self.opponent_model = opponent_model
-        self.belief = DoMZeroBelief(prior_belief, self.opponent_model, self.history)  # type: DoMZeroBelief
-        self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
+        self.belief = DoMZeroBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)  # type: DoMZeroBelief
+        self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, actions, self.belief)
         self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
 
     def reset(self, high: Optional[float] = None, low: Optional[float] = None,
               action_length: Optional[float] = 0, observation_length: Optional[float] = 0,
               terminal: Optional[bool] = False):
-        self.high = 1.0
+        self._high = 1.0
         self.low = 0.0
         self.history.reset(action_length, observation_length)
         self.opponent_model.reset(1.0, 0.0, terminal=terminal)
@@ -230,8 +239,7 @@ class DoMZeroModel(SubIntentionalAgent):
             self.history.update_observations(observation)
             self.opponent_model.history.update_actions(observation)
         action_nodes, q_values, softmax_transformation, mcts_tree = self.forward(action, observation, iteration_number)
-        if self.config.output_planning_tree:
-            mcts_tree["alpha"] = self.alpha
+        if mcts_tree is not None:
             mcts_tree["softmax_temp"] = self.softmax_temp
             mcts_tree["agent_type"] = self.name
             mcts_tree_output_name = os.path.join(self.config.planning_results_dir,
@@ -241,6 +249,7 @@ class DoMZeroModel(SubIntentionalAgent):
         prng = np.random.default_rng(seed)
         best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
         actions = list(action_nodes.keys())
+        action_probability = softmax_transformation[best_action_idx]
         if self.solver.name == "IPOMCP":
             best_action = action_nodes[actions[best_action_idx]].action
         else:
@@ -250,7 +259,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.environment_model.opponent_model.history.update_observations(best_action)
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
-        return best_action, q_values[:, :-1]
+        return best_action, action_probability, q_values[:, :-1], softmax_transformation
 
     def forward(self, action=None, observation=None, iteration_number=None, update_belief=True):
         actions, mcts_tree, q_values = self.solver.plan(action, observation, iteration_number, update_belief)
