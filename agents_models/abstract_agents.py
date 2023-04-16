@@ -97,10 +97,11 @@ class SubIntentionalAgent(ABC):
 
 class DoMZeroBelief(BeliefDistribution):
 
-    def __init__(self, support, zero_level_belief: Optional[np.array],
+    def __init__(self, support:np.array, zero_level_belief: Optional[np.array],
                  opponent_model: Optional[SubIntentionalAgent],
                  history: History):
         """
+        :type support: np.array
         :param zero_level_belief: np.array - represents the prior belief about the sender_parameters
         :param opponent_model:
         """
