@@ -1,5 +1,3 @@
-import numpy as np
-
 from agents_models.intentional_agents.tom_one_agents.tom_one_agents import *
 
 
@@ -97,8 +95,10 @@ class DoMTwoBelief(DoMOneBelief):
 
 
 class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
-    def __init__(self, opponent_model: DoMOneSender, reward_function, belief_distribution: DoMTwoBelief):
+    def __init__(self, opponent_model: DoMOneSender, memoization_table: DoMOneMemoization,
+                 reward_function, belief_distribution: DoMTwoBelief):
         super().__init__(opponent_model, reward_function, belief_distribution)
+        self.memoization_table = memoization_table
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
         self.opponent_model.threshold = persona
@@ -124,12 +124,14 @@ class DoMTwoReceiver(DoMZeroReceiver):
                  opponent_model: Optional[Union[DoMOneSender, DoMZeroSender, SubIntentionalAgent]],
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
+        self.memoization_table = DoMOneMemoization()
         self.threshold = 0.0
         self.belief = DoMTwoBelief(self.opponent_model.belief.support, self.opponent_model.belief.support,
                                    None,
                                    self.opponent_model.belief.belief_distribution,
                                    True, self.opponent_model, self.history)
-        self.environment_model = DoMTwoEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
+        self.environment_model = DoMTwoEnvironmentModel(self.opponent_model, self.memoization_table,
+                                                        self.utility_function, self.belief)
         self.exploration_policy = DoMTwoReceiverExplorationPolicy(self.potential_actions, self.utility_function,
                                                                   self.config.get_from_env("rollout_rejecting_bonus"),
                                                                   self.belief.belief_distribution,

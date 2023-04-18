@@ -1,5 +1,6 @@
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
+from agents_models.intentional_agents.tom_one_agents.dom_one_memoization import *
 from typing import Optional, Union
 
 
@@ -116,10 +117,12 @@ class DoMOneReceiver(DoMZeroReceiver):
 class DoMOneSender(DoMZeroSender):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
+                 memoization_table:DoMOneMemoization,
                  prior_belief: np.array,
                  opponent_model: Optional[Union[DoMZeroReceiver, SubIntentionalAgent]],
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
+        self.memoization_table = memoization_table
         self.belief = DoMOneBelief(self.opponent_model.belief.support, self.opponent_model.belief.belief_distribution,
                                    False, self.opponent_model, self.history)
         self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
@@ -127,7 +130,7 @@ class DoMOneSender(DoMZeroSender):
                                                                  self.config.get_from_env("rollout_rejecting_bonus"),
                                                                  self.belief.belief_distribution,
                                                                  self.belief.support)
-        self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
+        self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
+                             self.exploration_policy, self.utility_function, {"threshold": self.threshold}, seed)
         self.name = "DoM(1)_sender"
-
 
