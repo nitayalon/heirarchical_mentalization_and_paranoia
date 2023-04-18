@@ -19,6 +19,7 @@ class AgentFactory:
         self.thresholds_seq = [0.0, 0.1, 0.5] if self.include_random else [0.1, 0.5]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
+        self.path_to_memoization_data = 'data/agent_subject/basic_task/softmax'
 
     def create_experiment_grid(self):
         subject_parameters = self.thresholds_seq
@@ -77,7 +78,7 @@ class AgentFactory:
         if agent_role == "rational_sender":
             opponent_model = self.dom_zero_constructor("rational_receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-            memoization_table = DoMOneMemoization()
+            memoization_table = DoMOneMemoization(self.path_to_memoization_data)
             output_agent = DoMOneSender(self.agent_actions, self.config.softmax_temperature, None,
                                         memoization_table,opponent_theta_hat_distribution, opponent_model,
                                         self.config.seed)

@@ -64,6 +64,8 @@ if __name__ == "__main__":
         sender.reset(terminal=True)
         receiver.reset(terminal=True)
         experiment_name = config.experiment_name
+        if sender.name == "DoM(1)_sender":
+            sender.memoization_table.save_data()
         output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
         experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)
         q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)

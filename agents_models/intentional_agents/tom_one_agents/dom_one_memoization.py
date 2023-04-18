@@ -1,7 +1,6 @@
-import pandas as pd
-
 from IPOMCP_solver.utils.memoization_table import *
 import os
+from os.path import exists
 import argparse
 
 
@@ -11,16 +10,29 @@ q_values_columns = ["action", "q_value", "trial_number", "seed", "sender_thresho
 
 
 class DoMOneMemoization(MemoizationTable):
-    def __init__(self, softmax_temp=0.1):
+    def __init__(self, path_to_memoization_dir, softmax_temp=0.1):
         self.softmax_temp = softmax_temp
-        super().__init__()
+        self.config = get_config()
+        self.target_table_name = f'DoM_1_memoization_data_softmax_temp_{self.softmax_temp}_seed_{self.config.seed}.csv'
+        self.path_to_dir = path_to_memoization_dir
+        self.path_to_table = os.path.join(self.path_to_dir, self.target_table_name)
+        super().__init__(path_to_memoization_dir)
 
-    def load_behavioural_data(self):
-        q_values = self.load_results("q_values")
-        game_results = self.load_results("simulation_results")
-        nested_beliefs = self.load_results("beliefs")
-        data = self.combine_results(q_values, game_results, nested_beliefs)
+    def load_data(self):
+        # First - see if we already have data there
+        if exists(self.path_to_table):
+            data = pd.read_csv(self.path_to_table)
+        else:
+            q_values = self.load_results("q_values")
+            game_results = self.load_results("simulation_results")
+            nested_beliefs = self.load_results("beliefs")
+            data = self.combine_results(q_values, game_results, nested_beliefs)
         return data
+
+    def save_data(self):
+        if not os.path.exists(self.path_to_dir):
+            os.mkdir(self.path_to_dir)
+        self.data.to_csv(self.path_to_table, index=False)
 
     @staticmethod
     def load_results(directory_name):
@@ -89,6 +101,7 @@ class DoMOneMemoization(MemoizationTable):
                                             np.tile(beliefs, (q_values.shape[0], 1)),
                                             np.tile(history, (q_values.shape[0], 1))],
                                       columns=self.data.columns)
+        self.new_data = pd.concat([self.new_data, data_to_append])
         self.data = pd.concat([self.data, data_to_append])
 
 
