@@ -55,11 +55,9 @@ class EAT:
                                                          sender_threshold)
         receiver_belief = self.export_beliefs(receiver.belief.belief_distribution,
                                               receiver.belief.support,
-                                              receiver.name,
-                                             receiver_threshold,  sender_threshold)
+                                              receiver.name, receiver_threshold,  sender_threshold)
         sender_belief = self.export_beliefs(sender.belief.belief_distribution,
-                                            receiver.belief.support, sender.name,
-                                           receiver_threshold, sender_threshold)
+                                            receiver.belief.support, sender.name, receiver_threshold, sender_threshold)
         return experiment_results, agents_q_values, receiver_belief, sender_belief
 
     @staticmethod
