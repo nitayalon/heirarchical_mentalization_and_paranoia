@@ -1,6 +1,4 @@
 from agents_models.subintentional_agents.subintentional_senders import *
-from agents_models.subintentional_agents.subintentional_receiver import *
-from agents_models.intentional_agents.tom_one_agents.tom_one_agents import *
 from agents_models.intentional_agents.tom_two_agents.tom_two_agents import *
 
 
@@ -92,7 +90,8 @@ class AgentFactory:
     def dom_two_constructor(self, agent_role):
         opponent_model = self.dom_one_constructor("rational_sender")
         opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-        output_agent = DoMTwoReceiver(self.subject_actions, self.config.softmax_temperature, None,
+        memoization_table = DoMTwoMemoization(self.path_to_memoization_data)
+        output_agent = DoMTwoReceiver(self.subject_actions, self.config.softmax_temperature, None, memoization_table,
                                       opponent_theta_hat_distribution, opponent_model, self.config.seed)
         return output_agent
 
