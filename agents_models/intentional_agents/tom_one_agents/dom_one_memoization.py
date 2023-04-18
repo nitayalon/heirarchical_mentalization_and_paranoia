@@ -1,6 +1,7 @@
+import pandas as pd
+
 from IPOMCP_solver.utils.memoization_table import *
 import os
-import numpy as np
 import argparse
 
 
@@ -81,8 +82,14 @@ class DoMOneMemoization(MemoizationTable):
         q_values = results.groupby('action')['q_value'].mean().reset_index()
         return q_values
 
-    def update_table(self):
-        pass
+    def update_table(self, q_values: np.array, history: np.array, beliefs: np.array, game_parameters: dict):
+        trial_data = np.array([game_parameters['trial'], game_parameters['seed'], game_parameters['threshold']])
+        beliefs = np.r_[beliefs, np.round(beliefs, 3)]
+        data_to_append = pd.DataFrame(np.c_[q_values, np.tile(trial_data, (q_values.shape[0], 1)),
+                                            np.tile(beliefs, (q_values.shape[0], 1)),
+                                            np.tile(history, (q_values.shape[0], 1))],
+                                      columns=self.data.columns)
+        self.data = pd.concat([self.data, data_to_append])
 
 
 if __name__ == "__main__":
@@ -104,4 +111,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     config = init_config(args.environment, args)
     data_loader = DoMOneMemoization()
-    data_loader.query_table(1, 0.1, np.repeat(1/3, 3))

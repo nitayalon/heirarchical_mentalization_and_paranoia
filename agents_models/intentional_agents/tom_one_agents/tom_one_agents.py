@@ -137,6 +137,7 @@ class DoMOneSender(DoMZeroSender):
                  opponent_model: Optional[Union[DoMZeroReceiver, SubIntentionalAgent]],
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
+        self._planning_parameters = dict(seed=seed, threshold=self._threshold)
         self.memoization_table = memoization_table
         self.belief = DoMOneBelief(self.opponent_model.belief.support, self.opponent_model.belief.belief_distribution,
                                    False, self.opponent_model, self.history)
@@ -148,7 +149,7 @@ class DoMOneSender(DoMZeroSender):
                                                                  self.belief.belief_distribution,
                                                                  self.belief.support)
         self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
-                             self.exploration_policy, self.utility_function, {"threshold": self._threshold}, seed)
+                             self.exploration_policy, self.utility_function, self._planning_parameters, seed)
         self.name = "DoM(1)_sender"
 
     @property
@@ -159,4 +160,4 @@ class DoMOneSender(DoMZeroSender):
     def threshold(self, gamma):
         self._threshold = gamma
         self._high = 1 - gamma if gamma is not None else 1.0
-        self.solver.planning_parameters = {"threshold": self._threshold}
+        self.solver.planning_parameters["threshold"] = self._threshold
