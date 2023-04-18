@@ -1,6 +1,7 @@
-from agents_models.intentional_agents.tom_one_agents.tom_one_agents import *
 from agents_models.subintentional_agents.subintentional_senders import *
 from agents_models.subintentional_agents.subintentional_receiver import *
+from agents_models.intentional_agents.tom_one_agents.tom_one_agents import *
+from agents_models.intentional_agents.tom_two_agents.tom_two_agents import *
 
 
 class AgentFactory:
@@ -43,6 +44,8 @@ class AgentFactory:
             agent = self.dom_zero_constructor(agent_role)
         if agent_dom_level == "DoM1":
             agent = self.dom_one_constructor(agent_role)
+        if agent_dom_level == "DoM2":
+            agent = self.dom_two_constructor(agent_role)
         return agent
 
     def dom_minus_one_constructor(self, agent_role):
@@ -74,12 +77,21 @@ class AgentFactory:
         if agent_role == "rational_sender":
             opponent_model = self.dom_zero_constructor("rational_receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
+            memoization_table = DoMOneMemoization()
             output_agent = DoMOneSender(self.agent_actions, self.config.softmax_temperature, None,
-                                        opponent_theta_hat_distribution, opponent_model, self.config.seed)
+                                        memoization_table,opponent_theta_hat_distribution, opponent_model,
+                                        self.config.seed)
         else:
             opponent_model = self.dom_zero_constructor("rational_sender")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
             output_agent = DoMOneReceiver(self.subject_actions, self.config.softmax_temperature, None,
                                           opponent_theta_hat_distribution, opponent_model, self.config.seed)
+        return output_agent
+
+    def dom_two_constructor(self, agent_role):
+        opponent_model = self.dom_one_constructor("rational_sender")
+        opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
+        output_agent = DoMTwoReceiver(self.subject_actions, self.config.softmax_temperature, None,
+                                      opponent_theta_hat_distribution, opponent_model, self.config.seed)
         return output_agent
 

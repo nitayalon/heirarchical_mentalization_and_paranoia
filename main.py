@@ -1,6 +1,4 @@
 from eat_environment import *
-import argparse
-from IPOMCP_solver.Solver.ipomcp_config import *
 from agent_factory import *
 
 
@@ -50,6 +48,7 @@ if __name__ == "__main__":
             if config.get_from_general("skip_random"):
                 continue
             sender = random_sender
+            continue
         else:
             sender = rational_sender
         receiver = rational_receiver
