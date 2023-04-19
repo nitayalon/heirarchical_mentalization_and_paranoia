@@ -30,7 +30,7 @@ export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-0
 
 ENV=basic_task
 SOFTMAX_TEMP=0.1
-RECEIVER_TOM=DoM0
+RECEIVER_TOM=DoM2
 SENDER_TOM=DoM1
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"

@@ -174,10 +174,16 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
     def _get_last_from_list(l, location):
         return l[location - 1] if len(l) > 0 else Action(None, False)
 
+    def _simulate_opponent_response(self, seed, observation, action, iteration_number):
+        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
+                                                                                                    action,
+                                                                                                    iteration_number)
+        return counter_offer, observation_probability, q_values, opponent_policy
+
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
-                                                                                                    action, iteration_number)
+        counter_offer, observation_probability, q_values, opponent_policy = \
+            self._simulate_opponent_response(seed, observation, action, iteration_number)
         reward = self.reward_function(action.value, observation.value, counter_offer.value)
         interactive_state.state.terminal = interactive_state.state.name == 10
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
@@ -220,7 +226,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.opponent_model = opponent_model
         self.belief = DoMZeroBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)  # type: DoMZeroBelief
         self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, actions, self.belief)
-        self.solver = IPOMCP(self.belief, self.environment_model, None, self.utility_function, seed)
+        self.solver = IPOMCP(self.belief, self.environment_model, None, None, self.utility_function, {}, seed)
 
     def reset(self, high: Optional[float] = None, low: Optional[float] = None,
               action_length: Optional[float] = 0, observation_length: Optional[float] = 0,
@@ -232,7 +238,6 @@ class DoMZeroModel(SubIntentionalAgent):
         self.environment_model.reset()
         self.reset_belief()
         self.reset_solver()
-        # self.opponent_model.reset(terminal=terminal)
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         if iteration_number > 1:

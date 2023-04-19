@@ -1,7 +1,6 @@
 from eat_environment import *
-import argparse
-from IPOMCP_solver.Solver.ipomcp_config import *
 from agent_factory import *
+import argparse
 
 
 def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory):
@@ -50,6 +49,7 @@ if __name__ == "__main__":
             if config.get_from_general("skip_random"):
                 continue
             sender = random_sender
+            continue
         else:
             sender = rational_sender
         receiver = rational_receiver
@@ -65,6 +65,8 @@ if __name__ == "__main__":
         sender.reset(terminal=True)
         receiver.reset(terminal=True)
         experiment_name = config.experiment_name
+        if sender.name == "DoM(1)_sender":
+            sender.memoization_table.save_data()
         output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
         experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)
         q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
