@@ -238,7 +238,6 @@ class DoMZeroModel(SubIntentionalAgent):
         self.environment_model.reset()
         self.reset_belief()
         self.reset_solver()
-        # self.intentional_opponent_model.reset(terminal=terminal)
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         if iteration_number > 1:

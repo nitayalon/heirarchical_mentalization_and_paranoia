@@ -100,8 +100,8 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
                  belief_distribution: DoMTwoBelief):
         super().__init__(intentional_opponent_model, reward_function, actions, belief_distribution)
         self.random_sender = RandomSubIntentionalSender(
-            self.opponent_model.opponent_model.opponent_model.potential_actions,
-            self.opponent_model.opponent_model.opponent_model.softmax_temp, 0.0)
+            intentional_opponent_model.opponent_model.opponent_model.potential_actions,
+            intentional_opponent_model.opponent_model.opponent_model.softmax_temp, 0.0)
 
     def _simulate_opponent_response(self, seed, observation, action, iteration_number):
         if self.opponent_model.threshold == 0.0:
@@ -117,6 +117,10 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
 
+    def reset(self):
+        self.low = self.opponent_model.low
+        self.high = self.opponent_model.high
+        self.random_sender.reset()
 
 class DoMTwoReceiverExplorationPolicy(DoMZeroExplorationPolicy):
     def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array,

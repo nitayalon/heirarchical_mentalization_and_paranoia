@@ -1,7 +1,6 @@
 from IPOMCP_solver.utils.memoization_table import *
 import os
 from os.path import exists
-import argparse
 
 
 belief_columns = ["0.0", "0.1", "0.5", "trial_number", "seed", "sender_threshold"]
@@ -10,22 +9,31 @@ q_values_columns = ["action", "q_value", "trial_number", "seed", "sender_thresho
 
 
 class DoMOneMemoization(MemoizationTable):
+
     def __init__(self, path_to_memoization_dir, softmax_temp=0.1):
         self.softmax_temp = softmax_temp
         self.config = get_config()
-        self.target_table_name = f'DoM_1_memoization_data_softmax_temp_{self.softmax_temp}_seed_{self.config.seed}.csv'
+        self._table_name = f'DoM_1_memoization_data_softmax_temp_{self.softmax_temp}_seed_{self.config.seed}'
+        self.target_table_name = f'{self._table_name}.csv'
         self.path_to_dir = path_to_memoization_dir
         self.path_to_table = os.path.join(self.path_to_dir, self.target_table_name)
         super().__init__(path_to_memoization_dir)
+        self.path_to_buffer_file = self.create_buffer_file()
+
+    def create_buffer_file(self):
+        if not os.path.exists(self.path_to_dir):
+            os.mkdir(self.path_to_dir)
+        buffer_file_name = f'{self._table_name}_buffer.csv'
+        return os.path.join(self.path_to_dir, buffer_file_name)
 
     def load_data(self):
         # First - see if we already have data there
         if exists(self.path_to_table):
             data = pd.read_csv(self.path_to_table)
         else:
-            q_values = self.load_results("q_values")
-            game_results = self.load_results("simulation_results")
-            nested_beliefs = self.load_results("beliefs")
+            q_values = self._read_and_process_table("q_values")
+            game_results = self._read_and_process_table("simulation_results")
+            nested_beliefs = self._read_and_process_table("beliefs")
             data = self.combine_results(q_values, game_results, nested_beliefs)
         return data
 
@@ -34,8 +42,15 @@ class DoMOneMemoization(MemoizationTable):
             os.mkdir(self.path_to_dir)
         self.data.to_csv(self.path_to_table, index=False)
 
+    def update_buffer_data(self, new_data):
+        # If the buffer file already exists
+        if exists(self.path_to_buffer_file):
+            new_data.to_csv(self.path_to_buffer_file, mode='a', index=False, header=False)
+        else:
+            new_data.to_csv(self.path_to_buffer_file, mode='w', index=False, header=False)
+
     @staticmethod
-    def load_results(directory_name):
+    def _read_and_process_table(directory_name):
         """
         Method to load tables from memory
         :param directory_name:
@@ -95,6 +110,14 @@ class DoMOneMemoization(MemoizationTable):
         return q_values
 
     def update_table(self, q_values: np.array, history: np.array, beliefs: np.array, game_parameters: dict):
+        """
+        This method add new Q-value to
+        :param q_values:
+        :param history:
+        :param beliefs:
+        :param game_parameters:
+        :return:
+        """
         trial_data = np.array([game_parameters['trial'], game_parameters['seed'], game_parameters['threshold']])
         beliefs = np.r_[beliefs, np.round(beliefs, 3)]
         data_to_append = pd.DataFrame(np.c_[q_values, np.tile(trial_data, (q_values.shape[0], 1)),
@@ -103,24 +126,4 @@ class DoMOneMemoization(MemoizationTable):
                                       columns=self.data.columns)
         self.new_data = pd.concat([self.new_data, data_to_append])
         self.data = pd.concat([self.data, data_to_append])
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Cognitive hierarchy task')
-    parser.add_argument('--environment', type=str, default='basic_task', metavar='N',
-                        help='game environment (default: basic_task)')
-    parser.add_argument('--seed', type=int, default='6431', metavar='N',
-                        help='set simulation seed (default: 6431)')
-    parser.add_argument('--sender_tom', type=str, default='DoM0', metavar='N',
-                        help='set rational_sender tom level (default: DoM0)')
-    parser.add_argument('--receiver_tom', type=str, default='DoM0', metavar='N',
-                        help='set rational_receiver tom level (default: DoM0)')
-    parser.add_argument('--softmax_temp', type=float, default='0.05', metavar='N',
-                        help='set softmax temp (default: 0.05)')
-    parser.add_argument('--sender_threshold', type=float, default='0.5', metavar='N',
-                        help='set rational_sender threshold (default: 0.5)')
-    parser.add_argument('--receiver_threshold', type=float, default='0.5', metavar='N',
-                        help='set rational_receiver threshold (default: 0.5)')
-    args = parser.parse_args()
-    config = init_config(args.environment, args)
-    data_loader = DoMOneMemoization()
+        self.update_buffer_data(data_to_append)
