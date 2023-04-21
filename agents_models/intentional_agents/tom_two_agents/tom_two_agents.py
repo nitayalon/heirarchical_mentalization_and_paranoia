@@ -122,6 +122,7 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
         self.high = self.opponent_model.high
         self.random_sender.reset()
 
+
 class DoMTwoReceiverExplorationPolicy(DoMZeroExplorationPolicy):
     def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array,
                  type_support: np.array):

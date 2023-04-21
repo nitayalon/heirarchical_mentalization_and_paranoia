@@ -13,3 +13,9 @@ class DoMTwoMemoization(DoMOneMemoization):
     def query_table(self, query_parameters: dict):
         return pd.DataFrame
 
+    def update_table(self, q_values: np.array, history: np.array, beliefs: np.array, game_parameters: dict):
+        return None
+
+    def update_buffer_data(self, new_data):
+        return None
+

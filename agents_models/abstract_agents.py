@@ -36,13 +36,13 @@ class SubIntentionalAgent(ABC):
         self.belief = SubIntentionalBelief(self.history)
         self._alpha = None
 
-    def reset(self, high: Optional[float] = None, low: Optional[float] = None, terminal: Optional[bool] = False):
+    def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0, terminal: Optional[bool] = False):
         self._high = high
         self.low = low
         self.reset_belief()
         self.reset_solver()
         if terminal:
-            self._high = 1-self.threshold
+            self._high = 1-self.threshold if self.threshold is not None else 1.0
             self.low = 0.0
             self.history.reset(0, 0)
 
