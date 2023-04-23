@@ -50,6 +50,8 @@ if __name__ == "__main__":
                 continue
             sender = random_sender            
         else:
+            if config.get_from_general("skip_rational"):
+                continue
             sender = rational_sender
         receiver = rational_receiver
         # Update individual parameters
