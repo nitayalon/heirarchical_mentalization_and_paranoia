@@ -49,8 +49,9 @@ if __name__ == "__main__":
             if config.get_from_general("skip_random"):
                 continue
             sender = random_sender
-            continue
         else:
+            if config.get_from_general("skip_rational"):
+                continue
             sender = rational_sender
         receiver = rational_receiver
         # Update individual parameters

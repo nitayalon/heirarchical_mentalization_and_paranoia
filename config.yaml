@@ -4,7 +4,8 @@ general:
   report_ipocmp_statistics: False
   output_planning_tree: True
   include_random: True
-  skip_random: True
+  skip_random: False
+  skip_rational: False
 
 environments:
   basic_task:
