@@ -32,6 +32,7 @@ class DoMOneMemoization(MemoizationTable):
             data = pd.read_csv(self.path_to_table)
             print(data.dtypes, flush=True)
         else:
+            print('Loading from memory', flush=True)
             q_values = self._read_and_process_table("q_values")
             game_results = self._read_and_process_table("simulation_results")
             nested_beliefs = self._read_and_process_table("beliefs")
