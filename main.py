@@ -48,8 +48,7 @@ if __name__ == "__main__":
         if sender_threshold == 0:
             if config.get_from_general("skip_random"):
                 continue
-            sender = random_sender
-            continue
+            sender = random_sender            
         else:
             sender = rational_sender
         receiver = rational_receiver
