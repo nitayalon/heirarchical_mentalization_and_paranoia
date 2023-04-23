@@ -5,10 +5,7 @@ general:
   output_planning_tree: True
   include_random: True
   skip_random: False
-<<<<<<< HEAD
-=======
-  skip_rational: False
->>>>>>> refs/remotes/origin/main
+  skip_rational: True
 
 environments:
   basic_task:
