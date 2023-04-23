@@ -5,7 +5,7 @@ general:
   output_planning_tree: True
   include_random: True
   skip_random: False
-  skip_rational: False
+  skip_rational: True
 
 environments:
   basic_task:
@@ -13,7 +13,7 @@ environments:
     planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
-    mcts_number_of_iterations: 1000
+    mcts_number_of_iterations: 10000
     discount_factor: 0.95
     endowment: 1.0
     subintentional_type: softmax
