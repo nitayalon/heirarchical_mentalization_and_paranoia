@@ -38,9 +38,11 @@ class EAT:
         offer = Action(None, False)
         response = Action(None, False)
         for trial_number in range(1, self.n_trails+1, 1):
+            print(f'Starting trial number {trial_number}', flush=True)
             offer, response, trial_results, q_values = self.trial(trial_number, sender, receiver, seed, offer, response)
             self.trail_results.append(trial_results)
             q_values_list.append(q_values)
+            print(f'Ending trial number {trial_number}', flush=True)
         experiment_results = pd.DataFrame(self.trail_results, columns=['offer', 'offer_probability',
                                                                        'response', 'response_probability',
                                                                        'sender_reward', 'receiver_reward'])
