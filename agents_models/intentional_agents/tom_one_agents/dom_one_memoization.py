@@ -1,3 +1,5 @@
+from pandas.core.base import DataError
+
 from IPOMCP_solver.utils.memoization_table import *
 import os
 from os.path import exists
@@ -108,7 +110,11 @@ class DoMOneMemoization(MemoizationTable):
         p3 = belief[2]
         results = self.data.loc[(self.data['trial_number'] == trial) & (self.data['sender_threshold'] == threshold) &
                                 (self.data['p1'] == p1) & (self.data['p2'] == p2) & (self.data['p3'] == p3)]
-        q_values = results.groupby('action')['q_value'].mean().reset_index()
+        try:
+            q_values = results.groupby('action')['q_value'].mean().reset_index()
+        except DataError:
+            print(f'Missing numeric output for query:trial={trial},threshold={threshold},p1={p1},p2={p2},p3={p3}')
+            q_values = pd.DataFrame()
         return q_values
 
     def update_table(self, q_values: np.array, history: np.array, beliefs: np.array, game_parameters: dict):
