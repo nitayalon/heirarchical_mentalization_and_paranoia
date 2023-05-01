@@ -1,0 +1,24 @@
+---
+title: "DoM(0) receiver illustration"
+author: "Nitay Alon"
+date: "2023-03-23"
+output: html_document
+---
+
+```{r load libraries}
+library(tidyverse)
+```
+
+```{r set environmental variabels}
+offers <- seq(0,1,0.05)
+responses <- c(T,F)
+gamma <- c(0,0.1, 0.2, 0.4)
+N <- 10
+b <- matrix(0,N,length(gamma))
+b[1,] <- rep(0.25, 4)
+```
+
+```{r}
+
+```
+
