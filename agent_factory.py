@@ -20,13 +20,13 @@ class AgentFactory:
         self.path_to_memoization_data = self.config.path_to_memoization_data
 
     def create_experiment_grid(self):
-        subject_parameters = self.thresholds_seq
-        subject_grid_size = len(self.thresholds_seq)
-        agent_parameters = self.thresholds_seq
-        agent_grid_size = len(self.thresholds_seq)
-        self.grid_size = agent_grid_size * subject_grid_size
-        return {"sender_parameters": agent_parameters,
-                "receiver_parameters": subject_parameters}
+        receiver_parameters = self.thresholds_seq
+        receiver_grid_size = len(self.thresholds_seq)
+        sender_parameters = self.thresholds_seq
+        sender_grid_size = 1
+        self.grid_size = sender_grid_size * receiver_grid_size
+        return {"sender_parameters": sender_parameters,
+                "receiver_parameters": receiver_parameters}
 
     @staticmethod
     def _create_prior_distribution(support):

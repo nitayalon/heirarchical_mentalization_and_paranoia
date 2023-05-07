@@ -4,7 +4,7 @@ general:
   report_ipocmp_statistics: False
   output_planning_tree: True
   include_random: True
-  skip_random: FALSE
+  skip_random: False
   skip_rational: False
 
 environments:
@@ -17,7 +17,7 @@ environments:
     discount_factor: 0.95
     endowment: 1.0
     subintentional_type: softmax
-    subintentional_weight: -0.8
+    subintentional_weight: -0.9
   second_task:
     n_trials: 20
     planning_depth: 10
@@ -27,4 +27,4 @@ environments:
     discount_factor: 0.95
     endowment: 1.0
     subintentional_type: softmax
-    subintentional_weight: -0.8
+    subintentional_weight: -0.9

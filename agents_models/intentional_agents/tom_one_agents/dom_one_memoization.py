@@ -33,12 +33,17 @@ class DoMOneMemoization(MemoizationTable):
         if exists(self.path_to_table):
             data = pd.read_csv(self.path_to_table)
             print(data.dtypes, flush=True)
+        # If not - we create the table
         else:
-            print('Loading from memory', flush=True)
-            q_values = self._read_and_process_table("q_values")
-            game_results = self._read_and_process_table("simulation_results")
-            nested_beliefs = self._read_and_process_table("beliefs")
-            data = self.combine_results(q_values, game_results, nested_beliefs)
+            try:
+                print('Loading from memory', flush=True)
+                q_values = self._read_and_process_table("q_values")
+                game_results = self._read_and_process_table("simulation_results")
+                nested_beliefs = self._read_and_process_table("beliefs")
+                data = self.combine_results(q_values, game_results, nested_beliefs)
+            except FileNotFoundError:
+                print('First time simulating - no data!')
+                data = None
         return data
 
     def save_data(self):
@@ -101,6 +106,9 @@ class DoMOneMemoization(MemoizationTable):
         :param query_parameters:
         :return: pd.dataframe
         """
+        if self.data is None:
+            q_values = pd.DataFrame()
+            return q_values
         trial = query_parameters['trial']
         threshold = query_parameters['threshold']
         belief = query_parameters['belief']
