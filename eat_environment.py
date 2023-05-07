@@ -65,7 +65,7 @@ class EAT:
     @staticmethod
     def trial(trial_number, sender,  receiver, seed, offer, response):
         offer, offer_probability, sender_q_values, sender_policy = sender.act(seed, offer, response, trial_number)
-        response, response_probability , receiver_q_values, receiver_policy = receiver.act(seed, response, offer, trial_number + 1)
+        response, response_probability, receiver_q_values, receiver_policy = receiver.act(seed, response, offer, trial_number + 1)
         sender_reward = (1-offer.value) * response.value
         receiver_reward = offer.value * response.value
         sender_q_values = pd.DataFrame(sender_q_values)
