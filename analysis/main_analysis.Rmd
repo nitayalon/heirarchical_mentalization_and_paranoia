@@ -1,0 +1,531 @@
+---
+title: "DoM zero and one analysis"
+author: "Nitay Alon"
+date: "2023-02-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+library(colorspace)
+library(caret)
+library(patchwork)
+library(plotly)
+library(ks)
+library(ggpubr)
+library(rstatix)
+library(corrr)
+library(emmeans)
+library(effsize)
+library(ARTool)
+library(car)        
+library(forcats)        
+```
+
+```{r Plotting settings for aliasing on windows, include=FALSE}
+# Plotting settings for aliasing on windows
+# Enable anti-aliasing on Windows
+if(Sys.info()['sysname'] == "Windows"){
+  
+  trace(grDevices::png, quote({
+    if (missing(type) && missing(antialias)) {
+      type <- "cairo-png"
+      antialias <- "subpixel"
+    }
+  }), print = FALSE)
+  
+  
+  # Enable anti-aliasing on Windows
+  trace(grDevices:::png, quote({
+    if (missing(type) && missing(antialias)) {
+      type <- "cairo-png"
+      antialias <- "subpixel"
+    }
+  }), print = FALSE)
+  
+  
+}
+
+# Define general plot style and style
+base_size = 15
+theme_set(theme_classic(base_size = base_size))
+
+parse_experiment_file <- function(file_name)
+{
+  parameters_list <- strsplit(file_name, "_")[[1]]
+  alpha = parameters_list[4]
+  receiver_threshold = parameters_list[7]
+  sender_threshold = parameters_list[10]
+  return(c(alpha, receiver_threshold, sender_threshold))
+}
+```
+
+```{r set experiment path, include=FALSE}
+results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/"
+dom_levels = list(
+               c("0","-1"),
+               c("0","1"),
+               c("2","1"))
+agents_beliefs <- c("receiver_beliefs", "sender_beliefs")
+directory_pattern <- "DoM%s_receiver_DoM%s_sender_softmax_temp_0.1"
+path_to_game_results <- paste0(results_path, directory_pattern)
+```
+
+
+```{r Load and merge game data, include=FALSE}
+game_results <- c()
+for(dom_level in dom_levels)
+{
+  receiver_dom_level = dom_level[1]
+  sender_dom_level = dom_level[2]
+  path_to_experiments_results <- sprintf(path_to_game_results, receiver_dom_level, sender_dom_level)
+  path_to_dir <- paste(path_to_experiments_results, "simulation_results" ,sep="/")
+  temp = list.files(path=path_to_dir, pattern="*.csv")
+  if (length(temp) == 0)
+    {
+      next
+    }
+  myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
+  interim_results <- bind_rows(myfiles)
+  game_results <- rbind(game_results, cbind(interim_results, receiver_dom_level, sender_dom_level))
+}
+```
+
+```{r load DoM(2) vs Random game results}
+results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_random_sender/"
+
+receiver_dom_level = "2"
+sender_dom_level = "-1"
+path_to_dir <- paste(results_path, "simulation_results" ,sep="/")
+temp = list.files(path=path_to_dir, pattern="*.csv")
+myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
+interim_results <- bind_rows(myfiles)
+game_results <- rbind(game_results, cbind(interim_results, receiver_dom_level, sender_dom_level))
+
+```
+
+
+```{r load DoM(2) vs rational subintentional game results}
+results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_rational_sender/"
+
+receiver_dom_level = "2"
+sender_dom_level = "-1"
+path_to_dir <- paste(results_path, "simulation_results" ,sep="/")
+temp = list.files(path=path_to_dir, pattern="*.csv")
+myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
+interim_results <- bind_rows(myfiles)
+game_results <- rbind(game_results, cbind(interim_results, receiver_dom_level, sender_dom_level))
+
+```
+
+
+```{r Load and merge beliefs, include=FALSE}
+beliefs <- c()
+for(dom_level in dom_levels)
+{
+  receiver_dom_level = dom_level[1]
+  sender_dom_level = dom_level[2]
+  for(agent_name in agents_beliefs)
+  {
+    path_to_experiments_results <- sprintf(path_to_game_results, receiver_dom_level, sender_dom_level)
+    path_to_dir <- paste(path_to_experiments_results, "beliefs" ,sep="/")
+    updated_path = paste(path_to_dir, agent_name, sep="/")
+    temp = list.files(path=updated_path, pattern="*.csv")
+    if (length(temp) == 0)
+    {
+      next
+    }
+    myfiles = lapply(paste(updated_path, temp, sep="/"), read.csv)
+    interim_results <- bind_rows(myfiles)
+    beliefs <- rbind(beliefs, cbind(interim_results, receiver_dom_level, sender_dom_level))
+  }
+}
+```
+
+```{r load DoM(2) vs Random beliefs}
+results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_random_sender/beliefs/receiver_beliefs/"
+
+receiver_dom_level = "2"
+sender_dom_level = "-1"
+temp = list.files(path=results_path, pattern="*.csv")
+myfiles = lapply(paste(results_path, temp, sep="/"), read.csv)
+interim_results <- bind_rows(myfiles)
+beliefs <- rbind(beliefs, cbind(interim_results, receiver_dom_level, sender_dom_level))
+```
+
+```{r load DoM(2) rational subintentional beliefs}
+results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_rational_sender/beliefs/receiver_beliefs/"
+
+receiver_dom_level = "2"
+sender_dom_level = "-1"
+temp = list.files(path=results_path, pattern="*.csv")
+myfiles = lapply(paste(results_path, temp, sep="/"), read.csv)
+interim_results <- bind_rows(myfiles)
+beliefs <- rbind(beliefs, cbind(interim_results, receiver_dom_level, sender_dom_level))
+```
+
+```{r load and merge q_values, include=FALSE}
+q_values <- c()
+for(dom_level in dom_levels)
+{
+  receiver_dom_level = dom_level[1]
+  sender_dom_level = dom_level[2]
+  path_to_experiments_results <- sprintf(path_to_game_results, receiver_dom_level, sender_dom_level)
+  path_to_dir <- paste(path_to_experiments_results, "q_values" ,sep="/")
+  temp = list.files(path=path_to_dir, pattern="*.csv")
+  if (length(temp) == 0)
+    {
+      next
+    }
+  myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
+  interim_results <- bind_rows(myfiles)
+  issue_list <- sapply(myfiles, function(x){class(x$q_value)})
+  temp[issue_list == "character"][1]
+  myfiles[issue_list == "character"][1]
+  q_values <- rbind(q_values, cbind(interim_results, receiver_dom_level, sender_dom_level))
+}
+```
+
+```{r load DoM(2) vs Random beliefs q values}
+results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_random_sender/q_values/"
+
+receiver_dom_level = "2"
+sender_dom_level = "1"
+temp = list.files(path=results_path, pattern="*.csv")
+myfiles = lapply(paste(results_path, temp, sep="/"), read.csv)
+interim_results <- bind_rows(myfiles)
+q_values <- rbind(q_values, cbind(interim_results, receiver_dom_level, sender_dom_level))
+```
+
+# Comparing game results by DoM levels
+
+```{r cumulative reward by experiment setting}
+sender_reward <- game_results %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  mutate(dyad = fct_cross(sender_dom_level, receiver_dom_level)) %>% 
+  group_by(trial_number, sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold) %>% 
+  summarise(average_receiver_reward = mean(receiver_reward),
+            average_sender_reward = mean(sender_reward)) %>% 
+  arrange(sender_dom_level, receiver_dom_level, sender_threshold,
+          receiver_threshold) %>% 
+  group_by(receiver_threshold, sender_threshold, sender_dom_level, receiver_dom_level) %>% 
+  mutate(cumulative_receiver_reward = cumsum(average_receiver_reward),
+            cumulative_sender_reward = cumsum(average_sender_reward)) %>% 
+  ggplot(aes(trial_number, cumulative_sender_reward, colour = sender_threshold)) + 
+  geom_line(size = 1.0, alpha = 0.5) + 
+  ylab("Cumulative sender reward") + 
+  xlab("Trial number") + 
+  scale_color_viridis_d(name = expression(paste('Sender threshold')))+
+  facet_grid(receiver_dom_level~sender_dom_level) 
+
+receiver_reward <- game_results %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  mutate(dyad = fct_cross(sender_dom_level, receiver_dom_level)) %>% 
+  group_by(trial_number, sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold) %>% 
+  summarise(average_receiver_reward = mean(receiver_reward),
+            average_sender_reward = mean(sender_reward)) %>% 
+  arrange(sender_dom_level, receiver_dom_level, sender_threshold,
+          receiver_threshold) %>% 
+  group_by(receiver_threshold, sender_threshold, sender_dom_level, receiver_dom_level) %>% 
+  mutate(cumulative_receiver_reward = cumsum(average_receiver_reward),
+            cumulative_sender_reward = cumsum(average_sender_reward)) %>% 
+  ggplot(aes(trial_number, cumulative_receiver_reward, colour = sender_threshold)) + 
+  geom_line(size = 1.0, alpha = 0.5) + 
+  ylab("Cumulative receiver reward") + 
+  xlab("Trial number") + 
+  scale_color_viridis_d(name = expression(paste('Sender threshold')))+
+  facet_grid(receiver_dom_level~sender_dom_level) 
+
+cumulative_reward <- sender_reward + receiver_reward
+ggsave("../figures/cumulative_reward_by_agent.png", width = 40, height = 20, units = "cm")
+```
+
+## Detrimental effect of overmetaliastion
+
+```{r Detrimental effect of overmetaliastion}
+detrimental_effect_of_high_dom_plot <- 
+  game_results %>% 
+  filter(sender_dom_level == -1, sender_threshold > 0) %>% 
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  group_by(trial_number, sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold) %>% 
+  summarise(average_receiver_reward = mean(receiver_reward),
+            average_sender_reward = mean(sender_reward)) %>% 
+  arrange(sender_dom_level, receiver_dom_level, sender_threshold,
+          receiver_threshold) %>% 
+  group_by(receiver_threshold, sender_threshold, sender_dom_level, receiver_dom_level) %>% 
+  mutate(cumulative_receiver_reward = cumsum(average_receiver_reward),
+            cumulative_sender_reward = cumsum(average_sender_reward)) %>% 
+  ggplot(aes(trial_number, cumulative_receiver_reward, colour = receiver_dom_level)) + 
+  geom_line(size = 1.0, alpha = 0.5) + 
+  ylab("Cumulative receiver reward") + 
+  xlab("Trial number") + 
+  scale_color_viridis_d(name = 'Receiver DoM level')+
+  facet_grid(.~sender_threshold) 
+
+ggsave("../figures/detrimental_effect_of_high_dom_plot.png", width = 40, height = 20, units = "cm")
+```
+
+## Learnt policies
+
+Interestingly, the $DoM(1)$ learns to pretend to be random to 
+maneuver the receiver into accepting its offers
+
+```{r deep look into the sender policies}
+sender_policy <- game_results %>% 
+  filter(sender_threshold > 0) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  mutate(dyad = fct_cross(sender_dom_level, receiver_dom_level)) %>% 
+  group_by(trial_number, sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold) %>% 
+  summarise(average_offer = mean(offer),
+            average_reponse = mean(response)) %>% 
+  arrange(sender_dom_level, receiver_dom_level, sender_threshold, receiver_threshold, trial_number) %>% 
+  ggplot(aes(trial_number, average_offer, colour = sender_dom_level)) + 
+  geom_line(size = 1.0) + 
+  ylab("Average offer") + 
+  xlab("Trial number") + 
+  scale_color_viridis_d(name = expression(paste('Sender DoM')))+
+  facet_grid(sender_threshold ~ receiver_dom_level) + 
+  ggtitle('Sender policy')
+
+corresponding_beliefs <- beliefs %>% 
+  filter(agent_name %in% c("DoM(0)_receiver","DoM(2)_receiver"),
+         sender_threshold > 0) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  mutate(dyad = fct_cross(sender_dom_level, receiver_dom_level)) %>% 
+  group_by(agent_name, trial_number, dyad,  sender_dom_level, receiver_dom_level,
+           receiver_threshold, sender_threshold) %>% 
+  mutate(`P(0.0)` = mean(`X0.0`),
+         `P(0.1)` = mean(`X0.1`),
+         `P(0.5)` = mean(`X0.5`)) %>% 
+  ggplot() + 
+  geom_line(aes(x = trial_number, y = `P(0.0)`, colour='`P(0.0)`',
+                linetype = factor(sender_threshold)),
+            size=1.0) + 
+  geom_line(aes(x = trial_number, y = `P(0.1)`, colour='`P(0.1)`',
+                linetype = factor(sender_threshold)),
+            size=1.0) + 
+  geom_line(aes(x = trial_number, y = `P(0.5)`, colour='`P(0.5)`',
+                linetype = factor(sender_threshold)),
+            size=1.0) + 
+  scale_linetype_manual(values=c("solid", "dotted", "solid"))+
+  scale_color_viridis_d(name = expression(paste('P(',gamma, ')')))+
+  facet_grid(sender_dom_level ~ agent_name) + 
+  labs(y = 'Posterior probability', x= 'Trial')+
+  scale_linetype_manual("Sender threshold",values=c("0.5"=3,"0.1"=1)) + 
+  ggtitle('Reciever posterior belief')
+
+corresponding_beliefs
+ggsave("../figures/true_and_false_beliefs.png", width = 40, height = 20, units = "cm")
+
+policy_and_belief_manipulation <- sender_policy + corresponding_beliefs
+ggsave("../figures/policies_and_belief_manipulation.png", width = 40, height = 20, units = "cm")
+```
+
+
+```{r deep look into the receiver policies}
+game_results %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  mutate(dyad = fct_cross(sender_dom_level, receiver_dom_level)) %>% 
+  group_by(trial_number, sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold) %>% 
+  summarise(average_offer = mean(offer),
+            average_reponse = mean(response)) %>%
+  mutate(average_reponse_shape = ifelse(average_reponse > 0.5, "Accept", "Reject")) %>%  
+  ggplot(aes(x = trial_number, y = average_reponse, shape = average_reponse_shape,
+             colour = sender_dom_level)) + 
+  geom_point(size=2.0) + 
+  ylab("P(accept)") + 
+  xlab("Trial number") + 
+  scale_shape_manual(name = "Most likey response", values=c(15, 4)) + 
+  scale_color_viridis_d(name = 'Sender DoM level')+
+  facet_grid(sender_threshold ~ receiver_dom_level)
+# ggsave("../figures/dom_0_receiver_policy.png", width = 40, height = 20, units = "cm")
+```
+
+```{r belief analysis}
+beliefs %>% 
+  filter(agent_name %in% c("DoM(0)_receiver","DoM(2)_receiver")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  mutate(dyad = fct_cross(sender_dom_level, receiver_dom_level)) %>% 
+  group_by(trial_number, dyad,  sender_dom_level, receiver_dom_level,
+           receiver_threshold, sender_threshold) %>% 
+  mutate(`P(0.0)` = mean(`X0.0`),
+         `P(0.1)` = mean(`X0.1`),
+         `P(0.5)` = mean(`X0.5`)) %>% 
+  ggplot() + 
+  geom_line(aes(x = trial_number, y = `P(0.0)`, colour='`P(0.0)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) + 
+  geom_line(aes(x = trial_number, y = `P(0.1)`, colour='`P(0.1)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) + 
+  geom_line(aes(x = trial_number, y = `P(0.5)`, colour='`P(0.5)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) + 
+  scale_linetype_manual(values=c("solid", "dotted", "solid"))+
+  scale_color_viridis_d(name = expression(paste('P(',gamma, ')')))+
+  facet_grid(receiver_dom_level~sender_threshold) + 
+  labs(y = 'Posterior probability', x= 'Trial')
+ggsave("../figures/receiver_posterior_beliefs.png", width = 40, height = 20, units = "cm")
+```
+
+```{r time until the receiver decide that it playes with a random agent}
+corresponding_beliefs <- 
+  beliefs %>% 
+  filter(agent_name %in% c("DoM(0)_receiver", "DoM(2)_receiver"),
+         sender_threshold == 0) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(agent_name, trial_number, receiver_dom_level) %>% 
+  mutate(`P(Random)` = mean(`X0.0`)) %>% 
+  mutate(certainty = ifelse(`P(Random)` > 0.99, 1, 0)) %>% 
+  summarize(mean_time_to_call_random = mean(certainty)) %>% 
+  ggplot(aes(trial_number, mean_time_to_call_random, colour = receiver_dom_level)) + 
+  scale_color_viridis_d(name = "Receivre's DoM")+
+  geom_line(size = 2) + 
+  labs(y = 'Confidence level', x= 'Trial')
+corresponding_beliefs
+ggsave("../figures/time_to_detect_random_agent.png", width = 40, height = 20, units = "cm")
+```
+
+# Entropy analysis
+
+```{r entropy analysis}
+beliefs %>% 
+  filter(agent_name %in% c("DoM(0)_receiver","DoM(2)_receiver")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  mutate(dyad = fct_cross(sender_dom_level, receiver_dom_level)) %>% 
+  group_by(agent_name, trial_number, dyad,  sender_dom_level, receiver_dom_level,
+           receiver_threshold, sender_threshold) %>% 
+  mutate(`P(0.0)` = mean(`X0.0`),
+         `P(0.1)` = mean(`X0.1`),
+         `P(0.5)` = mean(`X0.5`)) %>% 
+  mutate(`log_prob(0.0)` = log2(`P(0.0)`) * `P(0.0)`,
+         `log_prob(0.1)` = log2(`P(0.1)`) * `P(0.1)`,
+         `log_prob(0.5)` = log2(`P(0.5)`) * `P(0.5)`) %>% 
+  summarise(entropy = -(`log_prob(0.0)` + `log_prob(0.1)` + `log_prob(0.5)`)) %>% 
+  ggplot() + 
+  geom_line(aes(x = trial_number, y = entropy, colour=sender_dom_level),
+            size=1.5) + 
+  scale_color_viridis_d(name = expression(paste('P(',gamma, ')')))+
+  ylab("Entropy") + 
+  xlab("Trial number") + 
+  facet_grid(receiver_dom_level~sender_threshold)
+# ggsave("../figures/posterior_beliefs_entropy.png", width = 40, height = 20, units = "cm")
+```
+
+
+Let's look at some games to learn more
+```{r plot games for illustration}
+sid = 210
+sender_dom_level_for_plot = 1
+receiver_dom_level_for_plot = 0
+
+game_plot <- game_results %>% 
+  filter(receiver_dom_level == receiver_dom_level_for_plot,
+         sender_dom_level == sender_dom_level_for_plot,
+         seed == sid) %>% 
+  mutate(sender_threshold = factor(sender_threshold),
+         response = factor(response, labels = c('reject','accept'))) %>%
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  ggplot(aes(x = trial_number, y = offer)) + 
+  geom_point(aes(shape = factor(response)), size = 1.5) + 
+  geom_line(aes(colour = sender_threshold), alpha=0.5, size = 1.5) + 
+  scale_color_viridis_d(name = expression(paste('Sender threshold')))+
+  scale_shape_manual(values=c(4, 15)) +
+  # scale_shape_manual(values=c(15, 4)) +
+  scale_x_continuous(name="Trial", breaks=seq(0, 10, 1)) +
+  labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
+   ggtitle('Game results')
+
+belief_plot <- beliefs %>% 
+    filter(receiver_dom_level == receiver_dom_level_for_plot,
+         sender_dom_level == sender_dom_level_for_plot,
+         seed == sid) %>% 
+    mutate(`P(0.0)` = `X0.0`,
+         `P(0.1)` = `X0.1`,
+         `P(0.5)` = `X0.5`) %>% 
+  ggplot() + 
+  geom_line(aes(x = trial_number, y = `P(0.0)`, colour='`P(0.0)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) + 
+  geom_line(aes(x = trial_number, y = `P(0.1)`, colour='`P(0.1)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) + 
+  geom_line(aes(x = trial_number, y = `P(0.5)`, colour='`P(0.5)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) + 
+  scale_linetype_manual(values=c("solid", "dotted", "solid"))+
+  scale_color_viridis_d(name = expression(paste('P(',eta, ')')))+
+  facet_grid(receiver_threshold~sender_threshold) + 
+  labs(y = 'Posterior probability', x= 'Trial') + 
+  ggtitle('Belief update')
+
+q_value_plot <- q_values %>% 
+    filter(receiver_dom_level == receiver_dom_level_for_plot, 
+           sender_dom_level == sender_dom_level_for_plot, seed == sid,
+           # agent == "DoM(2)_receiver") %>% 
+           agent == "DoM(0)_receiver") %>% 
+  mutate(response = factor(action, labels = c('reject','accept'))) %>% 
+    ggplot(aes(trial_number, q_value, colour = factor(sender_threshold))) + 
+  geom_point(aes(shape = response), size=2.0) + 
+  scale_shape_manual(values=c(4, 15)) + 
+  scale_color_viridis_d(name = expression(paste('P(',gamma, ')')))+
+  labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
+  ggtitle('DoM(0) receiver Q-values')
+  
+game_all = game_plot + belief_plot / q_value_plot
+ggsave(sprintf("../figures/simulation_illustration_sender_dom_level_%s_receiver_dom_level_%s.png", sender_dom_level_for_plot, receiver_dom_level_for_plot), width = 40, height = 20, units = "cm")
+```
+
+
+```{r beliefs of the same simulation}
+ beliefs %>% 
+  filter(receiver_dom_level == "0", sender_dom_level == "-1", seed == 110) %>% 
+  mutate(receiver_alpha = factor(receiver_alpha), 
+         sender_threshold = factor(sender_threshold)) %>% 
+  group_by(trial_number, receiver_threshold, receiver_alpha, sender_threshold) %>% 
+  mutate(`P(0.0)` = mean(`X0.0`),
+         `P(0.2)` = mean(`X0.2`),
+         `P(0.5)` = mean(`X0.5`),
+         `P(0.8)` = mean(`X0.8`)) %>% 
+  ggplot() + 
+  geom_line(aes(x = trial_number, y = `P(0.0)`, colour='`P(0.0)`'),
+            size=1.0, alpha = 0.5) + 
+  geom_line(aes(x = trial_number, y = `P(0.2)`, colour='`P(0.2)`'),
+            size=1.0, alpha = 0.5) + 
+  geom_line(aes(x = trial_number, y = `P(0.5)`, colour='`P(0.5)`'),
+            size=1.0, alpha = 0.5) + 
+  geom_line(aes(x = trial_number, y = `P(0.8)`, colour='`P(0.8)`'),
+            size=1.0, alpha = 0.5) + 
+  scale_linetype_manual(values=c("twodash", "dotted", "solid"))+
+  scale_color_viridis_d(name = expression(paste('P(',gamma, '):')),
+                        labels=c("0.0", "0.2", "0.5","0.8"))+
+  facet_grid(receiver_alpha~sender_threshold)+
+  labs(y = 'Posterior probability', x= 'Trial')
+# ggsave("../figures/belief_illustration.png", width = 40, height = 20, units = "cm")
+```
+

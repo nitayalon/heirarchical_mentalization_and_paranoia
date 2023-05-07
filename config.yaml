@@ -1,6 +1,6 @@
 general:
   fee_discount: 0.95
-  results_folder: "data/agent_subject/"
+  results_folder: "data/"
   report_ipocmp_statistics: False
   output_planning_tree: True
   include_random: True
@@ -8,8 +8,18 @@ general:
   skip_rational: False
 
 environments:
-  basic_task:
-    n_trials: 10
+  first_task:
+    n_trials: 20
+    planning_depth: 10
+    uct_exploration_bonus: 5.0
+    rollout_rejecting_bonus: 0.5
+    mcts_number_of_iterations: 5000
+    discount_factor: 0.95
+    endowment: 1.0
+    subintentional_type: softmax
+    subintentional_weight: -0.8
+  second_task:
+    n_trials: 20
     planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5

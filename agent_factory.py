@@ -17,7 +17,7 @@ class AgentFactory:
         self.thresholds_seq = [0.0, 0.1, 0.5] if self.include_random else [0.1, 0.5]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
-        self.path_to_memoization_data = 'data/agent_subject/basic_task/softmax'
+        self.path_to_memoization_data = self.config.path_to_memoization_data
 
     def create_experiment_grid(self):
         subject_parameters = self.thresholds_seq

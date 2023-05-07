@@ -17,14 +17,16 @@ def set_experiment_name(receiver_threshold, sender_threshold):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cognitive hierarchy task')
-    parser.add_argument('--environment', type=str, default='basic_task', metavar='N',
-                        help='game environment (default: basic_task)')
+    parser.add_argument('--environment', type=str, default='first_task', metavar='N',
+                        help='game environment (default: first_task)')
     parser.add_argument('--seed', type=int, default='6431', metavar='N',
                         help='set simulation seed (default: 6431)')
     parser.add_argument('--sender_tom', type=str, default='DoM0', metavar='N',
                         help='set rational_sender tom level (default: DoM0)')
     parser.add_argument('--receiver_tom', type=str, default='DoM0', metavar='N',
                         help='set rational_receiver tom level (default: DoM0)')
+    parser.add_argument('--duration', type=int, default='10', metavar='N',
+                        help='set IUG number of iteration (default: 10)')
     parser.add_argument('--softmax_temp', type=float, default='0.05', metavar='N',
                         help='set softmax temp (default: 0.05)')
     parser.add_argument('--sender_threshold', type=float, default='0.5', metavar='N',
