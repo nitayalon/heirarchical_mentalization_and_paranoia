@@ -62,7 +62,7 @@ parse_experiment_file <- function(file_name)
 ```
 
 ```{r set experiment path, include=FALSE}
-results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/"
+results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/long_duration/"
 dom_levels = list(
                c("0","-1"),
                c("0","1"),
@@ -440,8 +440,8 @@ beliefs %>%
 
 Let's look at some games to learn more
 ```{r plot games for illustration}
-sid = 210
-sender_dom_level_for_plot = 1
+sid = 410
+sender_dom_level_for_plot = -1
 receiver_dom_level_for_plot = 0
 
 game_plot <- game_results %>% 
@@ -457,7 +457,7 @@ game_plot <- game_results %>%
   scale_color_viridis_d(name = expression(paste('Sender threshold')))+
   scale_shape_manual(values=c(4, 15)) +
   # scale_shape_manual(values=c(15, 4)) +
-  scale_x_continuous(name="Trial", breaks=seq(0, 10, 1)) +
+  scale_x_continuous(name="Trial", breaks=seq(0, 20, 1)) +
   labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
    ggtitle('Game results')
 
@@ -481,6 +481,7 @@ belief_plot <- beliefs %>%
   scale_linetype_manual(values=c("solid", "dotted", "solid"))+
   scale_color_viridis_d(name = expression(paste('P(',eta, ')')))+
   facet_grid(receiver_threshold~sender_threshold) + 
+  scale_x_continuous(name="Trial", breaks=seq(0, 20, 1)) +
   labs(y = 'Posterior probability', x= 'Trial') + 
   ggtitle('Belief update')
 
