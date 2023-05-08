@@ -25,6 +25,9 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         return seed + number
 
     def update_bounds(self, action: Action, observation: Action, iteration_number):
+        # Remove access bounds
+        self._high = self.high[0:iteration_number]
+        self.low = self.low[0:iteration_number]
         if action.value is None or observation.value is None:
             return None
         # If the subject accepted the offer the upper bound is updated
@@ -78,8 +81,8 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         :param observation:
         :return:
         """
-        upper_bound = np.round(self.high, 3)
-        lower_bound = np.round(self.low, 3)
+        upper_bound = np.round(self.high[-1], 3)
+        lower_bound = np.round(self.low[-1], 3)
         weights = self._compute_weights(self.potential_actions, lower_bound, upper_bound)
         q_values, probabilities = self._compute_q_values_and_probabilities(self.potential_actions, weights)
         return self.potential_actions, q_values, probabilities

@@ -105,7 +105,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                self.opponent_model.belief)
             future_values = functools.partial(self.recursive_tree_spanning, observation=observation,
                                               opponent_model=self.opponent_model,
-                                              iteration_number=0)
+                                              iteration_number=1)
             q_values = list(map(future_values, self.surrogate_actions))
             q_values_array.append(q_values)
         self.reset_persona(None, action_length, observation_length,
@@ -120,7 +120,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         if iteration_number >= self.planning_horizon:
             return self.utility_function(action.value, observation.value)
         # compute offers and probs given previous history
-        potential_actions, _, probabilities = opponent_model.forward(observation, action)
+        potential_actions, _, probabilities = opponent_model.forward(observation, action, iteration_number)
         average_counter_offer_value = np.dot(potential_actions, probabilities).item()
         average_counter_offer = Action(average_counter_offer_value, False)
         # compute offers and probs given previous history

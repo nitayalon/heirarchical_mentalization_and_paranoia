@@ -36,9 +36,10 @@ class SubIntentionalAgent(ABC):
         self.belief = SubIntentionalBelief(self.history)
         self._alpha = None
 
-    def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0, terminal: Optional[bool] = False):
-        self._high = [high]
-        self.low = [low]
+    def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0,
+              iteration: Optional[int] = 1.0, terminal: Optional[bool] = False):
+        self._high = high[0:iteration]
+        self.low = low[0:iteration]
         self.reset_belief()
         self.reset_solver()
         if terminal:
@@ -166,7 +167,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.opponent_model.threshold = persona
         if action_length == 0 and observation_length == 0:
             return None
-        self.opponent_model.reset(self.high, self.low, False)
+        self.opponent_model.reset(self.high, self.low, observation_length, False)
         self.opponent_model.history.reset(observation_length, action_length)
         self.opponent_model.belief.belief_distribution = nested_beliefs
 
