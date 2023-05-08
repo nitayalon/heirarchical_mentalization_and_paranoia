@@ -44,10 +44,10 @@ class DoMZeroReceiverEnvironmentModel(DoMZeroEnvironmentModel):
     def __init__(self, opponent_model: SubIntentionalAgent, reward_function, actions, belief_distribution: DomZeroReceiverBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
-    def update_persona(self, observation, action):
+    def update_persona(self, observation, action, iteration_number):
         self.opponent_model.low = self.low
         self.opponent_model._high = self.high
-        self.opponent_model.update_bounds(observation, action)
+        self.opponent_model.update_bounds(observation, action, iteration_number)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -95,6 +95,8 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         observation_length = len(self.belief.history.observations)
         if update_belief:
             self.belief.update_distribution(action, observation, iteration_number)
+        # Update rational opponent bounds
+        self.update_low_and_high(observation, action, iteration_number)
         # Recursive tree spanning
         q_values_array = []
         for threshold in self.belief.support:
@@ -103,11 +105,13 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                self.opponent_model.belief)
             future_values = functools.partial(self.recursive_tree_spanning, observation=observation,
                                               opponent_model=self.opponent_model,
-                                              iteration_number=iteration_number)
+                                              iteration_number=0)
             q_values = list(map(future_values, self.surrogate_actions))
             q_values_array.append(q_values)
+        self.reset_persona(None, action_length, observation_length,
+                           self.opponent_model.belief)
         weighted_q_values = self.belief.belief_distribution[-1, :] @ np.array(q_values_array)
-        n_visits = np.repeat(10, self.actions.size)
+        n_visits = np.repeat(self.planning_horizon, self.actions.size)
         return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values, n_visits]
 
     def recursive_tree_spanning(self, action, observation, opponent_model, iteration_number):

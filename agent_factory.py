@@ -10,11 +10,11 @@ class AgentFactory:
         self.softmax_temp = float(self.config.softmax_temperature)
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.subintentional_weight = float(self.config.get_from_env("subintentional_weight"))
-        self.agent_actions = np.round(np.arange(0, 1.05, 0.05),3)
+        self.agent_actions = np.round(np.arange(0, 1.05, 0.05), 3)
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
-        self._thresholds = [0.1, 0.5]
-        self.thresholds_seq = [0.0, 0.1, 0.5] if self.include_random else [0.1, 0.5]  # parameters to control threshold of agent
+        self._thresholds = [0.0, 0.5]
+        self.thresholds_seq = self._thresholds if self.include_random else self._thresholds[1:]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
         self.path_to_memoization_data = self.config.path_to_memoization_data

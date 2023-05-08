@@ -29,20 +29,20 @@ class SubIntentionalAgent(ABC):
         self.potential_actions = actions
         self._threshold = threshold
         self.softmax_temp = softmax_temp
-        self._high = 1-self.threshold if threshold is not None else 1.0
-        self.low = 0.0
+        self._high = [1-self.threshold if threshold is not None else 1.0]
+        self.low = [0.0]
         self.name = None
         self.history = History()
         self.belief = SubIntentionalBelief(self.history)
         self._alpha = None
 
     def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0, terminal: Optional[bool] = False):
-        self._high = high
-        self.low = low
+        self._high = [high]
+        self.low = [low]
         self.reset_belief()
         self.reset_solver()
         if terminal:
-            self._high = 1-self.threshold if self.threshold is not None else 1.0
+            self._high = [1-self.threshold if self.threshold is not None else 1.0]
             self.low = 0.0
             self.history.reset(0, 0)
 
@@ -57,7 +57,7 @@ class SubIntentionalAgent(ABC):
     @threshold.setter
     def threshold(self, gamma):
         self._threshold = gamma
-        self._high = 1 - gamma if gamma is not None else 1.0
+        self._high = [1 - gamma if gamma is not None else 1.0]
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
@@ -68,7 +68,7 @@ class SubIntentionalAgent(ABC):
 
     def act(self, seed, action: Optional[Action] = None, observation: Optional[Action] = None,
             iteration_number: Optional[int] = None) -> [float, np.array]:
-        self.update_bounds(action, observation)
+        self.update_bounds(action, observation, iteration_number)
         seed = self.update_seed(seed, iteration_number)
         relevant_actions, q_values, probabilities = self.forward(action, observation, iteration_number)
         random_number_generator = np.random.default_rng(seed)
@@ -81,7 +81,7 @@ class SubIntentionalAgent(ABC):
     def forward(self, action: Action, observation: Action, iteration_number=None):
         pass
 
-    def update_bounds(self, action: Action, observation: Action):
+    def update_bounds(self, action: Action, observation: Action, iteration_number: Optional[int]):
         pass
 
     def update_history(self, action: Action, observation: Action, reward: float):
@@ -157,8 +157,8 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
-    def update_low_and_high(self, observation, action):
-        self.opponent_model.update_bounds(observation, action)
+    def update_low_and_high(self, observation, action, iteration_number):
+        self.opponent_model.update_bounds(observation, action, iteration_number)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -189,7 +189,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         return interactive_state, counter_offer, reward, observation_probability
 
-    def update_persona(self, observation, action):
+    def update_persona(self, observation, action, iteration_number):
         pass
 
 
@@ -259,7 +259,7 @@ class DoMZeroModel(SubIntentionalAgent):
             best_action = action_nodes[actions[best_action_idx]].action
         else:
             best_action = action_nodes[actions[best_action_idx]]
-        self.environment_model.update_persona(observation, best_action)
+        self.environment_model.update_persona(observation, best_action, iteration_number)
         self.history.update_actions(best_action)
         self.environment_model.opponent_model.history.update_observations(best_action)
         if action_nodes is not None:
