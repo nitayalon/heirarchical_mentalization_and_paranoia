@@ -93,7 +93,7 @@ class DoMZeroSenderSolver(DoMZeroEnvironmentModel):
         observation_length = len(self.belief.history.observations)
         if update_belief:
             self.belief.update_distribution(action, observation, iteration_number)
-        # Recursive tree spanning
+        # Recursive planning_tree spanning
         q_values_array = []
         for threshold in self.belief.belief_distribution[:, 0]:
             # Reset nested model

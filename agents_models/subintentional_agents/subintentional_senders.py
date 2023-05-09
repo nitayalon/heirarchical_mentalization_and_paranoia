@@ -31,13 +31,13 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         if action.value is None or observation.value is None:
             return None
         # If the subject accepted the offer the upper bound is updated
-        high = self.high[iteration_number - 1]
-        low = self.low[iteration_number - 1]
+        high = self.high[- 1]
+        low = self.low[- 1]
         if observation.value:
-            high = min(action.value, 1.0-self.threshold)
+            high = min(action.value, 1.0-self.threshold if self.threshold is not None else 1)
         # If the offer is rejected the upper bound is updated
         else:
-            low = max(action.value, self.low[iteration_number-1])
+            low = max(action.value, low)
         # If the opponent plays tricks with us
         if high < low:
             temp = high

@@ -151,8 +151,8 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.actions = actions
         self.surrogate_actions = [Action(value, False) for value in self.actions]
         self.opponent_model = opponent_model
-        self.low = low
-        self.high = high
+        self.low = [low]
+        self.high = [high]
 
     def reset(self):
         self.low = self.opponent_model.low
@@ -260,7 +260,7 @@ class DoMZeroModel(SubIntentionalAgent):
             best_action = action_nodes[actions[best_action_idx]].action
         else:
             best_action = action_nodes[actions[best_action_idx]]
-        self.environment_model.update_persona(observation, best_action, iteration_number)
+        self.environment_model.update_persona(observation, best_action, iteration_number-1)
         self.history.update_actions(best_action)
         self.environment_model.opponent_model.history.update_observations(best_action)
         if action_nodes is not None:
