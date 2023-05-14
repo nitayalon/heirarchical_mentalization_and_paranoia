@@ -25,14 +25,14 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         return seed + number
 
     def update_bounds(self, action: Action, observation: Action, iteration_number):
-        # Remove access bounds
-        self._high = self.high[0:iteration_number]
-        self.low = self.low[0:iteration_number]
+        # # Remove access bounds
+        # self._high = self.high[0:iteration_number]
+        # self.low = self.low[0:iteration_number]
         if action.value is None or observation.value is None:
             return None
         # If the subject accepted the offer the upper bound is updated
-        high = self.high[- 1]
-        low = self.low[- 1]
+        high = self.high[iteration_number]
+        low = self.low[iteration_number]
         if observation.value:
             high = min(action.value, 1.0-self.threshold if self.threshold is not None else 1)
         # If the offer is rejected the upper bound is updated
@@ -43,8 +43,8 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
             temp = high
             high = low
             low = temp
-        self.low.append(low)
-        self.high.append(high)
+        self.low[iteration_number] = low
+        self.high[iteration_number] = high
 
 
 class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):

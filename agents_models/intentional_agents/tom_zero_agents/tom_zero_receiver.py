@@ -27,7 +27,7 @@ class DomZeroReceiverBelief(DoMZeroBelief):
                 continue
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
-                self.opponent_model.forward(last_observation, action, iteration_number)
+                self.opponent_model.forward(last_observation, action, iteration_number-1)
             # If the observation is not in the feasible action set then it singles theta hat:
             observation_in_feasible_set = np.any(possible_opponent_actions == observation.value)
             if not observation_in_feasible_set:

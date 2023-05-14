@@ -28,9 +28,10 @@ class SubIntentionalAgent(ABC):
         self.config = get_config()
         self.potential_actions = actions
         self._threshold = threshold
+        self._duration = self.config.task_duration
         self.softmax_temp = softmax_temp
-        self._high = [1-self.threshold if threshold is not None else 1.0]
-        self.low = [0.0]
+        self.upper_bounds = [1 - self.threshold if threshold is not None else 1.0] + ([None] * (self._duration - 1))
+        self.lower_bounds = [0.0] + [None] * (self._duration - 1)
         self.name = None
         self.history = History()
         self.belief = SubIntentionalBelief(self.history)
@@ -38,18 +39,14 @@ class SubIntentionalAgent(ABC):
 
     def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0,
               iteration: Optional[int] = 1.0, terminal: Optional[bool] = False):
-        self._high = high[0:iteration]
-        self.low = low[0:iteration]
+        self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
         self.reset_belief()
         self.reset_solver()
         if terminal:
-            self._high = [1-self.threshold if self.threshold is not None else 1.0]
-            self.low = 0.0
+            self.upper_bounds = [1 - self.threshold if self.threshold is not None else 1.0] + ([None] * (self._duration - 1))
+            self.lower_bounds = [0.0] + [None] * (self._duration - 1)
             self.history.reset(0, 0)
-
-    @property
-    def high(self):
-        return self._high
 
     @property
     def threshold(self):
@@ -58,7 +55,6 @@ class SubIntentionalAgent(ABC):
     @threshold.setter
     def threshold(self, gamma):
         self._threshold = gamma
-        self._high = [1 - gamma if gamma is not None else 1.0]
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
