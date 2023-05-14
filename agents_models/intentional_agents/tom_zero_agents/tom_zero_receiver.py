@@ -122,7 +122,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         # Compute trial reward
         reward = self.utility_function(action.value, observation.value)
         if planning_step >= self.planning_horizon or iteration_number >= self.task_duration:
-            remaining_time = max(self.task_duration - iteration_number, 0)
+            remaining_time = max(self.task_duration - iteration_number, 1)
             return self.utility_function(action.value, observation.value) * remaining_time
         # compute offers and probs given previous history
         potential_actions, _, probabilities = opponent_model.forward(observation, action, iteration_number)

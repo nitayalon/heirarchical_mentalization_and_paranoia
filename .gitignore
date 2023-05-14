@@ -133,5 +133,6 @@ dmypy.json
 # directories
 data/
 logs/
+figures/	
 *.err
 *.out
