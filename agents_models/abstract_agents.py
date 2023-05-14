@@ -30,8 +30,8 @@ class SubIntentionalAgent(ABC):
         self._threshold = threshold
         self._duration = self.config.task_duration
         self.softmax_temp = softmax_temp
-        self.upper_bounds = [1 - self.threshold if threshold is not None else 1.0] + ([None] * (self._duration - 1))
-        self.lower_bounds = [0.0] + [None] * (self._duration - 1)
+        self.upper_bounds = ([1 - self.threshold if threshold is not None else 1.0] * 2) + ([None] * (self._duration - 2))
+        self.lower_bounds = ([0.0] * 2) + [None] * (self._duration - 2)
         self.name = None
         self.history = History()
         self.belief = SubIntentionalBelief(self.history)
@@ -39,8 +39,8 @@ class SubIntentionalAgent(ABC):
 
     def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0,
               iteration: Optional[int] = 1.0, terminal: Optional[bool] = False):
-        self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
-        self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        self.upper_bounds = ([1 - self.threshold if self.threshold is not None else 1.0] * 2) + ([None] * (self._duration - 2))
+        self.lower_bounds = ([0.0] * 2) + [None] * (self._duration - 2)
         self.reset_belief()
         self.reset_solver()
         if terminal:

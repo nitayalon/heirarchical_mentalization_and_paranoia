@@ -7,6 +7,8 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
         self.name = "DoM(-1)_RA"
+        self.low = None
+        self.high = None
 
     def utility_function(self, action, observation):
         return (1 - action) - self.threshold
@@ -25,14 +27,13 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         return seed + number
 
     def update_bounds(self, action: Action, observation: Action, iteration_number):
-        # # Remove access bounds
-        # self._high = self.high[0:iteration_number]
-        # self.low = self.low[0:iteration_number]
         if action.value is None or observation.value is None:
+            self.low = 0.0
+            self.high = 1.0-self.threshold if self.threshold is not None else 1
             return None
         # If the subject accepted the offer the upper bound is updated
-        high = self.high[iteration_number]
-        low = self.low[iteration_number]
+        high = self.upper_bounds[iteration_number-1]
+        low = self.lower_bounds[iteration_number-1]
         if observation.value:
             high = min(action.value, 1.0-self.threshold if self.threshold is not None else 1)
         # If the offer is rejected the upper bound is updated
@@ -43,8 +44,10 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
             temp = high
             high = low
             low = temp
-        self.low[iteration_number] = low
-        self.high[iteration_number] = high
+        self.upper_bounds[iteration_number] = high
+        self.lower_bounds[iteration_number] = low
+        self.low = low
+        self.high = high
 
 
 class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
@@ -81,8 +84,8 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         :param observation:
         :return:
         """
-        upper_bound = np.round(self.high[-1], 3)
-        lower_bound = np.round(self.low[-1], 3)
+        upper_bound = np.round(self.high, 3)
+        lower_bound = np.round(self.low, 3)
         weights = self._compute_weights(self.potential_actions, lower_bound, upper_bound)
         q_values, probabilities = self._compute_q_values_and_probabilities(self.potential_actions, weights)
         return self.potential_actions, q_values, probabilities
