@@ -25,7 +25,7 @@ class DoMOneBelief(DoMZeroBelief):
         :param iteration_number:
         :return:
         """
-        if iteration_number <= 1:
+        if iteration_number < 1:
             return None
         prior = np.copy(self.belief_distribution[-1, :])
         likelihood = self.compute_likelihood(action, observation, prior, iteration_number)
@@ -92,6 +92,9 @@ class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
             return None
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
+
+    def update_persona(self, observation, action, iteration_number):
+        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
 
 class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
