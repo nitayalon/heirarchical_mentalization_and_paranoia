@@ -37,7 +37,7 @@ class EAT:
         q_values_list = []
         offer = Action(None, False)
         response = Action(None, False)
-        for trial_number in range(1, self.n_trails+1, 1):
+        for trial_number in range(0, self.n_trails, 1):
             print(f'Starting trial number {trial_number}', flush=True)
             offer, response, trial_results, q_values = self.trial(trial_number, sender, receiver, seed, offer, response)
             self.trail_results.append(trial_results)

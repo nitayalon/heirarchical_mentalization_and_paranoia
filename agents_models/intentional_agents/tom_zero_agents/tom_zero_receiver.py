@@ -45,8 +45,6 @@ class DoMZeroReceiverEnvironmentModel(DoMZeroEnvironmentModel):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
     def update_persona(self, observation, action, iteration_number):
-        self.opponent_model.low = self.low
-        self.opponent_model._high = self.high
         self.opponent_model.update_bounds(observation, action, iteration_number)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
@@ -123,7 +121,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                 planning_step):
         # Compute trial reward
         reward = self.utility_function(action.value, observation.value)
-        if planning_step >= self.planning_horizon:
+        if planning_step >= self.planning_horizon or iteration_number >= self.task_duration:
             remaining_time = max(self.task_duration - iteration_number, 0)
             return self.utility_function(action.value, observation.value) * remaining_time
         # compute offers and probs given previous history

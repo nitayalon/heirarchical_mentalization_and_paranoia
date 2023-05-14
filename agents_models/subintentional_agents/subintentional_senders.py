@@ -44,8 +44,9 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
             temp = high
             high = low
             low = temp
-        self.upper_bounds[iteration_number] = high
-        self.lower_bounds[iteration_number] = low
+        if iteration_number < self.config.task_duration:
+            self.upper_bounds[iteration_number] = high
+            self.lower_bounds[iteration_number] = low
         self.low = low
         self.high = high
 
