@@ -28,7 +28,7 @@ module load singularity
 export SINGULARITY_BIND="/run,/ptmp,/scratch,/tmp,/opt/ohpc,${HOME}"
 export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-02-ec95d31ea677.sif
 
-ENV=basic_task
+ENV=first_task
 SOFTMAX_TEMP=0.1
 RECEIVER_TOM=DoM0
 SENDER_TOM=DoM-1
