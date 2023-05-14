@@ -27,7 +27,7 @@ class DomZeroReceiverBelief(DoMZeroBelief):
                 continue
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
-                self.opponent_model.forward(last_observation, action, iteration_number)
+                self.opponent_model.forward(last_observation, action, iteration_number-1)
             # If the observation is not in the feasible action set then it singles theta hat:
             observation_in_feasible_set = np.any(possible_opponent_actions == observation.value)
             if not observation_in_feasible_set:
@@ -44,10 +44,8 @@ class DoMZeroReceiverEnvironmentModel(DoMZeroEnvironmentModel):
     def __init__(self, opponent_model: SubIntentionalAgent, reward_function, actions, belief_distribution: DomZeroReceiverBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
-    def update_persona(self, observation, action):
-        self.opponent_model.low = self.low
-        self.opponent_model._high = self.high
-        self.opponent_model.update_bounds(observation, action)
+    def update_persona(self, observation, action, iteration_number):
+        self.opponent_model.update_bounds(observation, action, iteration_number)
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -76,7 +74,7 @@ class DoMZeroReceiverExplorationPolicy(DoMZeroExplorationPolicy):
 
 class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
     def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model,
-                 reward_function, planning_horizon, discount_factor):
+                 reward_function, planning_horizon, discount_factor, task_duration):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.actions = actions
         self.belief = belief_distribution
@@ -84,10 +82,12 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.utility_function = reward_function
         self.planning_horizon = planning_horizon
         self.discount_factor = discount_factor
+        self.task_duration = task_duration
         self.action_node = None
         self.surrogate_actions = [Action(value, False) for value in self.actions]
         self.name = "tree_search"
-        self.tree = []
+        self.planning_tree = []
+        self.q_values = []
 
     def plan(self, action, observation, iteration_number, update_belief):
         # Belief update via IRL
@@ -95,38 +95,50 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         observation_length = len(self.belief.history.observations)
         if update_belief:
             self.belief.update_distribution(action, observation, iteration_number)
-        # Recursive tree spanning
+        # Update rational opponent bounds
+        self.update_low_and_high(observation, action, iteration_number)
+        # Recursive planning_tree spanning
         q_values_array = []
+        self.q_values = []
         for threshold in self.belief.support:
             # Reset nested model
             self.reset_persona(threshold, action_length, observation_length,
                                self.opponent_model.belief)
             future_values = functools.partial(self.recursive_tree_spanning, observation=observation,
                                               opponent_model=self.opponent_model,
-                                              iteration_number=iteration_number)
+                                              iteration_number=iteration_number,
+                                              planning_step=0)
             q_values = list(map(future_values, self.surrogate_actions))
             q_values_array.append(q_values)
+        dt = pd.DataFrame(self.q_values)
+        self.reset_persona(None, action_length, observation_length,
+                           self.opponent_model.belief)
         weighted_q_values = self.belief.belief_distribution[-1, :] @ np.array(q_values_array)
-        n_visits = np.repeat(10, self.actions.size)
+        n_visits = np.repeat(self.planning_horizon, self.actions.size)
         return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values, n_visits]
 
-    def recursive_tree_spanning(self, action, observation, opponent_model, iteration_number):
+    def recursive_tree_spanning(self, action, observation, opponent_model, iteration_number,
+                                planning_step):
         # Compute trial reward
         reward = self.utility_function(action.value, observation.value)
-        if iteration_number >= self.planning_horizon:
-            return self.utility_function(action.value, observation.value)
+        if planning_step >= self.planning_horizon or iteration_number >= self.task_duration:
+            remaining_time = max(self.task_duration - iteration_number, 0)
+            return self.utility_function(action.value, observation.value) * remaining_time
         # compute offers and probs given previous history
-        potential_actions, _, probabilities = opponent_model.forward(observation, action)
+        potential_actions, _, probabilities = opponent_model.forward(observation, action, iteration_number)
         average_counter_offer_value = np.dot(potential_actions, probabilities).item()
         average_counter_offer = Action(average_counter_offer_value, False)
         # compute offers and probs given previous history
         future_values = functools.partial(self.recursive_tree_spanning, observation=average_counter_offer,
                                           opponent_model=self.opponent_model,
-                                          iteration_number=iteration_number + 1)
-        self.tree.append([self.opponent_model.threshold, iteration_number, action.value, observation.value,
-                          average_counter_offer_value])
+                                          iteration_number=iteration_number + 1,
+                                          planning_step=planning_step + 1)
+        self.planning_tree.append([self.opponent_model.threshold, iteration_number, action.value, observation.value,
+                                   average_counter_offer_value])
         q_values = list(map(future_values, self.surrogate_actions))
-        return reward + self.discount_factor * max(q_values)
+        q_values = reward + self.discount_factor * max(q_values)
+        self.q_values.append([self.opponent_model.threshold, iteration_number, action.value, observation.value, q_values])
+        return q_values
 
 
 class DoMZeroReceiver(DoMZeroModel):
@@ -137,7 +149,8 @@ class DoMZeroReceiver(DoMZeroModel):
                  threshold: Optional[float],
                  prior_belief: np.array,
                  opponent_model: SubIntentionalAgent,
-                 seed: int):
+                 seed: int,
+                 task_duration: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.belief = DomZeroReceiverBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)
         self.environment_model = DoMZeroReceiverEnvironmentModel(self.opponent_model, self.utility_function,
@@ -146,7 +159,8 @@ class DoMZeroReceiver(DoMZeroModel):
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
                                             self.utility_function,
                                             float(self.config.get_from_env("planning_depth")),
-                                            float(self.config.get_from_env("discount_factor")))
+                                            float(self.config.get_from_env("discount_factor")),
+                                            task_duration)
         self.name = "DoM(0)_receiver"
 
     def utility_function(self, observation, action, *args):

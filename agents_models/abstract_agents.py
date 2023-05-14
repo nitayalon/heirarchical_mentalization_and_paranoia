@@ -28,27 +28,27 @@ class SubIntentionalAgent(ABC):
         self.config = get_config()
         self.potential_actions = actions
         self._threshold = threshold
+        self._duration = self.config.task_duration
         self.softmax_temp = softmax_temp
-        self._high = 1-self.threshold if threshold is not None else 1.0
-        self.low = 0.0
+        self.upper_bounds = [1 - self.threshold if threshold is not None else 1.0] + ([None] * (self._duration - 1))
+        self.lower_bounds = [0.0] + [None] * (self._duration - 1)
+        self.low = self.lower_bounds[0]
+        self.high = self.upper_bounds[0]
         self.name = None
         self.history = History()
         self.belief = SubIntentionalBelief(self.history)
         self._alpha = None
 
-    def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0, terminal: Optional[bool] = False):
-        self._high = high
-        self.low = low
+    def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0,
+              iteration: Optional[int] = 1, terminal: Optional[bool] = False):
+        self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
         self.reset_belief()
         self.reset_solver()
         if terminal:
-            self._high = 1-self.threshold if self.threshold is not None else 1.0
-            self.low = 0.0
+            self.upper_bounds = [1 - self.threshold if self.threshold is not None else 1.0] + ([None] * (self._duration - 1))
+            self.lower_bounds = [0.0] + [None] * (self._duration - 1)
             self.history.reset(0, 0)
-
-    @property
-    def high(self):
-        return self._high
 
     @property
     def threshold(self):
@@ -57,7 +57,6 @@ class SubIntentionalAgent(ABC):
     @threshold.setter
     def threshold(self, gamma):
         self._threshold = gamma
-        self._high = 1 - gamma if gamma is not None else 1.0
 
     def softmax_transformation(self, q_values):
         softmax_transformation = np.exp(q_values / self.softmax_temp)
@@ -68,7 +67,7 @@ class SubIntentionalAgent(ABC):
 
     def act(self, seed, action: Optional[Action] = None, observation: Optional[Action] = None,
             iteration_number: Optional[int] = None) -> [float, np.array]:
-        self.update_bounds(action, observation)
+        self.update_bounds(action, observation, iteration_number)
         seed = self.update_seed(seed, iteration_number)
         relevant_actions, q_values, probabilities = self.forward(action, observation, iteration_number)
         random_number_generator = np.random.default_rng(seed)
@@ -81,7 +80,7 @@ class SubIntentionalAgent(ABC):
     def forward(self, action: Action, observation: Action, iteration_number=None):
         pass
 
-    def update_bounds(self, action: Action, observation: Action):
+    def update_bounds(self, action: Action, observation: Action, iteration_number: Optional[int]):
         pass
 
     def update_history(self, action: Action, observation: Action, reward: float):
@@ -120,7 +119,7 @@ class DoMZeroBelief(BeliefDistribution):
         :param iteration_number:
         :return:
         """
-        if iteration_number <= 1:
+        if iteration_number <= 0:
             return None
         prior = np.copy(self.belief_distribution[-1, :])
         probabilities = self.compute_likelihood(action, observation, prior, iteration_number)
@@ -150,15 +149,14 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.actions = actions
         self.surrogate_actions = [Action(value, False) for value in self.actions]
         self.opponent_model = opponent_model
-        self.low = low
-        self.high = high
+        self.low = [low]
+        self.high = [high]
 
     def reset(self):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
-    def update_low_and_high(self, observation, action):
-        self.opponent_model.update_bounds(observation, action)
+    def update_low_and_high(self, observation, action, iteration_number):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -166,7 +164,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.opponent_model.threshold = persona
         if action_length == 0 and observation_length == 0:
             return None
-        self.opponent_model.reset(self.high, self.low, False)
+        self.opponent_model.reset(self.high, self.low, observation_length, False)
         self.opponent_model.history.reset(observation_length, action_length)
         self.opponent_model.belief.belief_distribution = nested_beliefs
 
@@ -189,7 +187,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         return interactive_state, counter_offer, reward, observation_probability
 
-    def update_persona(self, observation, action):
+    def update_persona(self, observation, action, iteration_number):
         pass
 
 
@@ -240,7 +238,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.reset_solver()
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
-        if iteration_number > 1:
+        if iteration_number > 0:
             self.history.update_observations(observation)
             self.opponent_model.history.update_actions(observation)
         action_nodes, q_values, softmax_transformation, mcts_tree = self.forward(action, observation, iteration_number)
@@ -259,7 +257,7 @@ class DoMZeroModel(SubIntentionalAgent):
             best_action = action_nodes[actions[best_action_idx]].action
         else:
             best_action = action_nodes[actions[best_action_idx]]
-        self.environment_model.update_persona(observation, best_action)
+        self.environment_model.update_persona(observation, best_action, iteration_number)
         self.history.update_actions(best_action)
         self.environment_model.opponent_model.history.update_observations(best_action)
         if action_nodes is not None:

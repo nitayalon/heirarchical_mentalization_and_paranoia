@@ -7,6 +7,8 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
         self.name = "DoM(-1)_RA"
+        self.low = None
+        self.high = None
 
     def utility_function(self, action, observation):
         return (1 - action) - self.threshold
@@ -24,20 +26,29 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
     def update_seed(self, seed, number):
         return seed + number
 
-    def update_bounds(self, action: Action, observation: Action):
+    def update_bounds(self, action: Action, observation: Action, iteration_number):
         if action.value is None or observation.value is None:
+            self.low = 0.0
+            self.high = 1.0-self.threshold if self.threshold is not None else 1
             return None
         # If the subject accepted the offer the upper bound is updated
+        high = self.upper_bounds[iteration_number-1]
+        low = self.lower_bounds[iteration_number-1]
         if observation.value:
-            self._high = min(action.value, 1.0-self.threshold)
+            high = min(action.value, 1.0-self.threshold if self.threshold is not None else 1)
         # If the offer is rejected the upper bound is updated
         else:
-            self.low = max(action.value, self.low)
+            low = max(action.value, low)
         # If the opponent plays tricks with us
-        if self._high < self.low:
-            temp = self._high
-            self._high = self.low
-            self.low = temp
+        if high < low:
+            temp = high
+            high = low
+            low = temp
+        if iteration_number < self.config.task_duration:
+            self.upper_bounds[iteration_number] = high
+            self.lower_bounds[iteration_number] = low
+        self.low = low
+        self.high = high
 
 
 class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
@@ -59,7 +70,11 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
             self._name = "DoM(-1)_Rational"
 
     def _compute_weights(self, offers, low_bound, up_bound):
-        w = np.logical_not(np.logical_and(low_bound < offers, offers <= up_bound))
+        if low_bound < up_bound:
+            w = np.logical_not(np.logical_and(low_bound < offers, offers <= up_bound))
+        # If both bounds are equal to the threshold we do not penalize it
+        else:
+            w = np.logical_not(np.logical_and(low_bound <= offers, offers <= up_bound))
         w_prime = self.penalty * w
         return w_prime
 
@@ -77,7 +92,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         return self.potential_actions, q_values, probabilities
 
     def forward(self, action: Action, observation: Action, iteration_number=None):
-        self.update_bounds(action, observation)
+        self.update_bounds(action, observation, iteration_number)
         # Random agents act fully random
         if self.threshold == 0.0:
             potential_actions, q_values, probabilities = self.random_forward(action, observation)

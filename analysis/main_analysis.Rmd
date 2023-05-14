@@ -360,12 +360,12 @@ game_results %>%
 ```{r belief analysis}
 beliefs %>% 
   filter(agent_name %in% c("DoM(0)_receiver","DoM(2)_receiver")) %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, as.character(sender_threshold), "Random")) %>% 
   mutate(sender_dom_level = factor(sender_dom_level),
          sender_threshold = factor(sender_threshold),
          receiver_dom_level = factor(receiver_dom_level),
          receiver_threshold = factor(receiver_threshold)) %>% 
-  mutate(dyad = fct_cross(sender_dom_level, receiver_dom_level)) %>% 
-  group_by(trial_number, dyad,  sender_dom_level, receiver_dom_level,
+  group_by(trial_number,  sender_dom_level, receiver_dom_level,
            receiver_threshold, sender_threshold) %>% 
   mutate(`P(0.0)` = mean(`X0.0`),
          `P(0.1)` = mean(`X0.1`),
@@ -396,6 +396,7 @@ corresponding_beliefs <-
          sender_threshold = factor(sender_threshold),
          receiver_dom_level = factor(receiver_dom_level),
          receiver_threshold = factor(receiver_threshold)) %>% 
+  mutate(sender_threshold = ifelse(as.character(sender_threshold), sender_threshold > 0, "Random")) %>% 
   group_by(agent_name, trial_number, receiver_dom_level) %>% 
   mutate(`P(Random)` = mean(`X0.0`)) %>% 
   mutate(certainty = ifelse(`P(Random)` > 0.99, 1, 0)) %>% 
@@ -440,7 +441,7 @@ beliefs %>%
 
 Let's look at some games to learn more
 ```{r plot games for illustration}
-sid = 410
+sid = 610
 sender_dom_level_for_plot = -1
 receiver_dom_level_for_plot = 0
 
@@ -449,14 +450,15 @@ game_plot <- game_results %>%
          sender_dom_level == sender_dom_level_for_plot,
          seed == sid) %>% 
   mutate(sender_threshold = factor(sender_threshold),
-         response = factor(response, labels = c('reject','accept'))) %>%
+         # response = factor(response, labels = c('reject','accept'))) %>%
+         response = factor(response, labels = c('accept'))) %>%
   mutate(sender_threshold = factor(sender_threshold)) %>% 
   ggplot(aes(x = trial_number, y = offer)) + 
   geom_point(aes(shape = factor(response)), size = 1.5) + 
   geom_line(aes(colour = sender_threshold), alpha=0.5, size = 1.5) + 
   scale_color_viridis_d(name = expression(paste('Sender threshold')))+
-  scale_shape_manual(values=c(4, 15)) +
-  # scale_shape_manual(values=c(15, 4)) +
+  # scale_shape_manual(values=c(4, 15)) +
+  scale_shape_manual(values=c(15, 4)) +
   scale_x_continuous(name="Trial", breaks=seq(0, 20, 1)) +
   labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
    ggtitle('Game results')
