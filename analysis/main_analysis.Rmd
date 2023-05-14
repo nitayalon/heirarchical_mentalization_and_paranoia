@@ -62,7 +62,7 @@ parse_experiment_file <- function(file_name)
 ```
 
 ```{r set experiment path, include=FALSE}
-results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/long_duration/"
+results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/short_duration/"
 dom_levels = list(
                c("0","-1"),
                c("0","1"),
@@ -93,7 +93,7 @@ for(dom_level in dom_levels)
 ```
 
 ```{r load DoM(2) vs Random game results}
-results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_random_sender/"
+results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/short_duration/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_random_sender/"
 
 receiver_dom_level = "2"
 sender_dom_level = "-1"
@@ -107,7 +107,7 @@ game_results <- rbind(game_results, cbind(interim_results, receiver_dom_level, s
 
 
 ```{r load DoM(2) vs rational subintentional game results}
-results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_rational_sender/"
+results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/short_duration/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_rational_sender/"
 
 receiver_dom_level = "2"
 sender_dom_level = "-1"
@@ -144,7 +144,7 @@ for(dom_level in dom_levels)
 ```
 
 ```{r load DoM(2) vs Random beliefs}
-results_path = "~/Max_Planck/Hierarchical-modelling/data/agent_subject/basic_task/softmax/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_random_sender/beliefs/receiver_beliefs/"
+results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/short_duration/DoM2_receiver_DoM-1_sender_softmax_temp_0.1_random_sender/beliefs/receiver_beliefs/"
 
 receiver_dom_level = "2"
 sender_dom_level = "-1"
@@ -244,7 +244,7 @@ receiver_reward <- game_results %>%
   facet_grid(receiver_dom_level~sender_dom_level) 
 
 cumulative_reward <- sender_reward + receiver_reward
-ggsave("../figures/cumulative_reward_by_agent.png", width = 40, height = 20, units = "cm")
+# ggsave("../figures/cumulative_reward_by_agent.png", width = 40, height = 20, units = "cm")
 ```
 
 ## Detrimental effect of overmetaliastion
@@ -328,10 +328,10 @@ corresponding_beliefs <- beliefs %>%
   ggtitle('Reciever posterior belief')
 
 corresponding_beliefs
-ggsave("../figures/true_and_false_beliefs.png", width = 40, height = 20, units = "cm")
+# ggsave("../figures/true_and_false_beliefs.png", width = 40, height = 20, units = "cm")
 
 policy_and_belief_manipulation <- sender_policy + corresponding_beliefs
-ggsave("../figures/policies_and_belief_manipulation.png", width = 40, height = 20, units = "cm")
+# ggsave("../figures/policies_and_belief_manipulation.png", width = 40, height = 20, units = "cm")
 ```
 
 
@@ -384,7 +384,7 @@ beliefs %>%
   scale_color_viridis_d(name = expression(paste('P(',gamma, ')')))+
   facet_grid(receiver_dom_level~sender_threshold) + 
   labs(y = 'Posterior probability', x= 'Trial')
-ggsave("../figures/receiver_posterior_beliefs.png", width = 40, height = 20, units = "cm")
+# ggsave("../figures/receiver_posterior_beliefs.png", width = 40, height = 20, units = "cm")
 ```
 
 ```{r time until the receiver decide that it playes with a random agent}
@@ -440,8 +440,9 @@ beliefs %>%
 
 
 Let's look at some games to learn more
+
 ```{r plot games for illustration}
-sid = 610
+sid = 210
 sender_dom_level_for_plot = -1
 receiver_dom_level_for_plot = 0
 
@@ -450,15 +451,15 @@ game_plot <- game_results %>%
          sender_dom_level == sender_dom_level_for_plot,
          seed == sid) %>% 
   mutate(sender_threshold = factor(sender_threshold),
-         # response = factor(response, labels = c('reject','accept'))) %>%
-         response = factor(response, labels = c('accept'))) %>%
+         response = factor(response, labels = c('reject','accept'))) %>%
+         # response = factor(response, labels = c('accept'))) %>%
   mutate(sender_threshold = factor(sender_threshold)) %>% 
   ggplot(aes(x = trial_number, y = offer)) + 
   geom_point(aes(shape = factor(response)), size = 1.5) + 
   geom_line(aes(colour = sender_threshold), alpha=0.5, size = 1.5) + 
   scale_color_viridis_d(name = expression(paste('Sender threshold')))+
-  # scale_shape_manual(values=c(4, 15)) +
-  scale_shape_manual(values=c(15, 4)) +
+  scale_shape_manual(values=c(4, 15)) +
+  # scale_shape_manual(values=c(15, 4)) +
   scale_x_continuous(name="Trial", breaks=seq(0, 20, 1)) +
   labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
    ggtitle('Game results')
@@ -501,7 +502,7 @@ q_value_plot <- q_values %>%
   ggtitle('DoM(0) receiver Q-values')
   
 game_all = game_plot + belief_plot / q_value_plot
-ggsave(sprintf("../figures/simulation_illustration_sender_dom_level_%s_receiver_dom_level_%s.png", sender_dom_level_for_plot, receiver_dom_level_for_plot), width = 40, height = 20, units = "cm")
+# ggsave(sprintf("../figures/simulation_illustration_sender_dom_level_%s_receiver_dom_level_%s.png", sender_dom_level_for_plot, receiver_dom_level_for_plot), width = 40, height = 20, units = "cm")
 ```
 
 
