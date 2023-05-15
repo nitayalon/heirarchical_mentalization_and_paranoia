@@ -33,6 +33,7 @@ class DoMOneMemoization(MemoizationTable):
         if exists(self.path_to_table):
             data = pd.read_csv(self.path_to_table)
             print(data.dtypes, flush=True)
+            self.columns = data.columns
         # If not - we create the table
         else:
             try:
@@ -41,9 +42,12 @@ class DoMOneMemoization(MemoizationTable):
                 game_results = self._read_and_process_table("simulation_results")
                 nested_beliefs = self._read_and_process_table("beliefs")
                 data = self.combine_results(q_values, game_results, nested_beliefs)
+                self.columns = data.columns
             except FileNotFoundError:
                 print('First time simulating - no data!')
                 data = None
+                self.columns = ["action","q_value","trial_number","seed","sender_threshold","0.0",
+                                "0.1","0.5","p1","p2","p3","offer","response"]
         return data
 
     def save_data(self):
@@ -139,7 +143,7 @@ class DoMOneMemoization(MemoizationTable):
         data_to_append = pd.DataFrame(np.c_[q_values, np.tile(trial_data, (q_values.shape[0], 1)),
                                             np.tile(beliefs, (q_values.shape[0], 1)),
                                             np.tile(history, (q_values.shape[0], 1))],
-                                      columns=self.data.columns)
+                                      columns=self.columns)
         self.new_data = pd.concat([self.new_data, data_to_append])
         self.data = pd.concat([self.data, data_to_append])
         self.update_buffer_data(data_to_append)
