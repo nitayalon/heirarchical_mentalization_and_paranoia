@@ -106,6 +106,10 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         probabilities = self.softmax_transformation(q_values)
         return q_values, probabilities
 
+    def update_seed(self, seed, number):
+        if self.threshold > 0:
+            return seed
+        return seed + number
 
 class UniformRationalRandomSubIntentionalSender(SoftMaxRationalRandomSubIntentionalSender):
 
