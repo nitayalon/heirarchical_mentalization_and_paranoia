@@ -67,7 +67,6 @@ class SubIntentionalAgent(ABC):
 
     def act(self, seed, action: Optional[Action] = None, observation: Optional[Action] = None,
             iteration_number: Optional[int] = None) -> [float, np.array]:
-        self.update_bounds(action, observation, iteration_number)
         seed = self.update_seed(seed, iteration_number)
         relevant_actions, q_values, probabilities = self.forward(action, observation, iteration_number)
         random_number_generator = np.random.default_rng(seed)

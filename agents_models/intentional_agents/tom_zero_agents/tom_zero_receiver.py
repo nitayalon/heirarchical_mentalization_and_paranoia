@@ -1,4 +1,3 @@
-import numpy as np
 import functools
 from agents_models.abstract_agents import *
 
@@ -27,7 +26,7 @@ class DomZeroReceiverBelief(DoMZeroBelief):
                 continue
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
-                self.opponent_model.forward(last_observation, action, iteration_number-1)
+                self.opponent_model.forward(last_observation, action, iteration_number)
             # If the observation is not in the feasible action set then it singles theta hat:
             observation_in_feasible_set = np.any(possible_opponent_actions == observation.value)
             if not observation_in_feasible_set:
@@ -126,7 +125,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
             return self.utility_function(action.value, observation.value) * remaining_time
         # compute offers and probs given previous history
         potential_actions, _, probabilities = opponent_model.forward(observation, action, iteration_number)
-        average_counter_offer_value = np.dot(potential_actions, probabilities).item()
+        average_counter_offer_value = np.round(np.dot(potential_actions, probabilities).item() / 0.05) * 0.05
         average_counter_offer = Action(average_counter_offer_value, False)
         # compute offers and probs given previous history
         future_values = functools.partial(self.recursive_tree_spanning, observation=average_counter_offer,
@@ -135,10 +134,11 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                           planning_step=planning_step + 1)
         self.planning_tree.append([self.opponent_model.threshold, iteration_number, action.value, observation.value,
                                    average_counter_offer_value])
-        q_values = list(map(future_values, self.surrogate_actions))
-        q_values = reward + self.discount_factor * max(q_values)
-        self.q_values.append([self.opponent_model.threshold, iteration_number, action.value, observation.value, q_values])
-        return q_values
+        future_q_values = list(map(future_values, self.surrogate_actions))
+        q_value = reward + self.discount_factor * max(future_q_values)
+        self.q_values.append([self.opponent_model.threshold, iteration_number, action.value, observation.value, reward,
+                              q_value, future_q_values])
+        return q_value
 
 
 class DoMZeroReceiver(DoMZeroModel):

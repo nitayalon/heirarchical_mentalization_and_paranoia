@@ -4,12 +4,12 @@ general:
   report_ipocmp_statistics: False
   output_planning_tree: True
   include_random: True
-  skip_random: False
+  skip_random: True
   skip_rational: False
 
 environments:
   first_task:
-    n_trials: 10
+    n_trials: 15
     planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
