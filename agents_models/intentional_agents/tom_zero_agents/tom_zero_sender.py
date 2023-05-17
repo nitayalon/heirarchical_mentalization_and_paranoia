@@ -151,3 +151,5 @@ class DoMZeroSender(DoMZeroModel):
         self.history.rewards.append(game_reward)
         return game_reward
 
+    def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        pass

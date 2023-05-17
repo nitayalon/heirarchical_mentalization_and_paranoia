@@ -5,7 +5,7 @@ import os
 from os.path import exists
 
 
-belief_columns = ["0.0", "0.1", "0.5", "trial_number", "seed", "sender_threshold"]
+belief_columns = ["0.0", "0.1", "trial_number", "seed", "sender_threshold"]
 history_columns = ["offer", "response", "trial_number", "seed", "sender_threshold"]
 q_values_columns = ["action", "q_value", "trial_number", "seed", "sender_threshold"]
 
@@ -47,7 +47,7 @@ class DoMOneMemoization(MemoizationTable):
                 print('First time simulating - no data!')
                 data = None
                 self.columns = ["action","q_value","trial_number","seed","sender_threshold","0.0",
-                                "0.1","0.5","p1","p2","p3","offer","response"]
+                                "0.1","p1","p2","offer","response"]
         return data
 
     def save_data(self):
@@ -96,8 +96,7 @@ class DoMOneMemoization(MemoizationTable):
         beliefs = raw_beliefs.loc[raw_beliefs['agent_name'] == 'DoM(0)_receiver'][belief_columns]
         # round beliefs
         beliefs = beliefs.assign(p1=np.round(beliefs["0.0"], 3),
-                                 p2=np.round(beliefs["0.1"], 3),
-                                 p3=np.round(beliefs["0.5"], 3))
+                                 p2=np.round(beliefs["0.1"], 3))
         beliefs['trial_number'] = beliefs['trial_number']+1
         # Join tables to get unified view
         q_values_and_beliefs = pd.merge(q_values, beliefs, on=["trial_number", "seed", "sender_threshold"])
@@ -119,13 +118,12 @@ class DoMOneMemoization(MemoizationTable):
         belief = np.round(belief, 3)
         p1 = belief[0]
         p2 = belief[1]
-        p3 = belief[2]
         results = self.data.loc[(self.data['trial_number'] == trial) & (self.data['sender_threshold'] == threshold) &
-                                (self.data['p1'] == p1) & (self.data['p2'] == p2) & (self.data['p3'] == p3)]
+                                (self.data['p1'] == p1) & (self.data['p2'] == p2)]
         try:
             q_values = results.groupby('action')['q_value'].mean().reset_index()
         except DataError:
-            print(f'Missing numeric output for query:trial={trial},threshold={threshold},p1={p1},p2={p2},p3={p3}')
+            print(f'Missing numeric output for query:trial={trial},threshold={threshold},p1={p1},p2={p2})')
             q_values = pd.DataFrame()
         return q_values
 

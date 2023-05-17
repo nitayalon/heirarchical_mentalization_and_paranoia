@@ -4,6 +4,9 @@ import numpy as np
 
 class RandomSubIntentionalSender(SubIntentionalAgent):
 
+    def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        pass
+
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float] = None):
         super().__init__(actions, softmax_temp, threshold)
         self.name = "DoM(-1)_RA"

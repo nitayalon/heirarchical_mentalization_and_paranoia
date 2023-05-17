@@ -9,17 +9,17 @@ general:
 
 environments:
   first_task:
-    n_trials: 15
+    n_trials: 10
     planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
-    mcts_number_of_iterations: 6000
+    mcts_number_of_iterations: 6
     discount_factor: 0.95
     endowment: 1.0
     subintentional_type: softmax
-    subintentional_weight: -0.9
+    subintentional_weight: -0.95
   second_task:
-    n_trials: 20
+    n_trials: 10
     planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
@@ -27,4 +27,4 @@ environments:
     discount_factor: 0.95
     endowment: 1.0
     subintentional_type: softmax
-    subintentional_weight: -0.9
+    subintentional_weight: -0.95

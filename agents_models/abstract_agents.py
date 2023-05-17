@@ -94,6 +94,10 @@ class SubIntentionalAgent(ABC):
     def reset_belief(self):
         pass
 
+    @abstractmethod
+    def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        pass
+
 
 class DoMZeroBelief(BeliefDistribution):
 
@@ -150,6 +154,9 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.opponent_model = opponent_model
         self.low = [low]
         self.high = [high]
+
+    def update_parameters(self):
+        pass
 
     def reset(self):
         self.low = self.opponent_model.low
@@ -228,7 +235,7 @@ class DoMZeroModel(SubIntentionalAgent):
     def reset(self, high: Optional[float] = None, low: Optional[float] = None,
               action_length: Optional[float] = 0, observation_length: Optional[float] = 0,
               terminal: Optional[bool] = False):
-        self._high = 1.0
+        self.high = 1.0
         self.low = 0.0
         self.history.reset(action_length, observation_length)
         self.opponent_model.reset(1.0, 0.0, terminal=terminal)
@@ -240,6 +247,7 @@ class DoMZeroModel(SubIntentionalAgent):
         if iteration_number > 0:
             self.history.update_observations(observation)
             self.opponent_model.history.update_actions(observation)
+            self.update_nested_models(action, observation, iteration_number)
         action_nodes, q_values, softmax_transformation, mcts_tree = self.forward(action, observation, iteration_number)
         if mcts_tree is not None:
             mcts_tree["softmax_temp"] = self.softmax_temp
@@ -259,6 +267,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.environment_model.update_persona(observation, best_action, iteration_number)
         self.history.update_actions(best_action)
         self.environment_model.opponent_model.history.update_observations(best_action)
+        self.environment_model.update_parameters()
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
         return best_action, action_probability, q_values[:, :-1], softmax_transformation
@@ -286,3 +295,5 @@ class DoMZeroModel(SubIntentionalAgent):
         self.history.update_history(action, observation, reward)
         self.opponent_model.history.update_history(observation, action, None)
 
+    def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        pass
