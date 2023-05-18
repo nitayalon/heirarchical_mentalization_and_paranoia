@@ -64,11 +64,10 @@ parse_experiment_file <- function(file_name)
 ```
 
 ```{r set experiment path, include=FALSE}
-results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/short_duration/"
+results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/single_rational_agent/"
 dom_levels = list(
                c("0","-1"),
-               c("0","1"),
-               c("2","1"))
+               c("0","1"))
 agents_beliefs <- c("receiver_beliefs", "sender_beliefs")
 directory_pattern <- "DoM%s_receiver_DoM%s_sender_softmax_temp_0.1"
 path_to_game_results <- paste0(results_path, directory_pattern)
@@ -227,6 +226,8 @@ sender_policy <-
 
 sender_policy
 ```
+
+
 ```{r sender first offer distribution by type}
 sender_policy <- 
   game_results %>% 
@@ -298,6 +299,8 @@ corresponding_beliefs <-
   ggtitle('Reciever posterior belief')
 corresponding_beliefs
 ```
+
+
 ```{r time until the receiver decide that it playes with a random agent}
 corresponding_beliefs <- 
   beliefs %>% 

@@ -41,7 +41,7 @@ class DoMTwoBelief(DoMOneBelief):
         :param iteration_number:
         :return:
         """
-        if iteration_number <= 1:
+        if iteration_number <= 0:
             return None
         second_order_prior = np.copy(self.belief_distribution[-1, :])
         type_likelihood = self.compute_likelihood(action, observation, second_order_prior, iteration_number)
@@ -109,7 +109,7 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
                 self.random_sender.act(seed, observation, action, iteration_number)
         else:
             counter_offer, observation_probability, q_values, opponent_policy = \
-                self.opponent_model.act(seed, observation, action, iteration_number)
+                self.opponent_model.act(seed, observation, action, iteration_number-1)
         return counter_offer, observation_probability, q_values, opponent_policy
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
@@ -149,8 +149,8 @@ class DoMTwoReceiver(DoMZeroReceiver):
                  memoization_table: DoMTwoMemoization,
                  prior_belief: np.array,
                  opponent_model: Optional[Union[DoMOneSender, DoMZeroSender, SubIntentionalAgent]],
-                 seed: int):
-        super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
+                 seed: int, task_duration):
+        super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed, task_duration)
         self._planning_parameters = dict(seed=seed, threshold=self._threshold)
         self.memoization_table = memoization_table
         self.threshold = 0.0
