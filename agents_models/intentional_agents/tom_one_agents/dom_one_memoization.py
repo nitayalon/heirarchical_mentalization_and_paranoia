@@ -76,9 +76,9 @@ class DoMOneMemoization(MemoizationTable):
         :return:
         """
         data = []
-        path = f'data/first_task/single_rational_agent/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}'
+        path = f'data/first_task/short_duration/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}'
         if directory_name == "beliefs":
-            path = f'data/first_task/single_rational_agent/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}/receiver_beliefs'
+            path = f'data/first_task/short_duration/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}/receiver_beliefs'
         files = os.listdir(path)
         for file in files:
             df = pd.read_csv(f'{path}/{file}')
