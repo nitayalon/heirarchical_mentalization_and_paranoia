@@ -46,7 +46,7 @@ class DoMOneMemoization(MemoizationTable):
                 data.append(df)
             df = pd.concat(data, axis=0, ignore_index=True)
             self.columns = df.columns
-            return pd.concat(df, axis=0, ignore_index=True)
+            return df
         # If not - we create the table
         else:
             try:
@@ -125,7 +125,7 @@ class DoMOneMemoization(MemoizationTable):
         if self.data is None:
             q_values = pd.DataFrame()
             return q_values
-        trial = query_parameters['trial']+1
+        trial = query_parameters['trial']
         threshold = query_parameters['threshold']
         belief = query_parameters['belief']
         belief = np.round(belief, 3)
