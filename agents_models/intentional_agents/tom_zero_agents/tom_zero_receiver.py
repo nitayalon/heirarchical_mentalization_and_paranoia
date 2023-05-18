@@ -85,6 +85,8 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.action_node = None
         self.surrogate_actions = [Action(value, False) for value in self.actions]
         self.name = "tree_search"
+        self.low = 0.0
+        self.high = 1.0
         self.planning_tree = []
         self.q_values = []
 
@@ -92,10 +94,10 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         # Belief update via IRL
         action_length = len(self.belief.history.actions)
         observation_length = len(self.belief.history.observations)
+        self.update_low_and_high(observation, action, iteration_number)
         if update_belief:
             self.belief.update_distribution(action, observation, iteration_number)
         # Update rational opponent bounds
-        self.update_low_and_high(observation, action, iteration_number)
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []
@@ -103,7 +105,10 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
             # Reset nested model
             self.reset_persona(threshold, action_length, observation_length,
                                self.opponent_model.belief)
-            future_values = functools.partial(self.recursive_tree_spanning, observation=observation,
+            future_values = functools.partial(self.recursive_tree_spanning,
+                                              observation=observation,
+                                              current_low=self.low,
+                                              current_high=self.high,
                                               opponent_model=self.opponent_model,
                                               iteration_number=iteration_number,
                                               planning_step=0)
@@ -116,19 +121,28 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         n_visits = np.repeat(self.planning_horizon, self.actions.size)
         return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values, n_visits]
 
-    def recursive_tree_spanning(self, action, observation, opponent_model, iteration_number,
+    def recursive_tree_spanning(self, action, observation,
+                                current_low, current_high,
+                                opponent_model, iteration_number,
                                 planning_step):
         # Compute trial reward
         reward = self.utility_function(action.value, observation.value)
         if planning_step >= self.planning_horizon or iteration_number >= self.task_duration:
             remaining_time = max(self.task_duration - iteration_number, 1)
             return self.utility_function(action.value, observation.value) * remaining_time
+        # Update bounds:
+        current_low = observation.value * (1-action.value) + current_low * action.value
+        current_high = observation.value * action.value + current_high * (1-action.value)
         # compute offers and probs given previous history
-        potential_actions, _, probabilities = opponent_model.forward(observation, action, iteration_number)
+        potential_actions, _, probabilities = opponent_model.forward(observation, action, iteration_number,
+                                                                     [current_low, current_high])
         average_counter_offer_value = np.round(np.dot(potential_actions, probabilities).item() / 0.05) * 0.05
         average_counter_offer = Action(average_counter_offer_value, False)
         # compute offers and probs given previous history
-        future_values = functools.partial(self.recursive_tree_spanning, observation=average_counter_offer,
+        future_values = functools.partial(self.recursive_tree_spanning,
+                                          observation=average_counter_offer,
+                                          current_low=current_low,
+                                          current_high=current_high,
                                           opponent_model=self.opponent_model,
                                           iteration_number=iteration_number + 1,
                                           planning_step=planning_step + 1)

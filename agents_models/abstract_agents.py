@@ -163,8 +163,10 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.high = self.opponent_model.high
 
     def update_low_and_high(self, observation, action, iteration_number):
-        self.low = self.opponent_model.low
-        self.high = self.opponent_model.high
+        if action.value is None:
+            return None
+        self.low = observation.value * (1 - action.value) + self.low * action.value
+        self.high = observation.value * action.value + self.high * (1 - action.value)
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
         self.opponent_model.threshold = persona

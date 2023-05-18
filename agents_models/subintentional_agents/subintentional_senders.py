@@ -86,7 +86,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         w_prime = self.penalty * w
         return w_prime
 
-    def rational_forward(self, high: Optional[float] = None, low: Optional[float] = None):
+    def rational_forward(self, low: Optional[float] = None, high: Optional[float] = None):
         """
         This method computes an interval of positive reward offers and returns a uniform distribution over them
 
@@ -100,14 +100,17 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         q_values, probabilities = self._compute_q_values_and_probabilities(self.potential_actions, weights)
         return self.potential_actions, q_values, probabilities
 
-    def forward(self, action: Action, observation: Action, iteration_number=None):
+    def forward(self, action: Action, observation: Action, iteration_number=None, *args):
         # Random agents act fully random
         if self.threshold == 0.0:
             potential_actions, q_values, probabilities = self.random_forward()
         # Rational random use different policies
         else:
             self.update_bounds(action, observation, iteration_number)
-            potential_actions, q_values, probabilities = self.rational_forward()
+            if len(args) == 0:
+                potential_actions, q_values, probabilities = self.rational_forward()
+            else:
+                potential_actions, q_values, probabilities = self.rational_forward(args[0][0], args[0][1])
         return potential_actions, q_values, probabilities
 
     def _compute_q_values_and_probabilities(self, relevant_actions, weights):
@@ -119,6 +122,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         if self.threshold > 0:
             return seed
         return seed + number
+
 
 class UniformRationalRandomSubIntentionalSender(SoftMaxRationalRandomSubIntentionalSender):
 
