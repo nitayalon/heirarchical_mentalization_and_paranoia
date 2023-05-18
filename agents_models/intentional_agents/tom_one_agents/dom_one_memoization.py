@@ -2,7 +2,7 @@ from pandas.core.base import DataError
 from IPOMCP_solver.utils.memoization_table import *
 import os
 from os.path import exists
-
+import glob
 
 belief_columns = ["0.0", "0.1", "trial_number", "seed", "sender_threshold"]
 history_columns = ["offer", "response", "trial_number", "seed", "sender_threshold"]
@@ -35,11 +35,17 @@ class DoMOneMemoization(MemoizationTable):
         self.columns = data.columns
 
     def load_data(self):
-        # First - see if we already have data there
-        if exists(self.path_to_table):
-            data = pd.read_csv(self.path_to_table)
-            print(data.dtypes, flush=True)
-            self.columns = data.columns
+        # First - see if we already have memoization data there
+        if len(os.listdir(self.path_to_dir)) > 0:
+            print('Load memoization data', flush=True)
+            data = []
+            files = os.listdir(self.path_to_dir)
+            for file in files:
+                df = pd.read_csv(f'{self.path_to_dir}/{file}')
+                data.append(df)
+            df = pd.concat(data, axis=0, ignore_index=True)
+            self.columns = df.columns
+            return pd.concat(df, axis=0, ignore_index=True)
         # If not - we create the table
         else:
             try:
