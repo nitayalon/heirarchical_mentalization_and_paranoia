@@ -41,8 +41,10 @@ class SubIntentionalAgent(ABC):
 
     def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0,
               iteration: Optional[int] = 1, terminal: Optional[bool] = False):
-        self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
-        self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        self.low = low
+        self.high = high
+        # self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        # self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
         self.reset_belief()
         self.reset_solver()
         if terminal:

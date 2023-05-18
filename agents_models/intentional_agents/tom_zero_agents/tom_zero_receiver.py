@@ -94,10 +94,11 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         # Belief update via IRL
         action_length = len(self.belief.history.actions)
         observation_length = len(self.belief.history.observations)
-        self.update_low_and_high(observation, action, iteration_number)
         if update_belief:
-            self.belief.update_distribution(action, observation, iteration_number)
-        # Update rational opponent bounds
+            self.belief.update_distribution(action, observation, iteration_number)   # Update rational opponent bounds
+        self.update_low_and_high(self.belief.history.observations[-2] if iteration_number > 1 else Action(None, False),
+                                 self.belief.history.actions[-1] if iteration_number > 1 else Action(None, False)
+                                 , iteration_number)
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []
