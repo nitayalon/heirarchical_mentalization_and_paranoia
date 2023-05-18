@@ -46,7 +46,7 @@ class DoMOneMemoization(MemoizationTable):
                 data.append(df)
             df = pd.concat(data, axis=0, ignore_index=True)
             self.columns = df.columns
-            return pd.concat(df, axis=0, ignore_index=True)
+            return df
         # If not - we create the table
         else:
             try:
