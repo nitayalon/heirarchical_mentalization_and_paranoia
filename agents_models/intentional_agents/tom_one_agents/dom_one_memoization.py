@@ -36,6 +36,7 @@ class DoMOneMemoization(MemoizationTable):
 
     def load_data(self):
         # First - see if we already have memoization data there
+        print(self.path_to_dir, flush=True)
         if len(os.listdir(self.path_to_dir)) > 0:
             print('Load memoization data', flush=True)
             data = []
