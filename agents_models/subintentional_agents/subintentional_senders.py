@@ -37,6 +37,11 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         # If the subject accepted the offer the upper bound is updated
         high = self.upper_bounds[iteration_number-1]
         low = self.lower_bounds[iteration_number-1]
+        # Protection against missing data:
+        if low is None:
+            low = list(filter(lambda entry: entry is not None, self.lower_bounds))[-1]
+        if high is None:
+            high = list(filter(lambda entry: entry is not None, self.upper_bounds))[-1]
         if observation.value:
             high = min(action.value, 1.0)
         # If the offer is rejected the upper bound is updated

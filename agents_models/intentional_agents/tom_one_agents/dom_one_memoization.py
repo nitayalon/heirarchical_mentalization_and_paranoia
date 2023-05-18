@@ -1,5 +1,4 @@
 from pandas.core.base import DataError
-
 from IPOMCP_solver.utils.memoization_table import *
 import os
 from os.path import exists
@@ -15,7 +14,7 @@ class DoMOneMemoization(MemoizationTable):
     def __init__(self, path_to_memoization_dir, softmax_temp=0.1):
         self.softmax_temp = softmax_temp
         self.config = get_config()
-        self._table_name = f'DoM_1_memoization_data_softmax_temp_{self.softmax_temp}_seed_{self.config.seed}'
+        self._table_name = f'DoM_1_unified_memoization_data_softmax_temp_{self.softmax_temp}'
         self.target_table_name = f'{self._table_name}.csv'
         self.path_to_dir = path_to_memoization_dir
         self.path_to_table = os.path.join(self.path_to_dir, self.target_table_name)
@@ -27,6 +26,13 @@ class DoMOneMemoization(MemoizationTable):
             os.mkdir(self.path_to_dir)
         buffer_file_name = f'{self._table_name}_buffer.csv'
         return os.path.join(self.path_to_dir, buffer_file_name)
+
+    def create_unified_memoization_table(self):
+        q_values = self._read_and_process_table("q_values")
+        game_results = self._read_and_process_table("simulation_results")
+        nested_beliefs = self._read_and_process_table("beliefs")
+        data = self.combine_results(q_values, game_results, nested_beliefs)
+        self.columns = data.columns
 
     def load_data(self):
         # First - see if we already have data there
@@ -70,9 +76,9 @@ class DoMOneMemoization(MemoizationTable):
         :return:
         """
         data = []
-        path = f'data/agent_subject/basic_task/softmax/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}'
+        path = f'data/first_task/single_rational_agent/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}'
         if directory_name == "beliefs":
-            path = f'data/agent_subject/basic_task/softmax/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}/receiver_beliefs'
+            path = f'data/first_task/single_rational_agent/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}/receiver_beliefs'
         files = os.listdir(path)
         for file in files:
             df = pd.read_csv(f'{path}/{file}')
@@ -145,3 +151,4 @@ class DoMOneMemoization(MemoizationTable):
         self.new_data = pd.concat([self.new_data, data_to_append])
         self.data = pd.concat([self.data, data_to_append])
         self.update_buffer_data(data_to_append)
+
