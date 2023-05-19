@@ -41,8 +41,10 @@ class SubIntentionalAgent(ABC):
 
     def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0,
               iteration: Optional[int] = 1, terminal: Optional[bool] = False):
-        self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
-        self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        self.low = low
+        self.high = high
+        # self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        # self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
         self.reset_belief()
         self.reset_solver()
         if terminal:
@@ -163,8 +165,10 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.high = self.opponent_model.high
 
     def update_low_and_high(self, observation, action, iteration_number):
-        self.low = self.opponent_model.low
-        self.high = self.opponent_model.high
+        if action.value is None:
+            return None
+        self.low = observation.value * (1 - action.value) + self.low * action.value
+        self.high = observation.value * action.value + self.high * (1 - action.value)
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
         self.opponent_model.threshold = persona

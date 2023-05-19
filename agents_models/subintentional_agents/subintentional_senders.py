@@ -34,27 +34,29 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
             self.low = 0.0
             self.high = 1.0
             return None
-        # If the subject accepted the offer the upper bound is updated
-        high = self.upper_bounds[iteration_number-1]
-        low = self.lower_bounds[iteration_number-1]
-        # Protection against missing data:
-        if low is None:
-            low = list(filter(lambda entry: entry is not None, self.lower_bounds))[-1]
-        if high is None:
-            high = list(filter(lambda entry: entry is not None, self.upper_bounds))[-1]
-        if observation.value:
-            high = min(action.value, 1.0)
-        # If the offer is rejected the upper bound is updated
-        else:
-            low = max(action.value, low)
+        low = action.value * (1-observation.value) + observation.value * self.low
+        high = action.value * observation.value + (1-observation.value) * self.high
+        # # If the subject accepted the offer the upper bound is updated
+        # high = self.upper_bounds[iteration_number-1]
+        # low = self.lower_bounds[iteration_number-1]
+        # # Protection against missing data:
+        # if low is None:
+        #     low = list(filter(lambda entry: entry is not None, self.lower_bounds))[-1]
+        # if high is None:
+        #     high = list(filter(lambda entry: entry is not None, self.upper_bounds))[-1]
+        # if observation.value:
+        #     high = min(action.value, 1.0)
+        # # If the offer is rejected the upper bound is updated
+        # else:
+        #     low = max(action.value, low)
         # If the opponent plays tricks with us
         if high < low:
             temp = high
             high = low
             low = temp
-        if iteration_number < self.config.task_duration:
-            self.upper_bounds[iteration_number] = high
-            self.lower_bounds[iteration_number] = low
+        # if iteration_number < self.config.task_duration:
+        #     self.upper_bounds[iteration_number] = high
+        #     self.lower_bounds[iteration_number] = low
         self.low = low
         self.high = high
 
@@ -86,7 +88,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         w_prime = self.penalty * w
         return w_prime
 
-    def rational_forward(self, high: Optional[float] = None, low: Optional[float] = None):
+    def rational_forward(self, low: Optional[float] = None, high: Optional[float] = None):
         """
         This method computes an interval of positive reward offers and returns a uniform distribution over them
 
@@ -100,14 +102,17 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         q_values, probabilities = self._compute_q_values_and_probabilities(self.potential_actions, weights)
         return self.potential_actions, q_values, probabilities
 
-    def forward(self, action: Action, observation: Action, iteration_number=None):
+    def forward(self, action: Action, observation: Action, iteration_number=None, *args):
         # Random agents act fully random
         if self.threshold == 0.0:
             potential_actions, q_values, probabilities = self.random_forward()
         # Rational random use different policies
         else:
             self.update_bounds(action, observation, iteration_number)
-            potential_actions, q_values, probabilities = self.rational_forward()
+            if len(args) == 0:
+                potential_actions, q_values, probabilities = self.rational_forward()
+            else:
+                potential_actions, q_values, probabilities = self.rational_forward(args[0][0], args[0][1])
         return potential_actions, q_values, probabilities
 
     def _compute_q_values_and_probabilities(self, relevant_actions, weights):
@@ -119,6 +124,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         if self.threshold > 0:
             return seed
         return seed + number
+
 
 class UniformRationalRandomSubIntentionalSender(SoftMaxRationalRandomSubIntentionalSender):
 
