@@ -38,27 +38,11 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
             return None
         low = action.value * (1-observation.value) + observation.value * self.low
         high = action.value * observation.value + (1-observation.value) * self.high
-        # # If the subject accepted the offer the upper bound is updated
-        # high = self.upper_bounds[iteration_number-1]
-        # low = self.lower_bounds[iteration_number-1]
-        # # Protection against missing data:
-        # if low is None:
-        #     low = list(filter(lambda entry: entry is not None, self.lower_bounds))[-1]
-        # if high is None:
-        #     high = list(filter(lambda entry: entry is not None, self.upper_bounds))[-1]
-        # if observation.value:
-        #     high = min(action.value, 1.0)
-        # # If the offer is rejected the upper bound is updated
-        # else:
-        #     low = max(action.value, low)
         # If the opponent plays tricks with us
         if high < low:
             temp = high
             high = low
             low = temp
-        # if iteration_number < self.config.task_duration:
-        #     self.upper_bounds[iteration_number] = high
-        #     self.lower_bounds[iteration_number] = low
         self.low = low
         self.high = high
 
