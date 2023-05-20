@@ -1,4 +1,3 @@
-import numpy as np
 import functools
 from agents_models.abstract_agents import *
 
@@ -27,7 +26,7 @@ class DomZeroReceiverBelief(DoMZeroBelief):
                 continue
             self.opponent_model.threshold = theta
             possible_opponent_actions, opponent_q_values, probabilities = \
-                self.opponent_model.forward(last_observation, action, iteration_number-1)
+                self.opponent_model.forward(last_observation, action, iteration_number)
             # If the observation is not in the feasible action set then it singles theta hat:
             observation_in_feasible_set = np.any(possible_opponent_actions == observation.value)
             if not observation_in_feasible_set:
@@ -86,6 +85,8 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.action_node = None
         self.surrogate_actions = [Action(value, False) for value in self.actions]
         self.name = "tree_search"
+        self.low = 0.0
+        self.high = 1.0
         self.planning_tree = []
         self.q_values = []
 
@@ -94,9 +95,10 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         action_length = len(self.belief.history.actions)
         observation_length = len(self.belief.history.observations)
         if update_belief:
-            self.belief.update_distribution(action, observation, iteration_number)
-        # Update rational opponent bounds
-        self.update_low_and_high(observation, action, iteration_number)
+            self.belief.update_distribution(action, observation, iteration_number)   # Update rational opponent bounds
+        self.update_low_and_high(self.belief.history.observations[-2] if iteration_number > 1 else Action(None, False),
+                                 self.belief.history.actions[-1] if iteration_number > 1 else Action(None, False)
+                                 , iteration_number)
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []
@@ -104,7 +106,10 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
             # Reset nested model
             self.reset_persona(threshold, action_length, observation_length,
                                self.opponent_model.belief)
-            future_values = functools.partial(self.recursive_tree_spanning, observation=observation,
+            future_values = functools.partial(self.recursive_tree_spanning,
+                                              observation=observation,
+                                              current_low=self.low,
+                                              current_high=self.high,
                                               opponent_model=self.opponent_model,
                                               iteration_number=iteration_number,
                                               planning_step=0)
@@ -117,28 +122,38 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         n_visits = np.repeat(self.planning_horizon, self.actions.size)
         return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values, n_visits]
 
-    def recursive_tree_spanning(self, action, observation, opponent_model, iteration_number,
+    def recursive_tree_spanning(self, action, observation,
+                                current_low, current_high,
+                                opponent_model, iteration_number,
                                 planning_step):
         # Compute trial reward
         reward = self.utility_function(action.value, observation.value)
         if planning_step >= self.planning_horizon or iteration_number >= self.task_duration:
             remaining_time = max(self.task_duration - iteration_number, 1)
             return self.utility_function(action.value, observation.value) * remaining_time
+        # Update bounds:
+        current_low = observation.value * (1-action.value) + current_low * action.value
+        current_high = observation.value * action.value + current_high * (1-action.value)
         # compute offers and probs given previous history
-        potential_actions, _, probabilities = opponent_model.forward(observation, action, iteration_number)
-        average_counter_offer_value = np.dot(potential_actions, probabilities).item()
+        potential_actions, _, probabilities = opponent_model.forward(observation, action, iteration_number,
+                                                                     [current_low, current_high])
+        average_counter_offer_value = np.round(np.dot(potential_actions, probabilities).item() / 0.05) * 0.05
         average_counter_offer = Action(average_counter_offer_value, False)
         # compute offers and probs given previous history
-        future_values = functools.partial(self.recursive_tree_spanning, observation=average_counter_offer,
+        future_values = functools.partial(self.recursive_tree_spanning,
+                                          observation=average_counter_offer,
+                                          current_low=current_low,
+                                          current_high=current_high,
                                           opponent_model=self.opponent_model,
                                           iteration_number=iteration_number + 1,
                                           planning_step=planning_step + 1)
         self.planning_tree.append([self.opponent_model.threshold, iteration_number, action.value, observation.value,
                                    average_counter_offer_value])
-        q_values = list(map(future_values, self.surrogate_actions))
-        q_values = reward + self.discount_factor * max(q_values)
-        self.q_values.append([self.opponent_model.threshold, iteration_number, action.value, observation.value, q_values])
-        return q_values
+        future_q_values = list(map(future_values, self.surrogate_actions))
+        q_value = reward + self.discount_factor * max(future_q_values)
+        self.q_values.append([self.opponent_model.threshold, iteration_number, action.value, observation.value, reward,
+                              q_value, future_q_values])
+        return q_value
 
 
 class DoMZeroReceiver(DoMZeroModel):

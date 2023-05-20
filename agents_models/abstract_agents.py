@@ -41,8 +41,10 @@ class SubIntentionalAgent(ABC):
 
     def reset(self, high: Optional[float] = 1.0, low: Optional[float] = 0.0,
               iteration: Optional[int] = 1, terminal: Optional[bool] = False):
-        self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
-        self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        self.low = low
+        self.high = high
+        # self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
+        # self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
         self.reset_belief()
         self.reset_solver()
         if terminal:
@@ -67,7 +69,6 @@ class SubIntentionalAgent(ABC):
 
     def act(self, seed, action: Optional[Action] = None, observation: Optional[Action] = None,
             iteration_number: Optional[int] = None) -> [float, np.array]:
-        self.update_bounds(action, observation, iteration_number)
         seed = self.update_seed(seed, iteration_number)
         relevant_actions, q_values, probabilities = self.forward(action, observation, iteration_number)
         random_number_generator = np.random.default_rng(seed)
@@ -93,6 +94,10 @@ class SubIntentionalAgent(ABC):
         pass
 
     def reset_belief(self):
+        pass
+
+    @abstractmethod
+    def update_nested_models(self, action=None, observation=None, iteration_number=None):
         pass
 
 
@@ -152,13 +157,18 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.low = [low]
         self.high = [high]
 
+    def update_parameters(self):
+        pass
+
     def reset(self):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
     def update_low_and_high(self, observation, action, iteration_number):
-        self.low = self.opponent_model.low
-        self.high = self.opponent_model.high
+        if action.value is None:
+            return None
+        self.low = observation.value * (1 - action.value) + self.low * action.value
+        self.high = observation.value * action.value + self.high * (1 - action.value)
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
         self.opponent_model.threshold = persona
@@ -229,7 +239,7 @@ class DoMZeroModel(SubIntentionalAgent):
     def reset(self, high: Optional[float] = None, low: Optional[float] = None,
               action_length: Optional[float] = 0, observation_length: Optional[float] = 0,
               terminal: Optional[bool] = False):
-        self._high = 1.0
+        self.high = 1.0
         self.low = 0.0
         self.history.reset(action_length, observation_length)
         self.opponent_model.reset(1.0, 0.0, terminal=terminal)
@@ -241,6 +251,7 @@ class DoMZeroModel(SubIntentionalAgent):
         if iteration_number > 0:
             self.history.update_observations(observation)
             self.opponent_model.history.update_actions(observation)
+            self.update_nested_models(action, observation, iteration_number)
         action_nodes, q_values, softmax_transformation, mcts_tree = self.forward(action, observation, iteration_number)
         if mcts_tree is not None:
             mcts_tree["softmax_temp"] = self.softmax_temp
@@ -260,6 +271,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.environment_model.update_persona(observation, best_action, iteration_number)
         self.history.update_actions(best_action)
         self.environment_model.opponent_model.history.update_observations(best_action)
+        self.environment_model.update_parameters()
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
         return best_action, action_probability, q_values[:, :-1], softmax_transformation
@@ -287,3 +299,5 @@ class DoMZeroModel(SubIntentionalAgent):
         self.history.update_history(action, observation, reward)
         self.opponent_model.history.update_history(observation, action, None)
 
+    def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        pass

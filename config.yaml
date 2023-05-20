@@ -6,6 +6,7 @@ general:
   include_random: True
   skip_random: False
   skip_rational: False
+  number_of_rational_agents: 2
 
 environments:
   first_task:
@@ -14,11 +15,11 @@ environments:
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
     mcts_number_of_iterations: 6000
-    discount_factor: 0.95
+    discount_factor: 0.99
     endowment: 1.0
     subintentional_type: softmax
-    subintentional_weight: -0.9
-  second_task:
+    subintentional_weight: -0.95
+  x_ipomdp:
     n_trials: 20
     planning_depth: 10
     uct_exploration_bonus: 5.0
@@ -27,4 +28,4 @@ environments:
     discount_factor: 0.95
     endowment: 1.0
     subintentional_type: softmax
-    subintentional_weight: -0.9
+    subintentional_weight: -0.95

@@ -10,11 +10,11 @@ class AgentFactory:
         self.softmax_temp = float(self.config.softmax_temperature)
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.subintentional_weight = float(self.config.get_from_env("subintentional_weight"))
-        self.agent_actions = np.round(np.arange(0, 1.05, 0.05), 3)
+        self.agent_actions = np.round(np.arange(0, 1.05, 0.05), 2)
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
         self.task_duration = self.config.get_from_env("n_trials")
-        self._thresholds = [0.0, 0.1, 0.5]
+        self._thresholds = [0.0, 0.2, 0.8] if self.config.get_from_general("number_of_rational_agents") else [0.0, 0.2]
         self.thresholds_seq = self._thresholds if self.include_random else self._thresholds[1:]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
@@ -94,6 +94,7 @@ class AgentFactory:
         opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
         memoization_table = DoMTwoMemoization(self.path_to_memoization_data)
         output_agent = DoMTwoReceiver(self.subject_actions, self.config.softmax_temperature, None, memoization_table,
-                                      opponent_theta_hat_distribution, opponent_model, self.config.seed)
+                                      opponent_theta_hat_distribution, opponent_model, self.config.seed,
+                                      self.task_duration)
         return output_agent
 

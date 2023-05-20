@@ -1,11 +1,10 @@
 from pandas.core.base import DataError
-
 from IPOMCP_solver.utils.memoization_table import *
 import os
 from os.path import exists
+import glob
 
-
-belief_columns = ["0.0", "0.1", "0.5", "trial_number", "seed", "sender_threshold"]
+belief_columns = ["0.0", "0.1", "trial_number", "seed", "sender_threshold"]
 history_columns = ["offer", "response", "trial_number", "seed", "sender_threshold"]
 q_values_columns = ["action", "q_value", "trial_number", "seed", "sender_threshold"]
 
@@ -15,7 +14,7 @@ class DoMOneMemoization(MemoizationTable):
     def __init__(self, path_to_memoization_dir, softmax_temp=0.1):
         self.softmax_temp = softmax_temp
         self.config = get_config()
-        self._table_name = f'DoM_1_memoization_data_softmax_temp_{self.softmax_temp}_seed_{self.config.seed}'
+        self._table_name = f'DoM_1_unified_memoization_data_softmax_temp_{self.softmax_temp}'
         self.target_table_name = f'{self._table_name}.csv'
         self.path_to_dir = path_to_memoization_dir
         self.path_to_table = os.path.join(self.path_to_dir, self.target_table_name)
@@ -28,12 +27,26 @@ class DoMOneMemoization(MemoizationTable):
         buffer_file_name = f'{self._table_name}_buffer.csv'
         return os.path.join(self.path_to_dir, buffer_file_name)
 
+    def create_unified_memoization_table(self):
+        q_values = self._read_and_process_table("q_values")
+        game_results = self._read_and_process_table("simulation_results")
+        nested_beliefs = self._read_and_process_table("beliefs")
+        data = self.combine_results(q_values, game_results, nested_beliefs)
+        self.columns = data.columns
+
     def load_data(self):
-        # First - see if we already have data there
-        if exists(self.path_to_table):
-            data = pd.read_csv(self.path_to_table)
-            print(data.dtypes, flush=True)
-            self.columns = data.columns
+        # First - see if we already have memoization data there
+        print(self.path_to_dir, flush=True)
+        if len(os.listdir(self.path_to_dir)) > 0:
+            print('Load memoization data', flush=True)
+            data = []
+            files = os.listdir(self.path_to_dir)
+            for file in files:
+                df = pd.read_csv(f'{self.path_to_dir}/{file}')
+                data.append(df)
+            df = pd.concat(data, axis=0, ignore_index=True)
+            self.columns = df.columns
+            return df
         # If not - we create the table
         else:
             try:
@@ -47,7 +60,7 @@ class DoMOneMemoization(MemoizationTable):
                 print('First time simulating - no data!')
                 data = None
                 self.columns = ["action","q_value","trial_number","seed","sender_threshold","0.0",
-                                "0.1","0.5","p1","p2","p3","offer","response"]
+                                "0.1","p1","p2","offer","response"]
         return data
 
     def save_data(self):
@@ -70,9 +83,9 @@ class DoMOneMemoization(MemoizationTable):
         :return:
         """
         data = []
-        path = f'data/agent_subject/basic_task/softmax/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}'
+        path = f'data/first_task/single_rational_agent/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}'
         if directory_name == "beliefs":
-            path = f'data/agent_subject/basic_task/softmax/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}/receiver_beliefs'
+            path = f'data/first_task/single_rational_agent/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}/receiver_beliefs'
         files = os.listdir(path)
         for file in files:
             df = pd.read_csv(f'{path}/{file}')
@@ -96,8 +109,7 @@ class DoMOneMemoization(MemoizationTable):
         beliefs = raw_beliefs.loc[raw_beliefs['agent_name'] == 'DoM(0)_receiver'][belief_columns]
         # round beliefs
         beliefs = beliefs.assign(p1=np.round(beliefs["0.0"], 3),
-                                 p2=np.round(beliefs["0.1"], 3),
-                                 p3=np.round(beliefs["0.5"], 3))
+                                 p2=np.round(beliefs["0.1"], 3))
         beliefs['trial_number'] = beliefs['trial_number']+1
         # Join tables to get unified view
         q_values_and_beliefs = pd.merge(q_values, beliefs, on=["trial_number", "seed", "sender_threshold"])
@@ -113,19 +125,18 @@ class DoMOneMemoization(MemoizationTable):
         if self.data is None:
             q_values = pd.DataFrame()
             return q_values
-        trial = query_parameters['trial']+1
+        trial = query_parameters['trial']
         threshold = query_parameters['threshold']
         belief = query_parameters['belief']
         belief = np.round(belief, 3)
         p1 = belief[0]
         p2 = belief[1]
-        p3 = belief[2]
         results = self.data.loc[(self.data['trial_number'] == trial) & (self.data['sender_threshold'] == threshold) &
-                                (self.data['p1'] == p1) & (self.data['p2'] == p2) & (self.data['p3'] == p3)]
+                                (self.data['p1'] == p1) & (self.data['p2'] == p2)]
         try:
             q_values = results.groupby('action')['q_value'].mean().reset_index()
         except DataError:
-            print(f'Missing numeric output for query:trial={trial},threshold={threshold},p1={p1},p2={p2},p3={p3}')
+            print(f'Missing numeric output for query:trial={trial},threshold={threshold},p1={p1},p2={p2})')
             q_values = pd.DataFrame()
         return q_values
 
@@ -147,3 +158,4 @@ class DoMOneMemoization(MemoizationTable):
         self.new_data = pd.concat([self.new_data, data_to_append])
         self.data = pd.concat([self.data, data_to_append])
         self.update_buffer_data(data_to_append)
+

@@ -1,5 +1,3 @@
-import numpy as np
-
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
 from agents_models.intentional_agents.tom_one_agents.dom_one_memoization import *
@@ -35,6 +33,7 @@ class DoMOneBelief(DoMZeroBelief):
             self.belief_distribution = np.vstack([self.belief_distribution, posterior / posterior.sum()])
         # Store nested belief
         self.nested_belief = self.opponent_model.belief.belief_distribution
+        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
         """
@@ -81,7 +80,7 @@ class DoMOneBelief(DoMZeroBelief):
 
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
-    def __init__(self, opponent_model: DoMZeroSender, reward_function,
+    def __init__(self, opponent_model: DoMZeroReceiver, reward_function,
                  actions: np.array,
                  belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
@@ -94,18 +93,34 @@ class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
         self.opponent_model.belief.belief_distribution = nested_beliefs
 
     def update_persona(self, observation, action, iteration_number):
-        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
+        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number+1)
+
+    def update_parameters(self):
+        pass
 
 
 class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
-    def __init__(self, opponent_model: DoMZeroSender, reward_function, actions: np.array,
+    def __init__(self, opponent_model: DoMZeroReceiver, reward_function, actions: np.array,
                  belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
+        self.upper_bounds = opponent_model.opponent_model.upper_bounds
+        self.lower_bounds = opponent_model.opponent_model.lower_bounds
+
+    def update_parameters(self):
+        self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
+        self.lower_bounds = self.opponent_model.opponent_model.lower_bounds
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
         self.opponent_model.threshold = persona
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
+        iteration_number = action_length
+        if iteration_number >= 1:
+            action = self.belief_distribution.history.actions[observation_length-1]
+            observation = self.belief_distribution.history.observations[observation_length-1]
+            self.opponent_model.opponent_model.lower_bounds = self.lower_bounds
+            self.opponent_model.opponent_model.upper_bounds = self.upper_bounds
+            self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
@@ -142,7 +157,8 @@ class DoMOneSender(DoMZeroSender):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self._planning_parameters = dict(seed=seed, threshold=self._threshold)
         self.memoization_table = memoization_table
-        self.belief = DoMOneBelief(self.opponent_model.belief.support, self.opponent_model.belief.belief_distribution,
+        self.belief = DoMOneBelief(self.opponent_model.belief.support,
+                                   self.opponent_model.belief.belief_distribution,
                                    False, self.opponent_model, self.history)
         self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function,
                                                               actions,
@@ -154,6 +170,9 @@ class DoMOneSender(DoMZeroSender):
         self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
                              self.exploration_policy, self.utility_function, self._planning_parameters, seed)
         self.name = "DoM(1)_sender"
+
+    def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     @property
     def threshold(self):
