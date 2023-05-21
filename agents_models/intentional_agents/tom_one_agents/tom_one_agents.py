@@ -115,7 +115,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
         iteration_number = action_length
-        if iteration_number >= 1:
+        if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length-1]
             observation = self.belief_distribution.history.observations[observation_length-1]
             self.opponent_model.opponent_model.lower_bounds = self.lower_bounds
@@ -133,26 +133,12 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         return interactive_state, counter_offer, reward, observation_probability
 
 
-class DoMOneReceiver(DoMZeroReceiver):
-
-    def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
-                 prior_belief: np.array,
-                 opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
-                 seed: int):
-        super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
-        self.environment_model = DoMOneEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
-        self.belief = DoMOneBelief(self.opponent_model.belief.support, self.opponent_model.belief.belief_distribution,
-                                   True, self.opponent_model, self.history)
-        self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
-        self.name = "DoM(1)_receiver"
-
-
 class DoMOneSender(DoMZeroSender):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
                  memoization_table: DoMOneMemoization,
                  prior_belief: np.array,
-                 opponent_model: Optional[Union[DoMZeroReceiver, SubIntentionalAgent]],
+                 opponent_model: DoMZeroReceiver,
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self._planning_parameters = dict(seed=seed, threshold=self._threshold)
