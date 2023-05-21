@@ -47,7 +47,6 @@ class DoMOneMemoization(MemoizationTable):
                 df = pd.read_csv(f'{self.path_to_dir}/{file}')
                 data.append(df)
             df = pd.concat(data, axis=0, ignore_index=True)
-            self.columns = df.columns
             return df
         # If not - we create the table
         else:
@@ -57,7 +56,6 @@ class DoMOneMemoization(MemoizationTable):
                 game_results = self._read_and_process_table("simulation_results")
                 nested_beliefs = self._read_and_process_table("beliefs")
                 data = self.combine_results(q_values, game_results, nested_beliefs)
-                self.columns = data.columns
             except FileNotFoundError:
                 print('First time simulating - no data!')
                 data = None
@@ -75,18 +73,19 @@ class DoMOneMemoization(MemoizationTable):
         else:
             new_data.to_csv(self.path_to_buffer_file, mode='w', index=False, header=False)
 
-    @staticmethod
-    def _read_and_process_table(directory_name):
+    def _read_and_process_table(self, directory_name):
         """
         Method to load tables from memory
         :param directory_name:
         :return:
         """
         data = []
-        path = f'data/first_task/single_rational_agent/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}'
+        path = f'{os.path.dirname(self.config.planning_results_dir)}/{directory_name}'
         if directory_name == "beliefs":
-            path = f'data/first_task/single_rational_agent/DoM0_receiver_DoM1_sender_softmax_temp_0.1/{directory_name}/receiver_beliefs'
+            path = f'{self.config.beliefs_dir}/receiver_beliefs'
         files = os.listdir(path)
+        if len(files) == 0:
+            raise FileNotFoundError('No files founds')
         for file in files:
             df = pd.read_csv(f'{path}/{file}')
             data.append(df)
@@ -171,7 +170,7 @@ class DoMOneMemoization(MemoizationTable):
                        "rational_1", "p1", "p2", "offer", "response"]
         else:
             columns = ["action", "q_value", "trial_number", "seed", "sender_threshold", "random",
-                       "rational_1", "rational_2", "p1", "p2", "p3" "offer", "response"]
+                       "rational_1", "rational_2", "p1", "p2", "p3", "offer", "response"]
         return columns
 
 
