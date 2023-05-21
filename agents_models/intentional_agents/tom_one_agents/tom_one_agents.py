@@ -133,20 +133,6 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         return interactive_state, counter_offer, reward, observation_probability
 
 
-class DoMOneReceiver(DoMZeroReceiver):
-
-    def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
-                 prior_belief: np.array,
-                 opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
-                 seed: int):
-        super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
-        self.environment_model = DoMOneEnvironmentModel(self.opponent_model, self.utility_function, self.belief)
-        self.belief = DoMOneBelief(self.opponent_model.belief.support, self.opponent_model.belief.belief_distribution,
-                                   True, self.opponent_model, self.history)
-        self.solver = IPOMCP(self.belief, self.environment_model, self.exploration_policy, self.utility_function, seed)
-        self.name = "DoM(1)_receiver"
-
-
 class DoMOneSender(DoMZeroSender):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
