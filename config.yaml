@@ -6,7 +6,8 @@ general:
   include_random: True
   skip_random: True
   skip_rational: False
-  number_of_rational_agents: 2
+  number_of_rational_agents: 1
+  thresholds: [0.0, 0.1, 0.5]
 
 environments:
   first_task:

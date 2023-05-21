@@ -115,7 +115,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
         iteration_number = action_length
-        if iteration_number >= 1:
+        if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length-1]
             observation = self.belief_distribution.history.observations[observation_length-1]
             self.opponent_model.opponent_model.lower_bounds = self.lower_bounds
@@ -138,7 +138,7 @@ class DoMOneSender(DoMZeroSender):
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
                  memoization_table: DoMOneMemoization,
                  prior_belief: np.array,
-                 opponent_model: Optional[Union[DoMZeroReceiver, SubIntentionalAgent]],
+                 opponent_model: DoMZeroReceiver,
                  seed: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self._planning_parameters = dict(seed=seed, threshold=self._threshold)

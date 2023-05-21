@@ -14,7 +14,8 @@ class AgentFactory:
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
         self.task_duration = self.config.get_from_env("n_trials")
-        self._thresholds = [0.0, 0.2, 0.8] if self.config.get_from_general("number_of_rational_agents") else [0.0, 0.2]
+        self.eta = list(self.config.get_from_general("thresholds"))
+        self._thresholds = self.eta if self.config.get_from_general("number_of_rational_agents") else self.eta[:-1]
         self.thresholds_seq = self._thresholds if self.include_random else self._thresholds[1:]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
