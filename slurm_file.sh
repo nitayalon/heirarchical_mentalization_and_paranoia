@@ -38,9 +38,7 @@ export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-0
 ENV=x_ipomdp
 SOFTMAX_TEMP=0.1
 RECEIVER_TOM=DoM0
-SENDER_TOM=DoM-1
+SENDER_TOM=DoM1
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
-time singularity exec ${CONTAINER_PATH} python main.py  --environment $ENV --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --sender_tom $SENDER_TOM --receiver_tom  $RECEIVER_TOM \
-&& (cat JOB$SLURM_JOB_ID.out |mail -s "$SLURM_JOB_NAME Ended after $(secs_to_human $(($(date +%s) - ${start}))) id=$SLURM_JOB_ID" my@email.com && echo mail sended) \
-|| (cat JOB$SLURM_JOB_ID.out |mail -s "$SLURM_JOB_NAME Failed after $(secs_to_human $(($(date +%s) - ${start}))) id=$SLURM_JOB_ID" my@email.com && echo mail sended && exit $?)
+time singularity exec ${CONTAINER_PATH} python main.py  --environment $ENV --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --sender_tom $SENDER_TOM --receiver_tom  $RECEIVER_TOM 
