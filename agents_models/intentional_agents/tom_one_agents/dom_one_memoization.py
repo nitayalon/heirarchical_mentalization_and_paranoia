@@ -2,7 +2,7 @@ from pandas.core.base import DataError
 from IPOMCP_solver.utils.memoization_table import *
 import os
 from os.path import exists
-import glob
+
 
 belief_columns = ["0.0", "0.1", "trial_number", "seed", "sender_threshold"]
 history_columns = ["offer", "response", "trial_number", "seed", "sender_threshold"]
@@ -14,6 +14,8 @@ class DoMOneMemoization(MemoizationTable):
     def __init__(self, path_to_memoization_dir, softmax_temp=0.1):
         self.softmax_temp = softmax_temp
         self.config = get_config()
+        self.default_columns = self._get_memoization_columns()
+        self.columns = self.default_columns
         self._table_name = f'DoM_1_unified_memoization_data_softmax_temp_{self.softmax_temp}'
         self.target_table_name = f'{self._table_name}.csv'
         self.path_to_dir = path_to_memoization_dir
@@ -59,8 +61,6 @@ class DoMOneMemoization(MemoizationTable):
             except FileNotFoundError:
                 print('First time simulating - no data!')
                 data = None
-                self.columns = ["action","q_value","trial_number","seed","sender_threshold","0.0",
-                                "0.1","p1","p2","offer","response"]
         return data
 
     def save_data(self):
@@ -131,8 +131,14 @@ class DoMOneMemoization(MemoizationTable):
         belief = np.round(belief, 3)
         p1 = belief[0]
         p2 = belief[1]
-        results = self.data.loc[(self.data['trial_number'] == trial) & (self.data['sender_threshold'] == threshold) &
-                                (self.data['p1'] == p1) & (self.data['p2'] == p2)]
+        if self.config.get_from_general("number_of_rational_agents"):
+            results = self.data.loc[(self.data['trial_number'] == trial) & (self.data['sender_threshold'] == threshold) &
+                                    (self.data['p1'] == p1) & (self.data['p2'] == p2)]
+        else:
+            p3 = belief[2]
+            results = self.data.loc[
+                (self.data['trial_number'] == trial) & (self.data['sender_threshold'] == threshold) &
+                (self.data['p1'] == p1) & (self.data['p2'] == p2) & (self.data['p3'] == p3)]
         try:
             q_values = results.groupby('action')['q_value'].mean().reset_index()
         except DataError:
@@ -158,4 +164,14 @@ class DoMOneMemoization(MemoizationTable):
         self.new_data = pd.concat([self.new_data, data_to_append])
         self.data = pd.concat([self.data, data_to_append])
         self.update_buffer_data(data_to_append)
+
+    def _get_memoization_columns(self):
+        if self.config.get_from_general("number_of_rational_agents") == 1:
+            columns = ["action", "q_value", "trial_number", "seed", "sender_threshold", "random",
+                       "rational_1", "p1", "p2", "offer", "response"]
+        else:
+            columns = ["action", "q_value", "trial_number", "seed", "sender_threshold", "random",
+                       "rational_1", "rational_2", "p1", "p2", "p3" "offer", "response"]
+        return columns
+
 
