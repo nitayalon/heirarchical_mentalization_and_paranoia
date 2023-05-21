@@ -1,5 +1,3 @@
-import numpy as np
-
 from IPOMCP_solver.Solver.ipomcp_solver import *
 import os
 

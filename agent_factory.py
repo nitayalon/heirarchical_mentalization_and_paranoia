@@ -14,7 +14,8 @@ class AgentFactory:
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
         self.task_duration = self.config.get_from_env("n_trials")
-        self._thresholds = [0.0, 0.2, 0.8] if self.config.get_from_general("number_of_rational_agents") else [0.0, 0.2]
+        self.eta = list(self.config.get_from_general("thresholds"))
+        self._thresholds = self.eta if self.config.get_from_general("number_of_rational_agents") > 1 else self.eta[:-1]
         self.thresholds_seq = self._thresholds if self.include_random else self._thresholds[1:]  # parameters to control threshold of agent
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
@@ -83,10 +84,8 @@ class AgentFactory:
                                         memoization_table, opponent_theta_hat_distribution, opponent_model,
                                         self.config.seed)
         else:
-            opponent_model = self.dom_zero_constructor("rational_sender")
-            opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
-            output_agent = DoMOneReceiver(self.subject_actions, self.config.softmax_temperature, None,
-                                          opponent_theta_hat_distribution, opponent_model, self.config.seed)
+            output_agent = None
+            raise NotImplementedError('Missing implementation')
         return output_agent
 
     def dom_two_constructor(self, agent_role):
