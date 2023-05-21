@@ -136,3 +136,9 @@ logs/
 figures/	
 *.err
 *.out
+*.Rdata
+*.xlsx
+*.png
+*.jpeg
+*.zip
+

@@ -14,7 +14,9 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         self.high = None
 
     def utility_function(self, action, observation):
-        return (1 - action) - self.threshold
+        reward = (1 - action)
+        reward[reward < self.threshold] = 0.0
+        return reward
 
     def random_forward(self):
         q_values = self.potential_actions
@@ -80,10 +82,9 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
             self._name = "DoM(-1)_Rational"
 
     def _compute_weights(self, offers, low_bound, up_bound):
-        if low_bound < up_bound:
-            w = np.logical_not(np.logical_and(low_bound < offers, offers <= up_bound))
+        w = np.logical_not(np.logical_and(low_bound < offers, offers <= up_bound))
         # If both bounds are equal to the threshold we do not penalize it
-        else:
+        if low_bound >= (1 - self.threshold):
             w = np.logical_not(np.logical_and(low_bound <= offers, offers <= up_bound))
         w_prime = self.penalty * w
         return w_prime
@@ -95,7 +96,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         :return:
         """
         high = self.high if high is None else high
-        low = self.low if low is None else low
+        low = min(self.low if low is None else low, 1 - self.threshold)
         upper_bound = np.round(high, 3)
         lower_bound = np.round(low, 3)
         weights = self._compute_weights(self.potential_actions, lower_bound, upper_bound)

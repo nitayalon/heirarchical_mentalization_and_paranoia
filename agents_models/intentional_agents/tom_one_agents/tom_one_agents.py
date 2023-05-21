@@ -80,7 +80,7 @@ class DoMOneBelief(DoMZeroBelief):
 
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
-    def __init__(self, opponent_model: DoMZeroSender, reward_function,
+    def __init__(self, opponent_model: DoMZeroReceiver, reward_function,
                  actions: np.array,
                  belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
@@ -100,7 +100,7 @@ class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
 
 
 class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
-    def __init__(self, opponent_model: DoMZeroSender, reward_function, actions: np.array,
+    def __init__(self, opponent_model: DoMZeroReceiver, reward_function, actions: np.array,
                  belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.upper_bounds = opponent_model.opponent_model.upper_bounds
