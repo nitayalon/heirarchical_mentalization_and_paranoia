@@ -47,6 +47,7 @@ class DoMOneMemoization(MemoizationTable):
                 df = pd.read_csv(f'{self.path_to_dir}/{file}')
                 data.append(df)
             df = pd.concat(data, axis=0, ignore_index=True)
+            df.columns = self.columns
             return df
         # If not - we create the table
         else:
