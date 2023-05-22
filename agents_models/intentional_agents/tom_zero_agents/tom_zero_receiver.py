@@ -71,13 +71,45 @@ class DoMZeroReceiverExplorationPolicy(DoMZeroExplorationPolicy):
         return initial_qvalues
 
 
+class DoMZeroDetectionMechanism:
+
+    def __init__(self, history: History, actions, duration):
+        self.history = history
+        self.actions = actions
+        self.duration = duration
+
+    def strong_typicality(self, trial_number):
+        observations = [x.value for x in self.history.observations]
+        observations, number_of_appearance = np.unique(observations, return_counts=True)
+        observed_frequency = number_of_appearance / trial_number
+        expected_frequency = 1 / len(self.actions)
+        distance = np.absolute(observed_frequency - expected_frequency)
+        delta = (1 / trial_number) / expected_frequency
+        typical_set = distance <= delta * expected_frequency
+        return typical_set
+
+    def expected_reward(self, trial_number):
+        cumulative_reward = np.sum(self.history.rewards) / trial_number
+        expected_variance = (np.power(2, 2) - 1) / 12
+        lower_bound = 0.5 - np.sqrt(expected_variance)/np.sqrt(trial_number)
+        upper_bound = 0.5 + np.sqrt(expected_variance)/np.sqrt(trial_number)
+        return cumulative_reward >= lower_bound and upper_bound <= upper_bound
+
+    def verify_random_behaviour(self, trial_number):
+        strong_typicality = self.strong_typicality(trial_number)
+        average_reward = self.expected_reward(trial_number)
+        return strong_typicality + average_reward
+
+
 class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
     def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model,
+                 detection_mechanism: DoMZeroDetectionMechanism,
                  reward_function, planning_horizon, discount_factor, task_duration):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.actions = actions
         self.belief = belief_distribution
         self.opponent_model = opponent_model
+        self.detection_mechanism = detection_mechanism
         self.utility_function = reward_function
         self.planning_horizon = planning_horizon
         self.discount_factor = discount_factor
@@ -99,6 +131,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.update_low_and_high(self.belief.history.observations[-2] if iteration_number > 1 else Action(None, False),
                                  self.belief.history.actions[-1] if iteration_number > 1 else Action(None, False)
                                  , iteration_number)
+        self.detection_mechanism.verify_random_behaviour(iteration_number)
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []
@@ -167,12 +200,13 @@ class DoMZeroReceiver(DoMZeroModel):
                  seed: int,
                  task_duration: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
+        self.detection_mechanism = DoMZeroDetectionMechanism(self.history, self.opponent_model.potential_actions, task_duration)
         self.belief = DomZeroReceiverBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)
         self.environment_model = DoMZeroReceiverEnvironmentModel(self.opponent_model, self.utility_function,
                                                                  actions,
                                                                  self.belief)
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
-                                            self.utility_function,
+                                            self.detection_mechanism, self.utility_function,
                                             float(self.config.get_from_env("planning_depth")),
                                             float(self.config.get_from_env("discount_factor")),
                                             task_duration)
@@ -188,7 +222,6 @@ class DoMZeroReceiver(DoMZeroModel):
         if observation is None:
             return 0.0
         game_reward = (observation - self.threshold) * action
-        self.history.rewards.append(game_reward)
         return game_reward
 
     def update_belief(self, action, observation):

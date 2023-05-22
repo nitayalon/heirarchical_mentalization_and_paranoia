@@ -68,6 +68,8 @@ class EAT:
         response, response_probability, receiver_q_values, receiver_policy = receiver.act(seed, response, offer, trial_number + 1)
         sender_reward = (1-offer.value) * response.value
         receiver_reward = offer.value * response.value
+        sender.history.rewards.append(sender_reward)
+        receiver.history.rewards.append(receiver_reward)
         sender_q_values = pd.DataFrame(sender_q_values)
         sender_q_values['agent_name'] = sender.name
         sender_q_values['parameter'] = sender.threshold

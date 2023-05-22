@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash -list_of_interest
 #SBATCH -o ./slurm_logs/%x_%j_tjob.out
 #SBATCH -e ./slurm_logs/%x_%j_tjob.err
 # Initial working directory:

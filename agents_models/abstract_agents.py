@@ -177,8 +177,8 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.opponent_model.belief.belief_distribution = nested_beliefs
 
     @staticmethod
-    def _get_last_from_list(l, location):
-        return l[location - 1] if len(l) > 0 else Action(None, False)
+    def _get_last_from_list(list_of_interest, location):
+        return list_of_interest[location - 1] if len(list_of_interest) > 0 else Action(None, False)
 
     def _simulate_opponent_response(self, seed, observation, action, iteration_number):
         counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
