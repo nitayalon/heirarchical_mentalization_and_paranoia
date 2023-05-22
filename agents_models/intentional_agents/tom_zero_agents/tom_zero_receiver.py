@@ -89,7 +89,7 @@ class DoMZeroDetectionMechanism:
         return typical_set
 
     def expected_reward(self, trial_number):
-        cumulative_reward = np.sum(self.history.rewards) / trial_number
+        cumulative_reward = np.sum(self.history.rewards) / max(trial_number-1, 1)
         expected_variance = (np.power(2, 2) - 1) / 12
         lower_bound = 0.5 - np.sqrt(expected_variance)/np.sqrt(trial_number)
         upper_bound = 0.5 + np.sqrt(expected_variance)/np.sqrt(trial_number)
@@ -98,7 +98,7 @@ class DoMZeroDetectionMechanism:
     def verify_random_behaviour(self, trial_number):
         strong_typicality = self.strong_typicality(trial_number)
         average_reward = self.expected_reward(trial_number)
-        return strong_typicality + average_reward
+        return np.all(strong_typicality) + average_reward
 
 
 class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
@@ -131,7 +131,10 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.update_low_and_high(self.belief.history.observations[-2] if iteration_number > 1 else Action(None, False),
                                  self.belief.history.actions[-1] if iteration_number > 1 else Action(None, False)
                                  , iteration_number)
-        self.detection_mechanism.verify_random_behaviour(iteration_number)
+        detection_mechanism = self.detection_mechanism.verify_random_behaviour(iteration_number)
+        throw_the_toys_out_of_the_pram = self.belief.belief_distribution[-1][0] > 0.95 and not detection_mechanism
+        if throw_the_toys_out_of_the_pram:
+            print('Detection mechanism activated')
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []
