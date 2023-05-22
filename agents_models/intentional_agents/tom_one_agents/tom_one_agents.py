@@ -105,6 +105,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.upper_bounds = opponent_model.opponent_model.upper_bounds
         self.lower_bounds = opponent_model.opponent_model.lower_bounds
+        self.previous_nodes = dict()
 
     def update_parameters(self):
         self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
@@ -124,8 +125,21 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
+        # Skip this part - read from memory instead
+        key = f'{observation.value}-{action.value}-{iteration_number}'
+        if key in self.previous_nodes.keys():
+            if iteration_number > 0:
+                self.opponent_model.history.update_observations(action)
+                self.opponent_model.opponent_model.history.update_actions(action)
+            counter_offer, observation_probability, q_values, opponent_policy = self.previous_nodes[key]
+            self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
+            self.opponent_model.history.update_actions(counter_offer)
+            self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
+            self.opponent_model.environment_model.update_parameters()
+        else:
+            counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
                                                                                                     action, iteration_number)
+            self.previous_nodes[key] = [counter_offer, observation_probability, q_values, opponent_policy]
         reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
                  self.reward_function(action.value, observation.value, not counter_offer.value) * (1-observation_probability)
         interactive_state.state.terminal = interactive_state.state.name == 10
