@@ -4,7 +4,7 @@ import os
 from os.path import exists
 
 
-belief_columns = ["0.0", "0.1", "trial_number", "seed", "sender_threshold"]
+belief_columns = ["0.0", "0.2", "0.8", "trial_number", "seed", "sender_threshold"]
 history_columns = ["offer", "response", "trial_number", "seed", "sender_threshold"]
 q_values_columns = ["action", "q_value", "trial_number", "seed", "sender_threshold"]
 
@@ -109,7 +109,8 @@ class DoMOneMemoization(MemoizationTable):
         beliefs = raw_beliefs.loc[raw_beliefs['agent_name'] == 'DoM(0)_receiver'][belief_columns]
         # round beliefs
         beliefs = beliefs.assign(p1=np.round(beliefs["0.0"], 3),
-                                 p2=np.round(beliefs["0.1"], 3))
+                                 p2=np.round(beliefs["0.2"], 3),
+                                 p3=np.round(beliefs["0.8"], 3))
         beliefs['trial_number'] = beliefs['trial_number']+1
         # Join tables to get unified view
         q_values_and_beliefs = pd.merge(q_values, beliefs, on=["trial_number", "seed", "sender_threshold"])

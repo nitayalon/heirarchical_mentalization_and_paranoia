@@ -103,13 +103,14 @@ class DoMZeroDetectionMechanism:
 
 class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
     def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model,
-                 detection_mechanism: DoMZeroDetectionMechanism,
+                 detection_mechanism: DoMZeroDetectionMechanism, breakdown_policy: bool,
                  reward_function, planning_horizon, discount_factor, task_duration):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.actions = actions
         self.belief = belief_distribution
         self.opponent_model = opponent_model
         self.detection_mechanism = detection_mechanism
+        self.breakdown_policy = breakdown_policy
         self.utility_function = reward_function
         self.planning_horizon = planning_horizon
         self.discount_factor = discount_factor
@@ -133,8 +134,13 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                  , iteration_number)
         detection_mechanism = self.detection_mechanism.verify_random_behaviour(iteration_number)
         throw_the_toys_out_of_the_pram = self.belief.belief_distribution[-1][0] > 0.95 and not detection_mechanism
+        n_visits = np.repeat(self.planning_horizon, self.actions.size)
         if throw_the_toys_out_of_the_pram:
             print('Detection mechanism activated')
+            if self.breakdown_policy:
+                weighted_q_values = [-10, 10]
+                return {str(a.value): a for a in self.surrogate_actions}, None, \
+                       np.c_[self.actions, weighted_q_values, n_visits]
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []
@@ -209,7 +215,8 @@ class DoMZeroReceiver(DoMZeroModel):
                                                                  actions,
                                                                  self.belief)
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
-                                            self.detection_mechanism, self.utility_function,
+                                            self.detection_mechanism, self.config.get_from_env("break_down_policy"),
+                                            self.utility_function,
                                             float(self.config.get_from_env("planning_depth")),
                                             float(self.config.get_from_env("discount_factor")),
                                             task_duration)

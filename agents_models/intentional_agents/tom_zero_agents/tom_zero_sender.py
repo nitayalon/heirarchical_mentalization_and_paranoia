@@ -1,5 +1,3 @@
-import numpy as np
-
 from agents_models.subintentional_agents.subintentional_receiver import *
 import functools
 
@@ -52,7 +50,10 @@ class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
             potential_actions = self.actions[np.where(last_action >= self.actions)]
         # if the last offer was rejected - we should offer more (if we can)
         else:
-            potential_actions = self.actions[np.where(last_action < self.actions)]
+            if last_action < np.max(self.actions):
+                potential_actions = self.actions[np.where(last_action < self.actions)]
+            else:
+                potential_actions = self.actions[np.where(last_action <= self.actions)]
         expected_reward_from_offer = self.reward_function(potential_actions, True) * \
                                      (interactive_state.persona < (1 - potential_actions))
         optimal_action_idx = np.argmax(expected_reward_from_offer)

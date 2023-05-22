@@ -140,11 +140,13 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
                                                                                                     action, iteration_number)
             self.previous_nodes[key] = [counter_offer, observation_probability, q_values, opponent_policy]
-        reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
+        opponent_reward = counter_offer.value * action.value
+        self.opponent_model.history.update_rewards(opponent_reward)
+        expected_reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
                  self.reward_function(action.value, observation.value, not counter_offer.value) * (1-observation_probability)
         interactive_state.state.terminal = interactive_state.state.name == 10
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        return interactive_state, counter_offer, reward, observation_probability
+        return interactive_state, counter_offer, expected_reward, observation_probability
 
 
 class DoMOneSender(DoMZeroSender):
