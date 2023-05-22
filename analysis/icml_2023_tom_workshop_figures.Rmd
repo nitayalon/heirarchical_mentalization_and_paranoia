@@ -376,16 +376,12 @@ belief_plot <- beliefs %>%
          sender_dom_level == sender_dom_level_for_plot,
          seed == sid) %>% 
     mutate(`P(0.0)` = `X0.0`,
-         `P(0.1)` = `X0.1`,
-         `P(0.5)` = `X0.5`) %>% 
+         `P(0.1)` = `X0.1`) %>% 
   ggplot() + 
   geom_line(aes(x = trial_number, y = `P(0.0)`, colour='`P(0.0)`',
                 linetype = factor(sender_dom_level)),
             size=1.0) + 
   geom_line(aes(x = trial_number, y = `P(0.1)`, colour='`P(0.1)`',
-                linetype = factor(sender_dom_level)),
-            size=1.0) + 
-  geom_line(aes(x = trial_number, y = `P(0.5)`, colour='`P(0.5)`',
                 linetype = factor(sender_dom_level)),
             size=1.0) + 
   scale_linetype_manual(values=c("solid", "dotted", "solid"))+
