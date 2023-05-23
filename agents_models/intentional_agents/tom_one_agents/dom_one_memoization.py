@@ -44,7 +44,7 @@ class DoMOneMemoization(MemoizationTable):
             data = []
             files = os.listdir(self.path_to_dir)
             for file in files:
-                df = pd.read_csv(f'{self.path_to_dir}/{file}')
+                df = pd.read_csv(f'{self.path_to_dir}/{file}', header=None)
                 data.append(df)
             df = pd.concat(data, axis=0, ignore_index=True)
             df.columns = self.columns
