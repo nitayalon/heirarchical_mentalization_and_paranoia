@@ -14,6 +14,7 @@ class DoMOneBelief(DoMZeroBelief):
         self.prior_belief = opponent_model.belief.belief_distribution
         self.belief_distribution = self.prior_belief
         self.include_persona_inference = include_persona_inference
+        self.nested_mental_state = False
 
     def update_distribution(self, action, observation, iteration_number):
         """
@@ -34,6 +35,7 @@ class DoMOneBelief(DoMZeroBelief):
         # Store nested belief
         self.nested_belief = self.opponent_model.belief.belief_distribution
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
+        self.nested_mental_state = self.opponent_model.mental_state
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
         """
@@ -75,8 +77,8 @@ class DoMOneBelief(DoMZeroBelief):
         probabilities = 1.0
         rng_generator = np.random.default_rng(rng_key)
         idx = rng_generator.choice(self.belief_distribution.shape[0], size=n_samples, p=np.array([probabilities]))
-        particles = self.opponent_model.belief.belief_distribution[idx, :]
-        return np.repeat(0.0, n_samples)
+        particles = self.opponent_model.mental_state
+        return np.repeat(particles, n_samples)
 
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
@@ -115,6 +117,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.threshold = persona
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
+        self.opponent_model.mental_state = self.belief_distribution.nested_mental_state
         iteration_number = action_length
         if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length-1]
@@ -126,7 +129,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
         # Skip this part - read from memory instead
-        key = f'{observation.value}-{action.value}-{iteration_number}'
+        key = f'{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
         if key in self.previous_nodes.keys():
             if iteration_number > 0:
                 self.opponent_model.history.update_observations(action)
@@ -169,7 +172,7 @@ class DoMOneSender(DoMZeroSender):
                                                                  self.config.get_from_env("rollout_rejecting_bonus"),
                                                                  self.belief.belief_distribution,
                                                                  self.belief.support)
-        self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
+        self.solver = IPOMCP(1, self.belief, self.environment_model, self.memoization_table,
                              self.exploration_policy, self.utility_function, self._planning_parameters, seed)
         self.name = "DoM(1)_sender"
 

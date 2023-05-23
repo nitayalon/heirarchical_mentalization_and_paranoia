@@ -137,8 +137,12 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         detection_mechanism = self.detection_mechanism.verify_random_behaviour(iteration_number)
         throw_the_toys_out_of_the_pram = self.belief.belief_distribution[-1][0] > 0.95 and not detection_mechanism
         n_visits = np.repeat(self.planning_horizon, self.actions.size)
+        if self.mental_state:
+            weighted_q_values = [-1, 1]
+            return {str(a.value): a for a in self.surrogate_actions}, None, \
+                   np.c_[self.actions, weighted_q_values, n_visits]
         if throw_the_toys_out_of_the_pram:
-            self.mental_state = False
+            self.mental_state = True
             if self.breakdown_policy:
                 weighted_q_values = [-1, 1]
             else:
@@ -213,7 +217,7 @@ class DoMZeroReceiver(DoMZeroModel):
                  seed: int,
                  task_duration: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
-        self.mental_state = True  # Add flipflop mechanism
+        self.mental_state = False  # Add flipflop mechanism
         self.detection_mechanism = DoMZeroDetectionMechanism(self.history, self.opponent_model.potential_actions, task_duration)
         self.belief = DomZeroReceiverBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)
         self.environment_model = DoMZeroReceiverEnvironmentModel(self.opponent_model, self.utility_function,

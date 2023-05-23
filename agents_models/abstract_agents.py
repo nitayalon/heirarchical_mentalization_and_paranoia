@@ -232,7 +232,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.opponent_model = opponent_model
         self.belief = DoMZeroBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)  # type: DoMZeroBelief
         self.environment_model = DoMZeroEnvironmentModel(self.opponent_model, self.utility_function, actions, self.belief)
-        self.solver = IPOMCP(self.belief, self.environment_model, None, None, self.utility_function, {}, seed)
+        self.solver = None
 
     def reset(self, high: Optional[float] = None, low: Optional[float] = None,
               action_length: Optional[float] = 0, observation_length: Optional[float] = 0,
