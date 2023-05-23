@@ -65,15 +65,15 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         else:
             self._name = "DoM(-1)_Rational"
 
-    def _compute_weights(self, offers, low_bound, up_bound):
+    def _compute_weights(self, offers, iteration_number, low_bound, up_bound):
         w = np.logical_not(np.logical_and(low_bound < offers, offers <= up_bound))
         # If both bounds are equal to the threshold we do not penalize it
-        if low_bound >= (1 - self.threshold):
+        if low_bound >= (1 - self.threshold) or iteration_number == 0:
             w = np.logical_not(np.logical_and(low_bound <= offers, offers <= up_bound))
         w_prime = self.penalty * w
         return w_prime
 
-    def rational_forward(self, low: Optional[float] = None, high: Optional[float] = None):
+    def rational_forward(self, iteration_number: int,low: Optional[float] = None, high: Optional[float] = None):
         """
         This method computes an interval of positive reward offers and returns a uniform distribution over them
 
@@ -83,7 +83,7 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         low = min(self.low if low is None else low, 1 - self.threshold)
         upper_bound = np.round(high, 3)
         lower_bound = np.round(low, 3)
-        weights = self._compute_weights(self.potential_actions, lower_bound, upper_bound)
+        weights = self._compute_weights(self.potential_actions, iteration_number, lower_bound, upper_bound)
         q_values, probabilities = self._compute_q_values_and_probabilities(self.potential_actions, weights)
         return self.potential_actions, q_values, probabilities
 
@@ -95,9 +95,10 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
         else:
             self.update_bounds(action, observation, iteration_number)
             if len(args) == 0:
-                potential_actions, q_values, probabilities = self.rational_forward()
+                potential_actions, q_values, probabilities = self.rational_forward(iteration_number)
             else:
-                potential_actions, q_values, probabilities = self.rational_forward(args[0][0], args[0][1])
+                potential_actions, q_values, probabilities = self.rational_forward(iteration_number,
+                                                                                   args[0][0], args[0][1])
         return potential_actions, q_values, probabilities
 
     def _compute_q_values_and_probabilities(self, relevant_actions, weights):

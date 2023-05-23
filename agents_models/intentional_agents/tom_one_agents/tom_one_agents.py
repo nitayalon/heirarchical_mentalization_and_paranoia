@@ -141,7 +141,8 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
             self.opponent_model.history.update_actions(counter_offer)
             self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
-            mental_model = self.opponent_model.solver.detection_mechanism.verify_random_behaviour(iteration_number)
+            mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
+                                                                                                     self.opponent_model.belief.belief_distribution)
             if mental_model:
                 self.opponent_model.solver.mental_state = mental_model
             self.opponent_model.environment_model.update_parameters()
