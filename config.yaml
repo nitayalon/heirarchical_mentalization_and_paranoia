@@ -4,7 +4,7 @@ general:
   report_ipocmp_statistics: False
   output_planning_tree: True
   include_random: True
-  skip_random: False
+  skip_random: True
   skip_rational: False
   number_of_rational_agents: 2
   thresholds: [0.0,0.2,0.8]
@@ -24,9 +24,9 @@ environments:
   x_ipomdp:
     n_trials: 20
     planning_depth: 10
-    uct_exploration_bonus: 5.0
+    uct_exploration_bonus: 10.0
     rollout_rejecting_bonus: 0.5
-    mcts_number_of_iterations: 6000
+    mcts_number_of_iterations: 10000
     discount_factor: 0.99
     endowment: 1.0
     break_down_policy: True
