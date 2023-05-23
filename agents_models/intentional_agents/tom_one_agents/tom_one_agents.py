@@ -35,7 +35,7 @@ class DoMOneBelief(DoMZeroBelief):
         # Store nested belief
         self.nested_belief = self.opponent_model.belief.belief_distribution
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
-        self.nested_mental_state = self.opponent_model.detection_mechanism.verify_random_behaviour(iteration_number)
+        self.nested_mental_state = not self.opponent_model.detection_mechanism.verify_random_behaviour(iteration_number)
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
         """
@@ -181,7 +181,7 @@ class DoMOneSender(DoMZeroSender):
         self.name = "DoM(1)_sender"
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
-        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
+        self.opponent_model.history.rewards.append(action.value * observation.value)
 
     @property
     def threshold(self):
