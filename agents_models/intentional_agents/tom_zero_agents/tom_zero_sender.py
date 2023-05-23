@@ -55,7 +55,7 @@ class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
             else:
                 potential_actions = self.actions[np.where(last_action <= self.actions)]
         expected_reward_from_offer = self.reward_function(potential_actions, True) * \
-                                     (interactive_state.persona < (1 - potential_actions))
+                                     (interactive_state.persona[0] < (1 - potential_actions))
         optimal_action_idx = np.argmax(expected_reward_from_offer)
         optimal_action = potential_actions[optimal_action_idx]
         q_value = expected_reward_from_offer[optimal_action_idx]
@@ -137,7 +137,7 @@ class DoMZeroSender(DoMZeroModel):
         self.name = "DoM(0)_sender"
         self.alpha = 0.0
 
-    def utility_function(self, action, observation, *args):
+    def utility_function(self, action, observation, *args, **kwargs):
         """
 
         :param action: bool - either True for accepting the offer or False for rejecting it

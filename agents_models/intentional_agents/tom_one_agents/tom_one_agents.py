@@ -35,7 +35,7 @@ class DoMOneBelief(DoMZeroBelief):
         # Store nested belief
         self.nested_belief = self.opponent_model.belief.belief_distribution
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
-        self.nested_mental_state = self.opponent_model.mental_state
+        self.nested_mental_state = self.opponent_model.detection_mechanism.verify_random_behaviour(iteration_number)
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
         """
@@ -77,8 +77,8 @@ class DoMOneBelief(DoMZeroBelief):
         probabilities = 1.0
         rng_generator = np.random.default_rng(rng_key)
         idx = rng_generator.choice(self.belief_distribution.shape[0], size=n_samples, p=np.array([probabilities]))
-        particles = self.opponent_model.mental_state
-        return np.repeat(particles, n_samples)
+        particles = [[self.opponent_model.threshold, self.opponent_model.mental_state]]
+        return particles * n_samples
 
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
@@ -109,15 +109,18 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.lower_bounds = opponent_model.opponent_model.lower_bounds
         self.previous_nodes = dict()
 
+    def get_persona(self):
+        return [self.opponent_model.threshold, self.opponent_model.mental_state]
+
     def update_parameters(self):
         self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
         self.lower_bounds = self.opponent_model.opponent_model.lower_bounds
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
-        self.opponent_model.threshold = persona
+        self.opponent_model.threshold = persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
-        self.opponent_model.mental_state = self.belief_distribution.nested_mental_state
+        self.opponent_model.solver.mental_state = persona[1]
         iteration_number = action_length
         if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length-1]
@@ -149,6 +152,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
                  self.reward_function(action.value, observation.value, not counter_offer.value) * (1-observation_probability)
         interactive_state.state.terminal = interactive_state.state.name == 10
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
+        interactive_state.persona = [interactive_state.persona[0], self.opponent_model.solver.mental_state]
         return interactive_state, counter_offer, expected_reward, observation_probability
 
 

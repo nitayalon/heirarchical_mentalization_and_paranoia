@@ -231,7 +231,7 @@ class DoMZeroReceiver(DoMZeroModel):
                                             task_duration)
         self.name = "DoM(0)_receiver"
 
-    def utility_function(self, action, observation, *args):
+    def utility_function(self, observation, action, *args):
         """
 
         :param action: bool - either True for accepting the offer or False for rejecting it
