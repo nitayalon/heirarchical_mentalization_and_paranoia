@@ -231,7 +231,7 @@ class DoMZeroReceiver(DoMZeroModel):
                                             task_duration)
         self.name = "DoM(0)_receiver"
 
-    def utility_function(self, observation, action, *args):
+    def utility_function(self, action, observation, *args):
         """
 
         :param action: bool - either True for accepting the offer or False for rejecting it
@@ -240,7 +240,7 @@ class DoMZeroReceiver(DoMZeroModel):
         """
         if observation is None:
             return 0.0
-        game_reward = (observation - self.threshold) * action
+        game_reward = (action - self.threshold) * observation
         return game_reward
 
     def update_belief(self, action, observation):
