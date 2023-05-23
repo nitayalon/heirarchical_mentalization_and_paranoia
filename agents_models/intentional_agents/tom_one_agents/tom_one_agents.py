@@ -141,18 +141,22 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
             self.opponent_model.history.update_actions(counter_offer)
             self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
+            mental_model = self.opponent_model.solver.detection_mechanism.verify_random_behaviour(iteration_number)
+            if mental_model:
+                self.opponent_model.solver.mental_state = mental_model
             self.opponent_model.environment_model.update_parameters()
         else:
-            counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
-                                                                                                    action, iteration_number)
+            counter_offer, observation_probability, q_values, opponent_policy = \
+                self.opponent_model.act(seed, observation, action, iteration_number)
             self.previous_nodes[key] = [counter_offer, observation_probability, q_values, opponent_policy]
+            mental_model = self.opponent_model.solver.mental_state
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
         expected_reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
                  self.reward_function(action.value, observation.value, not counter_offer.value) * (1-observation_probability)
         interactive_state.state.terminal = interactive_state.state.name == 10
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        interactive_state.persona = [interactive_state.persona[0], self.opponent_model.solver.mental_state]
+        interactive_state.persona = [interactive_state.persona[0], mental_model]
         return interactive_state, counter_offer, expected_reward, observation_probability
 
 

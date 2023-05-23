@@ -89,16 +89,22 @@ class DoMZeroDetectionMechanism:
         return typical_set
 
     def expected_reward(self, trial_number):
-        cumulative_reward = np.sum(self.history.rewards) / max(trial_number-1, 1)
+        average_offer = np.mean([x.value for x in self.history.observations])
         expected_variance = (np.power(2, 2) - 1) / 12
         lower_bound = 0.5 - np.sqrt(expected_variance)/np.sqrt(trial_number)
         upper_bound = 0.5 + np.sqrt(expected_variance)/np.sqrt(trial_number)
-        return cumulative_reward >= lower_bound and upper_bound <= upper_bound
+        return lower_bound <= average_offer <= upper_bound
 
     def verify_random_behaviour(self, trial_number):
         strong_typicality = self.strong_typicality(trial_number)
         average_reward = self.expected_reward(trial_number)
         return np.all(strong_typicality) + average_reward
+
+    def nonrandom_sender_detection(self, iteration_number, belief_distribution):
+        detection_mechanism = self.verify_random_behaviour(iteration_number)
+        p_random = belief_distribution[-1][0] > 0.95
+        decision = p_random and not detection_mechanism
+        return decision
 
 
 class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
@@ -134,14 +140,16 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.update_low_and_high(self.belief.history.observations[-2] if iteration_number > 1 else Action(None, False),
                                  self.belief.history.actions[-1] if iteration_number > 1 else Action(None, False)
                                  , iteration_number)
-        detection_mechanism = self.detection_mechanism.verify_random_behaviour(iteration_number)
-        throw_the_toys_out_of_the_pram = self.belief.belief_distribution[-1][0] > 0.95 and not detection_mechanism
+        non_random_sender = self.detection_mechanism.nonrandom_sender_detection(iteration_number,
+                                                                                self.belief_distribution.belief_distribution)
         n_visits = np.repeat(self.planning_horizon, self.actions.size)
+        # If the Flip Flop mechanism is on
         if self.mental_state:
             weighted_q_values = [-1, 1]
             return {str(a.value): a for a in self.surrogate_actions}, None, \
                    np.c_[self.actions, weighted_q_values, n_visits]
-        if throw_the_toys_out_of_the_pram:
+        # If we detect a deviation from random behaviour:
+        if non_random_sender:
             self.mental_state = True
             if self.breakdown_policy:
                 weighted_q_values = [-1, 1]
