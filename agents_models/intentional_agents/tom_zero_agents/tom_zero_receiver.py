@@ -204,8 +204,13 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.q_values.append([self.opponent_model.threshold, iteration_number, action.value, observation.value, reward,
                               q_value, future_q_values])
         return q_value
+    
+    def reset(self):
+        self.low = self.opponent_model.low
+        self.high = self.opponent_model.high
+        self.mental_state = False
 
-
+    
 class DoMZeroReceiver(DoMZeroModel):
 
     def __init__(self,

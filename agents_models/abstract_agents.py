@@ -41,8 +41,6 @@ class SubIntentionalAgent(ABC):
               iteration: Optional[int] = 1, terminal: Optional[bool] = False):
         self.low = low
         self.high = high
-        # self.upper_bounds = self.upper_bounds[0:iteration] + ([None] * (self._duration - iteration))
-        # self.lower_bounds = self.lower_bounds[0:iteration] + ([None] * (self._duration - iteration))
         self.reset_belief()
         self.reset_solver()
         if terminal:
@@ -152,8 +150,8 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.actions = actions
         self.surrogate_actions = [Action(value, False) for value in self.actions]
         self.opponent_model = opponent_model
-        self.low = [low]
-        self.high = [high]
+        self.low = low
+        self.high = high
 
     def update_parameters(self):
         pass
