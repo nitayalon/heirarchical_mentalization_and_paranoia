@@ -245,6 +245,7 @@ class DoMZeroReceiver(DoMZeroModel):
                                                                  self.belief)
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
                                             self.detection_mechanism,
+                                            self.config.get_from_env("active_detection_mechanism"),
                                             self.config.get_from_env("break_down_policy"),
                                             self.mental_state, self.utility_function,
                                             float(self.config.get_from_env("planning_depth")),

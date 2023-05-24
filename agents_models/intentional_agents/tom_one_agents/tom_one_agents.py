@@ -82,6 +82,9 @@ class DoMOneBelief(DoMZeroBelief):
 
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
+    def compute_future_values(self, value, value1, iteration_number, duration):
+        pass
+
     def __init__(self, opponent_model: DoMZeroReceiver, reward_function,
                  actions: np.array,
                  belief_distribution: DoMOneBelief):
@@ -102,12 +105,20 @@ class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
 
 
 class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
+
     def __init__(self, opponent_model: DoMZeroReceiver, reward_function, actions: np.array,
                  belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.upper_bounds = opponent_model.opponent_model.upper_bounds
         self.lower_bounds = opponent_model.opponent_model.lower_bounds
         self.previous_nodes = dict()
+
+    def compute_future_values(self, observation, action, iteration_number, duration):
+        current_reward = self.reward_function(observation, action)
+        # We can expect to get this reward if the opponent isn't angry with us
+        reward = current_reward * (1 - self.opponent_model.solver.mental_state)
+        total_reward = reward * max(duration - iteration_number, 1)
+        return total_reward
 
     def get_persona(self):
         return [self.opponent_model.threshold, self.opponent_model.mental_state]

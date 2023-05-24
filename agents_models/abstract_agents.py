@@ -140,6 +140,9 @@ class DoMZeroBelief(BeliefDistribution):
 
 class DoMZeroEnvironmentModel(EnvironmentModel):
 
+    def compute_future_values(self, value, value1, iteration_number, duration):
+        pass
+
     def __init__(self, opponent_model: SubIntentionalAgent,
                  reward_function,
                  actions: np.array,
