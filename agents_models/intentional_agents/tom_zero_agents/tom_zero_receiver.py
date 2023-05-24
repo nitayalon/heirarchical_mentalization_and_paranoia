@@ -163,6 +163,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                  , iteration_number)
         if self.active_detection:
             actions, mcts_tree, q_values = self.xipomdp_mechanism(iteration_number)
+            return actions, mcts_tree, q_values
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []

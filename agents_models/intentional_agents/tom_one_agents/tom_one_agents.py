@@ -114,7 +114,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.previous_nodes = dict()
 
     def compute_future_values(self, observation, action, iteration_number, duration):
-        current_reward = self.reward_function(observation, action)
+        current_reward = self.reward_function(action, observation)
         # We can expect to get this reward if the opponent isn't angry with us
         reward = current_reward * (1 - self.opponent_model.solver.mental_state)
         total_reward = reward * max(duration - iteration_number, 1)
@@ -140,8 +140,9 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        # Skip this part - read from memory instead
         key = f'{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
+        mental_model = interactive_state.persona[1]
+        # If we already visited this history
         if key in self.previous_nodes.keys():
             if iteration_number > 0:
                 self.opponent_model.history.update_observations(action)
@@ -151,10 +152,12 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.history.update_actions(counter_offer)
             self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
             self.opponent_model.belief.update_distribution(action, observation, iteration_number)  # Update rational opponent bounds
-            mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
+            # In case we're in the XIPOMDP env:
+            if self.opponent_model.solver.active_detection:
+                mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
                                                                                                      self.opponent_model.belief.belief_distribution)
-            if mental_model:
-                self.opponent_model.solver.mental_state = mental_model
+                if mental_model:
+                    self.opponent_model.solver.mental_state = mental_model
             self.opponent_model.environment_model.update_parameters()
         else:
             counter_offer, observation_probability, q_values, opponent_policy = \
