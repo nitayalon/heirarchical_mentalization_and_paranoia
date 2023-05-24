@@ -98,7 +98,7 @@ class DoMZeroDetectionMechanism:
     def verify_random_behaviour(self, trial_number):
         strong_typicality = self.strong_typicality(trial_number)
         average_reward = self.expected_reward(trial_number)
-        return np.all(strong_typicality) + average_reward
+        return np.all(strong_typicality) and average_reward
 
     def nonrandom_sender_detection(self, iteration_number, belief_distribution):
         detection_mechanism = self.verify_random_behaviour(iteration_number)
@@ -109,7 +109,8 @@ class DoMZeroDetectionMechanism:
 
 class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
     def __init__(self, actions, belief_distribution: DoMZeroBelief, opponent_model,
-                 detection_mechanism: DoMZeroDetectionMechanism, breakdown_policy: bool,
+                 detection_mechanism: DoMZeroDetectionMechanism,
+                 active_detection: bool, breakdown_policy: bool,
                  mental_state: bool, 
                  reward_function, planning_horizon, discount_factor, task_duration):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
@@ -117,6 +118,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.belief = belief_distribution
         self.opponent_model = opponent_model
         self.detection_mechanism = detection_mechanism
+        self.active_detection = active_detection
         self.breakdown_policy = breakdown_policy
         self.mental_state = mental_state
         self.utility_function = reward_function
@@ -131,15 +133,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.planning_tree = []
         self.q_values = []
 
-    def plan(self, action, observation, iteration_number, update_belief):
-        # Belief update via IRL
-        action_length = len(self.belief.history.actions)
-        observation_length = len(self.belief.history.observations)
-        if update_belief:
-            self.belief.update_distribution(action, observation, iteration_number)   # Update rational opponent bounds
-        self.update_low_and_high(self.belief.history.observations[-2] if iteration_number > 1 else Action(None, False),
-                                 self.belief.history.actions[-1] if iteration_number > 1 else Action(None, False)
-                                 , iteration_number)
+    def xipomdp_mechanism(self, iteration_number):
         non_random_sender = self.detection_mechanism.nonrandom_sender_detection(iteration_number,
                                                                                 self.belief_distribution.belief_distribution)
         n_visits = np.repeat(self.planning_horizon, self.actions.size)
@@ -154,9 +148,22 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
             if self.breakdown_policy:
                 weighted_q_values = [-1, 1]
             else:
-                weighted_q_values = [-1/10, 1/10]
+                weighted_q_values = [-1 / 10, 1 / 10]
             return {str(a.value): a for a in self.surrogate_actions}, None, \
                    np.c_[self.actions, weighted_q_values, n_visits]
+
+    def plan(self, action, observation, iteration_number, update_belief):
+        # Belief update via IRL
+        action_length = len(self.belief.history.actions)
+        observation_length = len(self.belief.history.observations)
+        if update_belief:
+            self.belief.update_distribution(action, observation, iteration_number)   # Update rational opponent bounds
+        self.update_low_and_high(self.belief.history.observations[-2] if iteration_number > 1 else Action(None, False),
+                                 self.belief.history.actions[-1] if iteration_number > 1 else Action(None, False)
+                                 , iteration_number)
+        if self.active_detection:
+            actions, mcts_tree, q_values = self.xipomdp_mechanism(iteration_number)
+            return actions, mcts_tree, q_values
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []
@@ -231,13 +238,16 @@ class DoMZeroReceiver(DoMZeroModel):
                  task_duration: int):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self.mental_state = False  # Add flipflop mechanism
-        self.detection_mechanism = DoMZeroDetectionMechanism(self.history, self.opponent_model.potential_actions, task_duration)
+        self.detection_mechanism = DoMZeroDetectionMechanism(self.history, self.opponent_model.potential_actions,
+                                                             task_duration)
         self.belief = DomZeroReceiverBelief(prior_belief[:, 0], prior_belief[:, 1], self.opponent_model, self.history)
         self.environment_model = DoMZeroReceiverEnvironmentModel(self.opponent_model, self.utility_function,
                                                                  actions,
                                                                  self.belief)
         self.solver = DoMZeroReceiverSolver(self.potential_actions, self.belief, self.opponent_model,
-                                            self.detection_mechanism, self.config.get_from_env("break_down_policy"),
+                                            self.detection_mechanism,
+                                            self.config.get_from_env("active_detection_mechanism"),
+                                            self.config.get_from_env("break_down_policy"),
                                             self.mental_state, self.utility_function,
                                             float(self.config.get_from_env("planning_depth")),
                                             float(self.config.get_from_env("discount_factor")),

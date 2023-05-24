@@ -82,6 +82,9 @@ class DoMOneBelief(DoMZeroBelief):
 
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
+    def compute_future_values(self, value, value1, iteration_number, duration):
+        pass
+
     def __init__(self, opponent_model: DoMZeroReceiver, reward_function,
                  actions: np.array,
                  belief_distribution: DoMOneBelief):
@@ -102,12 +105,20 @@ class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
 
 
 class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
+
     def __init__(self, opponent_model: DoMZeroReceiver, reward_function, actions: np.array,
                  belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.upper_bounds = opponent_model.opponent_model.upper_bounds
         self.lower_bounds = opponent_model.opponent_model.lower_bounds
         self.previous_nodes = dict()
+
+    def compute_future_values(self, observation, action, iteration_number, duration):
+        current_reward = self.reward_function(action, observation)
+        # We can expect to get this reward if the opponent isn't angry with us
+        reward = current_reward * (1 - self.opponent_model.solver.mental_state)
+        total_reward = reward * max(duration - iteration_number, 1)
+        return total_reward
 
     def get_persona(self):
         return [self.opponent_model.threshold, self.opponent_model.mental_state]
@@ -125,14 +136,13 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length-1]
             observation = self.belief_distribution.history.observations[observation_length-1]
-            self.opponent_model.opponent_model.lower_bounds = self.lower_bounds
-            self.opponent_model.opponent_model.upper_bounds = self.upper_bounds
             self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int):
-        # Skip this part - read from memory instead
         key = f'{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
+        mental_model = interactive_state.persona[1]
+        # If we already visited this history
         if key in self.previous_nodes.keys():
             if iteration_number > 0:
                 self.opponent_model.history.update_observations(action)
@@ -141,10 +151,13 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
             self.opponent_model.history.update_actions(counter_offer)
             self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
-            mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
+            self.opponent_model.belief.update_distribution(action, observation, iteration_number)  # Update rational opponent bounds
+            # In case we're in the XIPOMDP env:
+            if self.opponent_model.solver.active_detection:
+                mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
                                                                                                      self.opponent_model.belief.belief_distribution)
-            if mental_model:
-                self.opponent_model.solver.mental_state = mental_model
+                if mental_model:
+                    self.opponent_model.solver.mental_state = mental_model
             self.opponent_model.environment_model.update_parameters()
         else:
             counter_offer, observation_probability, q_values, opponent_policy = \
