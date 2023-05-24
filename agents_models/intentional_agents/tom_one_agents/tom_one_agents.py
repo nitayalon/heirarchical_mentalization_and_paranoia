@@ -125,8 +125,6 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length-1]
             observation = self.belief_distribution.history.observations[observation_length-1]
-            self.opponent_model.opponent_model.lower_bounds = self.lower_bounds
-            self.opponent_model.opponent_model.upper_bounds = self.upper_bounds
             self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
@@ -141,6 +139,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
             self.opponent_model.history.update_actions(counter_offer)
             self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
+            self.opponent_model.belief.update_distribution(action, observation, iteration_number)  # Update rational opponent bounds
             mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
                                                                                                      self.opponent_model.belief.belief_distribution)
             if mental_model:
