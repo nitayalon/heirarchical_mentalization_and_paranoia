@@ -140,7 +140,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         # If the Flip Flop mechanism is on
         if self.mental_state:
             weighted_q_values = [-1, 1]
-            return {str(a.value): a for a in self.surrogate_actions}, None, \
+            return True, {str(a.value): a for a in self.surrogate_actions}, None, \
                    np.c_[self.actions, weighted_q_values, n_visits]
         # If we detect a deviation from random behaviour:
         if non_random_sender:
@@ -149,8 +149,9 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                 weighted_q_values = [-1, 1]
             else:
                 weighted_q_values = [-1 / 10, 1 / 10]
-            return {str(a.value): a for a in self.surrogate_actions}, None, \
+            return True, {str(a.value): a for a in self.surrogate_actions}, None, \
                    np.c_[self.actions, weighted_q_values, n_visits]
+        return False, None, None, None
 
     def plan(self, action, observation, iteration_number, update_belief):
         # Belief update via IRL
@@ -162,8 +163,9 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                  self.belief.history.actions[-1] if iteration_number > 1 else Action(None, False)
                                  , iteration_number)
         if self.active_detection:
-            actions, mcts_tree, q_values = self.xipomdp_mechanism(iteration_number)
-            return actions, mcts_tree, q_values
+            am_i_being_fooled, actions, mcts_tree, q_values = self.xipomdp_mechanism(iteration_number)
+            if am_i_being_fooled:
+                return actions, mcts_tree, q_values
         # Recursive planning_tree spanning
         q_values_array = []
         self.q_values = []
