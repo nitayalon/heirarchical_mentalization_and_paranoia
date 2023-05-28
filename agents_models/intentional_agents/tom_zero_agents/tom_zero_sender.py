@@ -61,11 +61,16 @@ class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
         q_value = expected_reward_from_offer[optimal_action_idx]
         return Action(optimal_action, False), q_value
 
-    def init_q_values(self, observation: Action):
+    def init_q_values(self, observation: Action, *args):
+        is_irritated = 1
+        if len(args) > 0:
+            if len(args[0]) > 0:
+                persona = [x.get_persona[1] for x in args[0]]
+                is_irritated = 1 - np.any(persona)
         reward_from_action = self.reward_function(self.actions, True)
         acceptance_probability = self.acceptance_probability_per_type(self.belief[-1, :])
         initial_qvalues = np.multiply(reward_from_action, acceptance_probability)
-        return initial_qvalues
+        return initial_qvalues * is_irritated
 
     def acceptance_probability_per_type(self, belief):
         accept_reject_by_type = self.actions[:, np.newaxis] >= self.support
