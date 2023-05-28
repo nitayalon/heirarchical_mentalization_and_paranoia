@@ -61,7 +61,7 @@ class EAT:
         sender_belief = self.export_beliefs(sender.belief.belief_distribution,
                                             receiver.belief.support, sender.name, receiver_threshold, sender_threshold)
         if self.config.env == "x_ipomdp":
-            receiver_mental_state = receiver.solver.mental_state
+            receiver_mental_state = receiver.get_mental_state()
         else:
             receiver_mental_state = None
         return experiment_results, agents_q_values, receiver_belief, sender_belief, receiver_mental_state

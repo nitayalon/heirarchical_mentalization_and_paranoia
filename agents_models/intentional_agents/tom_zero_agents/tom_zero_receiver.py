@@ -119,7 +119,9 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.planning_tree = []
         self.q_values = []
 
-    def get_mental_state(self):
+    def get_mental_state(self, all: bool = False) -> Union[bool, list]:
+        if all:
+            return self.detection_mechanism.mental_state
         return self.detection_mechanism.mental_state[-1]
 
     def set_mental_state(self, mental_state: bool):
