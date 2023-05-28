@@ -63,12 +63,12 @@ if __name__ == "__main__":
         config.new_experiment_name(experiment_name)
         print(f'Sender parameters: gamma = {sender.threshold}', flush=True)
         print(f'Receiver parameters: gamma = {receiver.threshold}', flush=True)
-        experiment_results, q_values, receiver_belief, sender_belief = \
+        experiment_results, q_values, receiver_belief, sender_belief, receiver_mental_state = \
             eat_task_simulator.simulate_task(sender, receiver, receiver.threshold, sender.threshold)
         if sender.name == "DoM(1)_sender":
             sender.memoization_table.save_data()
-        sender.reset(terminal=True)
-        receiver.reset(terminal=True)
+        sender.reset()
+        receiver.reset()
         experiment_name = config.experiment_name
         output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
         experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)

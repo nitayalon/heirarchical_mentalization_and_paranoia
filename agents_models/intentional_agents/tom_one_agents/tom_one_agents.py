@@ -77,7 +77,7 @@ class DoMOneBelief(DoMZeroBelief):
         probabilities = 1.0
         rng_generator = np.random.default_rng(rng_key)
         idx = rng_generator.choice(self.belief_distribution.shape[0], size=n_samples, p=np.array([probabilities]))
-        particles = [[self.opponent_model.threshold, self.opponent_model.mental_state]]
+        particles = [[self.opponent_model.threshold, self.opponent_model.get_mental_state()]]
         return particles * n_samples
 
 
@@ -116,12 +116,12 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
     def compute_future_values(self, observation, action, iteration_number, duration):
         current_reward = self.reward_function(action, observation)
         # We can expect to get this reward if the opponent isn't angry with us
-        reward = current_reward * (1 - self.opponent_model.solver.mental_state)
+        reward = current_reward * (1 - self.opponent_model.get_mental_state())
         total_reward = reward * max(duration - iteration_number, 1)
         return total_reward
 
     def get_persona(self):
-        return [self.opponent_model.threshold, self.opponent_model.mental_state]
+        return [self.opponent_model.threshold, self.opponent_model.get_mental_state()]
 
     def update_parameters(self):
         self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
@@ -131,7 +131,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.threshold = persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
-        self.opponent_model.solver.mental_state = persona[1]
+        self.opponent_model.solver.mental_state = [persona[1]]
         iteration_number = action_length
         if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length-1]
@@ -139,31 +139,38 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-             iteration_number: int):
-        key = f'{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
+             iteration_number: int, *args):
+        if len(args) > 0:
+            previous_offer = args[0]
+            key = f'{previous_offer.value}-{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
+        else:
+            key = f'{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
         mental_model = interactive_state.persona[1]
-        # If we already visited this history
+        # If we already visited this node
         if key in self.previous_nodes.keys():
             if iteration_number > 0:
                 self.opponent_model.history.update_observations(action)
                 self.opponent_model.opponent_model.history.update_actions(action)
-            counter_offer, observation_probability, q_values, opponent_policy = self.previous_nodes[key]
-            self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
-            self.opponent_model.history.update_actions(counter_offer)
-            self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
-            self.opponent_model.belief.update_distribution(action, observation, iteration_number)  # Update rational opponent bounds
-            # In case we're in the XIPOMDP env:
+            # update distribution
+            self.opponent_model.belief.update_distribution(action, observation, iteration_number)
+            # update persona
             if self.opponent_model.solver.active_detection:
                 mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
                                                                                                      self.opponent_model.belief.belief_distribution)
                 if mental_model:
-                    self.opponent_model.solver.mental_state = mental_model
+                    self.opponent_model.set_mental_state(mental_model)
+            # sample previous Q-values
+            counter_offer, observation_probability, q_values, opponent_policy = self.previous_nodes[key]
+            self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
+            self.opponent_model.history.update_actions(counter_offer)
+            self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
+            # In case we're in the XIPOMDP env:
             self.opponent_model.environment_model.update_parameters()
         else:
             counter_offer, observation_probability, q_values, opponent_policy = \
                 self.opponent_model.act(seed, observation, action, iteration_number)
             self.previous_nodes[key] = [counter_offer, observation_probability, q_values, opponent_policy]
-            mental_model = self.opponent_model.solver.mental_state
+            mental_model = self.opponent_model.get_mental_state()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
         expected_reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
@@ -171,6 +178,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         interactive_state.state.terminal = interactive_state.state.name == 10
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
         interactive_state.persona = [interactive_state.persona[0], mental_model]
+        interactive_state.opponent_belief = self.opponent_model.belief.belief_distribution[-1, :]
         return interactive_state, counter_offer, expected_reward, observation_probability
 
 

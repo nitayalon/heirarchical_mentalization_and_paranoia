@@ -44,8 +44,8 @@ class SubIntentionalAgent(ABC):
         self.reset_belief()
         self.reset_solver()
         if terminal:
-            self.upper_bounds = [1 - self.threshold if self.threshold is not None else 1.0] + ([None] * (self._duration - 1))
-            self.lower_bounds = [0.0] + [None] * (self._duration - 1)
+            self.upper_bounds = 1.0
+            self.lower_bounds = 0.0
             self.history.reset(0, 0)
 
     @property
@@ -159,7 +159,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
     def update_parameters(self):
         pass
 
-    def reset(self):
+    def reset(self, iteration_number):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
 
@@ -242,9 +242,9 @@ class DoMZeroModel(SubIntentionalAgent):
         self.low = 0.0
         self.history.reset(action_length, observation_length)
         self.opponent_model.reset(1.0, 0.0, terminal=terminal)
-        self.environment_model.reset()
+        self.environment_model.reset(action_length)
         self.reset_belief()
-        self.reset_solver()
+        self.reset_solver(action_length)
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
         if iteration_number > 0:
@@ -284,8 +284,8 @@ class DoMZeroModel(SubIntentionalAgent):
     def reset_belief(self):
         self.belief.reset()
 
-    def reset_solver(self):
-        self.solver.reset()
+    def reset_solver(self, iteration_number: Optional[int]=None):
+        self.solver.reset(iteration_number)
 
     def update_history(self, action, observation, reward):
         """
