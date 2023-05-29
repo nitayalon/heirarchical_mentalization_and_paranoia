@@ -26,6 +26,7 @@ class DoMOneBelief(DoMZeroBelief):
         """
         if iteration_number < 1:
             return None
+        self.nested_mental_state = not self.opponent_model.detection_mechanism.verify_random_behaviour(iteration_number)
         prior = np.copy(self.belief_distribution[-1, :])
         likelihood = self.compute_likelihood(action, observation, prior, iteration_number)
         if self.include_persona_inference:
@@ -35,7 +36,6 @@ class DoMOneBelief(DoMZeroBelief):
         # Store nested belief
         self.nested_belief = self.opponent_model.belief.belief_distribution
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
-        self.nested_mental_state = not self.opponent_model.detection_mechanism.verify_random_behaviour(iteration_number)
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
         """
@@ -131,7 +131,6 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.threshold = persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
-        self.opponent_model.solver.mental_state = [persona[1]]
         iteration_number = action_length
         if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length-1]
@@ -154,11 +153,10 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             # update distribution
             self.opponent_model.belief.update_distribution(action, observation, iteration_number)
             # update persona
-            if self.opponent_model.solver.active_detection:
+            if self.opponent_model.solver.x_ipomdp_model:
                 mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
-                                                                                                     self.opponent_model.belief.belief_distribution)
-                if mental_model:
-                    self.opponent_model.set_mental_state(mental_model)
+                                                                                                         self.opponent_model.belief.belief_distribution)
+                self.opponent_model.solver.detection_mechanism.mental_state.append(mental_model)
             # sample previous Q-values
             counter_offer, observation_probability, q_values, opponent_policy = self.previous_nodes[key]
             self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
