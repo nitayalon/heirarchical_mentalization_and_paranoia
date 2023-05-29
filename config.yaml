@@ -23,8 +23,8 @@ environments:
     subintentional_type: softmax
     subintentional_weight: -0.95
   x_ipomdp:
-    n_trials: 3
-    planning_depth: 3
+    n_trials: 10
+    planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
     mcts_number_of_iterations: 25000
