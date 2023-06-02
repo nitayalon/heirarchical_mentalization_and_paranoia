@@ -137,6 +137,26 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             observation = self.belief_distribution.history.observations[observation_length-1]
             self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
+    def recall_opponents_actions_from_memory(self, key, iteration_number, action, observation):
+        if iteration_number > 0:
+            self.opponent_model.history.update_observations(action)
+            self.opponent_model.opponent_model.history.update_actions(action)
+        # update distribution
+        self.opponent_model.belief.update_distribution(action, observation, iteration_number)
+        # update persona
+        if self.opponent_model.solver.x_ipomdp_model:
+            mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
+                                                                                                     self.opponent_model.belief.belief_distribution)
+            self.opponent_model.solver.detection_mechanism.mental_state.append(mental_model)
+        # sample previous Q-values
+        counter_offer, observation_probability, q_values, opponent_policy = self.previous_nodes[key]
+        self.opponent_model.environment_model.update_persona(action, counter_offer, iteration_number)
+        self.opponent_model.history.update_actions(counter_offer)
+        self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
+        # In case we're in the XIPOMDP env:
+        self.opponent_model.environment_model.update_parameters()
+        return counter_offer, observation_probability, q_values, opponent_policy
+
     def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
              iteration_number: int, *args):
         if len(args) > 0:
@@ -146,29 +166,14 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             key = f'{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
         mental_model = interactive_state.persona[1]
         # If we already visited this node
-        if key in self.previous_nodes.keys():
-            if iteration_number > 0:
-                self.opponent_model.history.update_observations(action)
-                self.opponent_model.opponent_model.history.update_actions(action)
-            # update distribution
-            self.opponent_model.belief.update_distribution(action, observation, iteration_number)
-            # update persona
-            if self.opponent_model.solver.x_ipomdp_model:
-                mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
-                                                                                                         self.opponent_model.belief.belief_distribution)
-                self.opponent_model.solver.detection_mechanism.mental_state.append(mental_model)
-            # sample previous Q-values
-            counter_offer, observation_probability, q_values, opponent_policy = self.previous_nodes[key]
-            self.opponent_model.environment_model.update_persona(observation, counter_offer, iteration_number)
-            self.opponent_model.history.update_actions(counter_offer)
-            self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
-            # In case we're in the XIPOMDP env:
-            self.opponent_model.environment_model.update_parameters()
-        else:
-            counter_offer, observation_probability, q_values, opponent_policy = \
-                self.opponent_model.act(seed, observation, action, iteration_number)
-            self.previous_nodes[key] = [counter_offer, observation_probability, q_values, opponent_policy]
-            mental_model = self.opponent_model.get_mental_state()
+        # if key in self.previous_nodes.keys():
+        #     counter_offer, observation_probability, q_values, opponent_policy = \
+        #         self.recall_opponents_actions_from_memory(key, iteration_number, action, observation)
+        # else:
+        counter_offer, observation_probability, q_values, opponent_policy = \
+            self.opponent_model.act(seed, observation, action, iteration_number)
+        self.previous_nodes[key] = [counter_offer, observation_probability, q_values, opponent_policy]
+        mental_model = self.opponent_model.get_mental_state()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
         expected_reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \

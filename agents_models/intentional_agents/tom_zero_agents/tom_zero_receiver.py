@@ -119,8 +119,8 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         self.planning_tree = []
         self.q_values = []
 
-    def get_mental_state(self, all: bool = False) -> Union[bool, list]:
-        if all:
+    def get_mental_state(self, sequence: bool = False) -> Union[bool, list]:
+        if sequence:
             return self.detection_mechanism.mental_state
         return self.detection_mechanism.mental_state[-1]
 
@@ -131,6 +131,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         n_visits = np.repeat(self.planning_horizon, self.actions.size)
         # If the Flip Flop mechanism is on
         if self.get_mental_state():
+            self.detection_mechanism.update_mental_state(iteration_number, True)
             weighted_q_values = [-1, 1]
             return True, {str(a.value): a for a in self.surrogate_actions}, None, \
                    np.c_[self.actions, weighted_q_values, n_visits]
@@ -267,8 +268,8 @@ class DoMZeroReceiver(DoMZeroModel):
                                             task_duration)
         self.name = "DoM(0)_receiver"
 
-    def get_mental_state(self):
-        return self.solver.get_mental_state()
+    def get_mental_state(self, sequence: bool = False):
+        return self.solver.get_mental_state(sequence)
 
     def set_mental_state(self, mental_state: bool):
         return self.solver.set_mental_state(mental_state)
