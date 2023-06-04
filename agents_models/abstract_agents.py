@@ -140,6 +140,10 @@ class DoMZeroBelief(BeliefDistribution):
 
 class DoMZeroEnvironmentModel(EnvironmentModel):
 
+    def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
+                     iteration_number: int, *args):
+        pass
+
     def compute_future_values(self, value, value1, iteration_number, duration):
         pass
 
@@ -187,8 +191,10 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
                                                                                                     iteration_number)
         return counter_offer, observation_probability, q_values, opponent_policy
 
-    def step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-             iteration_number: int, *args):
+    def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,
+             seed: int, iteration_number: int, *args):
+        observation = history_node.observation
+        action = action_node.observation
         counter_offer, observation_probability, q_values, opponent_policy = \
             self._simulate_opponent_response(seed, observation, action, iteration_number)
         reward = self.reward_function(action.value, observation.value, counter_offer.value)
