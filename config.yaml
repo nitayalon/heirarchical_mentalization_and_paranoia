@@ -2,7 +2,7 @@ general:
   fee_discount: 0.95
   results_folder: "data/"
   report_ipocmp_statistics: False
-  output_planning_tree: True
+  output_planning_tree: False
   include_random: True
   skip_random: True
   skip_rational: False

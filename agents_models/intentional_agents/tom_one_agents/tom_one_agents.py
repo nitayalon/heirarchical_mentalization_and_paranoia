@@ -106,22 +106,23 @@ class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
 
 class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
 
-    def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-                     iteration_number: int, *args):
-        counter_offer, observation_probability, q_values, opponent_policy = \
-            self.opponent_model.act(seed, observation, action, iteration_number)
-        self.opponent_model.environment_model.update_persona(action, counter_offer, iteration_number)
-        self.opponent_model.history.update_actions(counter_offer)
-        self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
-        # In case we're in the XIPOMDP env:
-        self.opponent_model.environment_model.update_parameters()
-        return counter_offer, observation_probability, q_values, opponent_policy
-
     def __init__(self, opponent_model: DoMZeroReceiver, reward_function, actions: np.array,
                  belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
         self.upper_bounds = opponent_model.opponent_model.upper_bounds
         self.lower_bounds = opponent_model.opponent_model.lower_bounds
+
+    def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
+                     iteration_number: int, *args):
+        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
+                                                                                                    action,
+                                                                                                    iteration_number)
+        reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
+                 self.reward_function(action.value, observation.value, not counter_offer.value) * (
+                         1 - observation_probability)
+        interactive_state.state.terminal = interactive_state.state.name == 10
+        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
+        return interactive_state, counter_offer, reward, observation_probability
 
     def compute_future_values(self, observation, action, iteration_number, duration):
         current_reward = self.reward_function(action, observation)
@@ -164,7 +165,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         q_values, opponent_policy = action_node.opponent_response[key]
         prng = np.random.default_rng(seed)
         best_action_idx = prng.choice(a=len(q_values), p=opponent_policy)
-        counter_offer, observation_probability = self.opponent_model.potential_actions[best_action_idx], \
+        counter_offer, observation_probability = Action(self.opponent_model.potential_actions[best_action_idx], False), \
                                                  opponent_policy[best_action_idx]
         self.opponent_model.environment_model.update_persona(action, counter_offer, iteration_number)
         self.opponent_model.history.update_actions(counter_offer)
@@ -177,7 +178,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
              seed: int, iteration_number: int, *args):
         action = action_node.action
         observation = history_node.observation
-        nested_beliefs = np.round(interactive_state.get_nested_belief[-1, :], 3)
+        nested_beliefs = np.round(interactive_state.get_nested_belief, 3)
         key = f'{nested_beliefs}-{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
         # If we already visited this node
         if key in action_node.opponent_response.keys():
