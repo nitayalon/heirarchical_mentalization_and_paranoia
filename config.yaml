@@ -2,9 +2,9 @@ general:
   fee_discount: 0.95
   results_folder: "data/"
   report_ipocmp_statistics: False
-  output_planning_tree: True
+  output_planning_tree: False
   include_random: True
-  skip_random: False
+  skip_random: True
   skip_rational: False
   number_of_rational_agents: 2
   thresholds: [0.0,0.3,0.7]
