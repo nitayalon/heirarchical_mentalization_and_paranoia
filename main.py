@@ -4,7 +4,7 @@ import argparse
 
 
 def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory):
-    outdir = os.path.join(config.beliefs_dir, directory_name)
+    outdir = os.path.join(config.beliefs_dir, directorAddy_name)
     if table is not None:
         if not os.path.exists(outdir):
             os.mkdir(outdir)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
         export_beliefs_to_file(receiver_belief, 'receiver_beliefs', output_file_name)
         export_beliefs_to_file(sender_belief, 'sender_beliefs', output_file_name)
-        # export_beliefs_to_file(receiver_mental_state, 'receiver_mental_state', output_file_name)
+        export_beliefs_to_file(receiver_mental_state, 'receiver_mental_state', output_file_name)
         print("#" * 10 + ' simulation over ' + "#" * 10, flush=True)
         i += 1
         print(f'{i / factory.grid_size * 100}% of trials completed', flush=True)
