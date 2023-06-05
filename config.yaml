@@ -15,7 +15,7 @@ environments:
     planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
-    mcts_number_of_iterations: 25000
+    mcts_number_of_iterations: 10000
     discount_factor: 0.99
     endowment: 1.0
     break_down_policy: False
@@ -27,7 +27,7 @@ environments:
     planning_depth: 10
     uct_exploration_bonus: 5.0
     rollout_rejecting_bonus: 0.5
-    mcts_number_of_iterations: 25000
+    mcts_number_of_iterations: 10000
     discount_factor: 0.99
     endowment: 1.0
     break_down_policy: True

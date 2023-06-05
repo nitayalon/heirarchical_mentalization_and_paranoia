@@ -117,11 +117,14 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
                                                                                                     action,
                                                                                                     iteration_number)
+        mental_model = self.opponent_model.get_mental_state()
         reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
                  self.reward_function(action.value, observation.value, not counter_offer.value) * (
                          1 - observation_probability)
         interactive_state.state.terminal = interactive_state.state.name == 10
         interactive_state.state.name = str(int(interactive_state.state.name) + 1)
+        interactive_state.persona = [interactive_state.persona[0], mental_model]
+        interactive_state.opponent_belief = self.opponent_model.belief.belief_distribution[-1, :]
         return interactive_state, counter_offer, reward, observation_probability
 
     def compute_future_values(self, observation, action, iteration_number, duration):
@@ -163,7 +166,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.solver.detection_mechanism.mental_state.append(mental_model)
         # sample previous Q-values
         q_values, opponent_policy = action_node.opponent_response[key]
-        prng = np.random.default_rng(seed)
+        prng = np.random.default_rng(seed + iteration_number)
         best_action_idx = prng.choice(a=len(q_values), p=opponent_policy)
         counter_offer, observation_probability = Action(self.opponent_model.potential_actions[best_action_idx], False), \
                                                  opponent_policy[best_action_idx]
@@ -187,7 +190,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         else:
             counter_offer, observation_probability, q_values, opponent_policy = \
                 self.opponent_model.act(seed, observation, action, iteration_number)
-        action_node.add_opponent_response(key, q_values, opponent_policy)
+            action_node.add_opponent_response(key, q_values, opponent_policy)
         mental_model = self.opponent_model.get_mental_state()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
