@@ -63,6 +63,8 @@ class EAT:
         if self.config.env == "x_ipomdp":
             receiver_mental_state = pd.DataFrame(receiver.get_mental_state(True), columns=['mental_state'])
             receiver_mental_state['trial_number'] = np.arange(0, receiver_mental_state.shape[0], 1)
+            receiver_mental_state['seed'] = self.seed
+            receiver_mental_state['sender_threshold'] = sender.threshold
         else:
             receiver_mental_state = None
         return experiment_results, agents_q_values, receiver_belief, sender_belief, receiver_mental_state
