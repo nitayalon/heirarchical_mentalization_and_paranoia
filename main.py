@@ -4,7 +4,7 @@ import argparse
 
 
 def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory):
-    outdir = os.path.join(config.beliefs_dir, directorAddy_name)
+    outdir = os.path.join(config.beliefs_dir, directory_name)
     if table is not None:
         if not os.path.exists(outdir):
             os.mkdir(outdir)
