@@ -158,7 +158,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.history.update_observations(action)
             self.opponent_model.opponent_model.history.update_actions(action)
         # update distribution
-        self.opponent_model.belief.update_distribution(action, observation, iteration_number)
+        self.opponent_model.belief.update_distribution(observation, action,  iteration_number)
         # update persona
         if self.opponent_model.solver.x_ipomdp_model:
             mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,

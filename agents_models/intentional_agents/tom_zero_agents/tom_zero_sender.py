@@ -47,17 +47,20 @@ class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
     def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool, iteration_number: int):
         # if the last offer was accepted - we can offer less (if we can)
         if observation:
-            potential_actions = self.actions[np.where(last_action >= self.actions)]
+            weights = np.array([last_action >= self.actions]) * 0.5
         # if the last offer was rejected - we should offer more (if we can)
         else:
             if last_action < np.max(self.actions):
-                potential_actions = self.actions[np.where(last_action < self.actions)]
+                weights = np.array([last_action < self.actions]) * 0.5
             else:
-                potential_actions = self.actions[np.where(last_action <= self.actions)]
-        expected_reward_from_offer = self.reward_function(potential_actions, True) * \
-                                     (interactive_state.persona[0] < (1 - potential_actions))
+                weights = 0.0
+        acceptance_odds = np.array([x >= 1-self.actions for x in self.support[1:]]).T
+        acceptance_odds = np.c_[np.repeat(True, len(self.actions)), acceptance_odds]
+        current_beliefs = interactive_state.get_nested_belief
+        acceptance_probability = np.multiply(current_beliefs, acceptance_odds).sum(axis=1)
+        expected_reward_from_offer = self.reward_function(self.actions, True) * acceptance_probability
         optimal_action_idx = np.argmax(expected_reward_from_offer)
-        optimal_action = potential_actions[optimal_action_idx]
+        optimal_action = self.actions[optimal_action_idx]
         q_value = expected_reward_from_offer[optimal_action_idx]
         return Action(optimal_action, False), q_value
 
