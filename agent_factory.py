@@ -1,4 +1,3 @@
-from agents_models.subintentional_agents.subintentional_senders import *
 from agents_models.intentional_agents.tom_two_agents.tom_two_agents import *
 
 
@@ -14,18 +13,19 @@ class AgentFactory:
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
         self.task_duration = self.config.get_from_env("n_trials")
-        self.eta = list(self.config.get_from_general("thresholds"))
-        self._thresholds = self.eta if self.config.get_from_general("number_of_rational_agents") > 1 else self.eta[:-1]
-        self.thresholds_seq = self._thresholds if self.include_random else self._thresholds[1:]  # parameters to control threshold of agent
+        self.sender_theta = list(self.config.get_from_general("sender_thresholds"))
+        self._sender_theta = self.sender_theta if self.config.get_from_general("number_of_rational_agents") > 1 else self.sender_theta[:-1]
+        self.sender_theta = self._sender_theta if self.include_random else self._sender_theta[1:]
+        self.receiver_theta = list(self.config.get_from_general("receiver_thresholds"))
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
         self.path_to_memoization_data = self.config.path_to_memoization_data
 
     def create_experiment_grid(self):
-        receiver_parameters = self.thresholds_seq
-        receiver_grid_size = len(self.thresholds_seq)
-        sender_parameters = self.thresholds_seq
-        sender_grid_size = 1
+        receiver_parameters = self.receiver_theta
+        receiver_grid_size = len(receiver_parameters)
+        sender_parameters = self.sender_theta
+        sender_grid_size = len(sender_parameters)
         self.grid_size = sender_grid_size * receiver_grid_size
         return {"sender_parameters": sender_parameters,
                 "receiver_parameters": receiver_parameters}
@@ -64,12 +64,12 @@ class AgentFactory:
     def dom_zero_constructor(self, agent_role):
         if agent_role == "rational_sender":
             opponent_model = self.dom_minus_one_constructor("rational_receiver")
-            opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
+            opponent_theta_hat_distribution = self._create_prior_distribution(self.sender_theta)
             output_agent = DoMZeroSender(self.agent_actions, self.config.softmax_temperature, 0.0,
                                          opponent_theta_hat_distribution, opponent_model, self.config.seed)
         else:
             opponent_model = self.dom_minus_one_constructor("rational_sender")
-            opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
+            opponent_theta_hat_distribution = self._create_prior_distribution(self.sender_theta)
             output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, 0.0,
                                            opponent_theta_hat_distribution, opponent_model, self.config.seed,
                                            self.task_duration)
@@ -78,7 +78,7 @@ class AgentFactory:
     def dom_one_constructor(self, agent_role):
         if agent_role == "rational_sender":
             opponent_model = self.dom_zero_constructor("rational_receiver")
-            opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
+            opponent_theta_hat_distribution = self._create_prior_distribution(self.receiver_theta)
             memoization_table = DoMOneMemoization(self.path_to_memoization_data)
             output_agent = DoMOneSender(self.agent_actions, self.config.softmax_temperature, None,
                                         memoization_table, opponent_theta_hat_distribution, opponent_model,
@@ -90,7 +90,7 @@ class AgentFactory:
 
     def dom_two_constructor(self, agent_role):
         opponent_model = self.dom_one_constructor("rational_sender")
-        opponent_theta_hat_distribution = self._create_prior_distribution(self.thresholds_seq)
+        opponent_theta_hat_distribution = self._create_prior_distribution(self.sender_theta)
         memoization_table = DoMTwoMemoization(self.path_to_memoization_data)
         output_agent = DoMTwoReceiver(self.subject_actions, self.config.softmax_temperature, None, memoization_table,
                                       opponent_theta_hat_distribution, opponent_model, self.config.seed,

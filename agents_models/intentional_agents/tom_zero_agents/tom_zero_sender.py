@@ -71,7 +71,7 @@ class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
                 persona = [x.get_persona[1] for x in args[0]]
                 is_irritated = 1 - np.any(persona)
         reward_from_action = self.reward_function(self.actions, True)
-        acceptance_probability = self.acceptance_probability_per_type(self.belief[-1, :])
+        acceptance_probability = self.acceptance_probability_per_type(self.support)
         initial_qvalues = np.multiply(reward_from_action, acceptance_probability)
         return initial_qvalues * is_irritated
 

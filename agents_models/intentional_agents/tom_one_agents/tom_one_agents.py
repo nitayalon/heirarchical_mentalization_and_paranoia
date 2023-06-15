@@ -8,11 +8,12 @@ class DoMOneBelief(DoMZeroBelief):
     def __init__(self, belief_distribution_support, zero_level_belief, include_persona_inference: bool,
                  opponent_model: Optional[Union[DoMZeroSender, SubIntentionalAgent]],
                  history: History):
-        super().__init__(belief_distribution_support, zero_level_belief, opponent_model, history)
+        super().__init__(belief_distribution_support[:, 0],
+                         belief_distribution_support[:, 1], opponent_model, history)
+        self.type_belief = self.prior_belief
+        # Because there's no observation uncertainty the DoM(1) belief about the DoM(0) beliefs are exact
         self.nested_belief = opponent_model.belief.belief_distribution
-        # Because there's no observation uncertainty the DoM(1) belief about the DoM(0) belief is its belief
-        self.prior_belief = opponent_model.belief.belief_distribution
-        self.belief_distribution = self.prior_belief
+        self.belief_distribution = {"type_belief": self.type_belief, "nested_beliefs": self.nested_belief}
         self.include_persona_inference = include_persona_inference
         self.nested_mental_state = False
 
@@ -27,14 +28,15 @@ class DoMOneBelief(DoMZeroBelief):
         if iteration_number < 1:
             return None
         self.nested_mental_state = not self.opponent_model.detection_mechanism.verify_random_behaviour(iteration_number)
-        prior = np.copy(self.belief_distribution[-1, :])
+        prior = np.copy(self.belief_distribution["type_belief"][-1, :])
         likelihood = self.compute_likelihood(action, observation, prior, iteration_number)
         if self.include_persona_inference:
             # Compute P(observation|action, history)
             posterior = likelihood * prior
-            self.belief_distribution = np.vstack([self.belief_distribution, posterior / posterior.sum()])
+            self.belief_distribution['type_belief'] = np.vstack([self.belief_distribution['type_belief'], posterior / posterior.sum()])
         # Store nested belief
         self.nested_belief = self.opponent_model.belief.belief_distribution
+        self.belief_distribution["nested_beliefs"] = self.nested_belief
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
@@ -54,9 +56,6 @@ class DoMOneBelief(DoMZeroBelief):
         if self.include_persona_inference:
             for i in range(len(self.support)):
                 theta = self.support[i]
-                if theta == 0.0:
-                    offer_likelihood[i] = 1 / len(self.opponent_model.potential_actions)
-                    continue
                 self.opponent_model.threshold = theta
                 actions, q_values, softmax_transformation, mcts_tree = \
                     self.opponent_model.forward(last_observation, action, iteration_number-1, False)
@@ -74,11 +73,12 @@ class DoMOneBelief(DoMZeroBelief):
         :param n_samples:
         :return:
         """
-        probabilities = 1.0
+        probabilities = self.belief_distribution['type_belief'][-1, :]
         rng_generator = np.random.default_rng(rng_key)
-        idx = rng_generator.choice(self.belief_distribution.shape[0], size=n_samples, p=np.array([probabilities]))
-        particles = [[self.opponent_model.threshold, self.opponent_model.get_mental_state()]]
-        return particles * n_samples
+        idx = rng_generator.choice(self.belief_distribution['type_belief'].shape[1], size=n_samples, p=probabilities)
+        particles = self.support[idx]
+        mental_state = [False] * n_samples
+        return list(zip(particles, mental_state))
 
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
@@ -203,6 +203,27 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         return interactive_state, counter_offer, expected_reward, observation_probability
 
 
+class DoMOneSenderExplorationPolicy(DoMZeroSenderExplorationPolicy):
+
+    def __init__(self, actions, reward_function, exploration_bonus, belief: np.array, type_support: np.array,
+                 nested_type_support:np.array):
+        super().__init__(actions, reward_function, exploration_bonus, belief, type_support)
+        self.nested_type_support = nested_type_support
+
+    def sample(self, interactive_state: InteractiveState, last_action: float, observation: bool, iteration_number: int):
+        acceptance_odds = np.array([x >= 1-self.actions for x in self.nested_type_support[1:]]).T
+        acceptance_odds = np.c_[np.repeat(True, len(self.actions)), acceptance_odds]
+        current_beliefs = interactive_state.get_nested_belief
+        acceptance_probability = np.multiply(current_beliefs, acceptance_odds).sum(axis=1) * 1.0
+        opponents_reward = self.actions - interactive_state.persona[0]
+        weights = (opponents_reward > 0.0) * 0.5
+        expected_reward_from_offer = self.reward_function(self.actions, True) * acceptance_probability + weights
+        optimal_action_idx = np.argmax(expected_reward_from_offer)
+        optimal_action = self.actions[optimal_action_idx]
+        q_value = expected_reward_from_offer[optimal_action_idx]
+        return Action(optimal_action, False), q_value
+
+
 class DoMOneSender(DoMZeroSender):
 
     def __init__(self, actions, softmax_temp: float, threshold: Optional[float],
@@ -213,16 +234,17 @@ class DoMOneSender(DoMZeroSender):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self._planning_parameters = dict(seed=seed, threshold=self._threshold)
         self.memoization_table = memoization_table
-        self.belief = DoMOneBelief(self.opponent_model.belief.support,
+        self.belief = DoMOneBelief(prior_belief,
                                    self.opponent_model.belief.belief_distribution,
-                                   False, self.opponent_model, self.history)
+                                   True, self.opponent_model, self.history)
         self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function,
                                                               actions,
                                                               self.belief)
-        self.exploration_policy = DoMZeroSenderExplorationPolicy(self.potential_actions, self.utility_function,
-                                                                 self.config.get_from_env("rollout_rejecting_bonus"),
-                                                                 self.belief.belief_distribution,
-                                                                 self.belief.support)
+        self.exploration_policy = DoMOneSenderExplorationPolicy(self.potential_actions, self.utility_function,
+                                                                self.config.get_from_env("rollout_rejecting_bonus"),
+                                                                self.belief.belief_distribution,
+                                                                self.belief.support,
+                                                                self.opponent_model.belief.support)
         self.solver = IPOMCP(1, self.belief, self.environment_model, self.memoization_table,
                              self.exploration_policy, self.utility_function, self._planning_parameters, seed)
         self.name = "DoM(1)_sender"
