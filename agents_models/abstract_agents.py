@@ -43,6 +43,7 @@ class SubIntentionalAgent(ABC):
         self.high = high
         self.reset_belief()
         self.reset_solver()
+        self.history.reset(iteration, iteration)
         if terminal:
             self.upper_bounds = 1.0
             self.lower_bounds = 0.0
