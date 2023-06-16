@@ -11,12 +11,17 @@ class DoMOneBelief(DoMZeroBelief):
         super().__init__(belief_distribution_support[:, 0],
                          belief_distribution_support[:, 1], opponent_model, history)
         self.type_belief = self.prior_belief
+        self.prior_nested_belief = self.opponent_model.belief.prior_belief
         self.supports = {"type_belief": belief_distribution_support[:, 0], "nested_beliefs": opponent_model.belief.support}
         # Because there's no observation uncertainty the DoM(1) belief about the DoM(0) beliefs are exact
         self.nested_belief = opponent_model.belief.belief_distribution
         self.belief_distribution = {"type_belief": self.type_belief, "nested_beliefs": self.nested_belief}
         self.include_persona_inference = include_persona_inference
         self.nested_mental_state = False
+
+    def reset(self):
+        self.belief_distribution['type_belief'] = self.prior_belief
+        self.belief_distribution['nested_beliefs'] = self.prior_nested_belief
 
     def update_distribution(self, action, observation, iteration_number):
         """
