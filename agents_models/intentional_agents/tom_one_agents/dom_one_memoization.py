@@ -49,7 +49,7 @@ class DoMOneMemoization(MemoizationTable):
             df = pd.concat(data, axis=0, ignore_index=True)
             df.columns = self.columns
             return df
-        # If not - we create the table
+        # If not - we create the data
         else:
             try:
                 print('Loading from memory', flush=True)

@@ -3,12 +3,20 @@ from agent_factory import *
 import argparse
 
 
-def export_beliefs_to_file(table: pd.DataFrame, directory_name, output_directory):
-    outdir = os.path.join(config.beliefs_dir, directory_name)
-    if table is not None:
+def export_beliefs_to_file(data: Union[pd.DataFrame, dict], directory_name, output_directory, nested=False):
+    if not nested:
+        outdir = os.path.join(config.beliefs_dir, directory_name)
+    else:
+        outdir = directory_name
+    if type(data) == dict:
+        for table_name in data.keys():
+            new_directory_name = os.path.join(outdir, table_name)
+            export_beliefs_to_file(data[table_name], new_directory_name, output_directory, True)
+        return None
+    if data is not None:
         if not os.path.exists(outdir):
             os.makedirs(outdir, exist_ok=True)
-        table.to_csv(os.path.join(outdir, output_directory), index=False)
+        data.to_csv(os.path.join(outdir, output_directory), index=False)
 
 
 def set_experiment_name(receivers_threshold, senders_threshold):

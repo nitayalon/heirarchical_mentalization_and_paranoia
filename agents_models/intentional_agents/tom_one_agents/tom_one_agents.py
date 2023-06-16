@@ -11,6 +11,7 @@ class DoMOneBelief(DoMZeroBelief):
         super().__init__(belief_distribution_support[:, 0],
                          belief_distribution_support[:, 1], opponent_model, history)
         self.type_belief = self.prior_belief
+        self.supports = {"type_belief": belief_distribution_support[:, 0], "nested_beliefs": opponent_model.belief.support}
         # Because there's no observation uncertainty the DoM(1) belief about the DoM(0) beliefs are exact
         self.nested_belief = opponent_model.belief.belief_distribution
         self.belief_distribution = {"type_belief": self.type_belief, "nested_beliefs": self.nested_belief}
