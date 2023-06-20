@@ -225,8 +225,8 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
                                           opponent_model=self.opponent_model,
                                           iteration_number=iteration_number + 1,
                                           planning_step=planning_step + 1)
-        self.planning_tree.append([self.opponent_model.threshold, iteration_number, action.value, observation.value,
-                                   average_counter_offer_value])
+        # self.planning_tree.append([self.opponent_model.threshold, iteration_number, action.value, observation.value,
+        #                            average_counter_offer_value])
         future_q_values = list(map(future_values, self.surrogate_actions))
         q_value = reward + self.discount_factor * max(future_q_values)
         self.q_values.append([self.opponent_model.threshold, iteration_number, action.value, observation.value, reward,
