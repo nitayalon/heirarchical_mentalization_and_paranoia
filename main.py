@@ -76,6 +76,7 @@ if __name__ == "__main__":
     sender_parameters = experiment_data["sender_parameters"]
     receiver_parameters = experiment_data["receiver_parameters"]
     i = 0
+    np.random.seed(config.seed)
     eat_task_simulator = EAT(config.seed)
     if args.senders_threshold > 0 and args.receivers_threshold > 0:
         simulate_iug_task(rational_sender, rational_receiver, args.senders_threshold, args.receivers_threshold)
