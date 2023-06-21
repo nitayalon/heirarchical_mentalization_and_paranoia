@@ -5,7 +5,8 @@ from agents_models.subintentional_agents.subintentional_senders import *
 
 class DoMTwoBelief(DoMOneBelief):
 
-    def __init__(self, self_belief_distribution_support,
+    def __init__(self,
+                 self_belief_distribution_support,
                  other_belief_distribution_support,
                  second_level_belief, zero_level_belief, include_persona_inference: bool,
                  opponent_model: Optional[Union[DoMOneSender, SubIntentionalAgent]],
@@ -154,7 +155,7 @@ class DoMTwoReceiver(DoMZeroReceiver):
         self._planning_parameters = dict(seed=seed, threshold=self._threshold)
         self.memoization_table = memoization_table
         self.threshold = 0.0
-        self.belief = DoMTwoBelief(self.opponent_model.belief.support, self.opponent_model.belief.support,
+        self.belief = DoMTwoBelief(prior_belief, self.opponent_model.belief.belief_distribution,
                                    None,
                                    self.opponent_model.belief.belief_distribution,
                                    True, self.opponent_model, self.history)

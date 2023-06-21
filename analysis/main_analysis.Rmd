@@ -205,9 +205,10 @@ cumulative_reward
 
 ```{r}
 game_results %>% 
-  filter(sender_dom_level == -1, receiver_threshold == 0.2, sender_threshold==0.7)
+  filter(sender_dom_level == -1, receiver_threshold == 0.2, sender_threshold==0.0)
 beliefs %>% 
-  filter(sender_dom_level == -1, receiver_threshold == 0.2, sender_threshold==0.7)
+  filter(sender_dom_level == 1, receiver_threshold == 0.2, sender_threshold==0.7,
+          seed == 760)
 ```
 
 ```{r}
