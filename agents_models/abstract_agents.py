@@ -7,6 +7,12 @@ class SubIntentionalBelief(BeliefDistribution):
     def __init__(self, history: History):
         super().__init__(None, None, None, history)
 
+    def reset(self):
+        pass
+
+    def reset_prior(self):
+        pass
+
     def get_current_belief(self):
         return None
 
@@ -100,15 +106,25 @@ class SubIntentionalAgent(ABC):
 
 class DoMZeroBelief(BeliefDistribution):
 
-    def __init__(self, support, zero_level_belief: Optional[np.array],
+    def __init__(self, support: np.array, zero_level_belief: np.array,
                  opponent_model: Optional[SubIntentionalAgent],
                  history: History):
         """
-        :param zero_level_belief: np.array - represents the prior belief about the sender_parameters
-        :param opponent_model:
+        :type support: list, representing the possible (finite) values of theta
+        :param zero_level_belief: np.array - the prior distribution of the DoM(0) agent
+        :param opponent_model: SubIntentionalAgent model
         """
         super().__init__(support, zero_level_belief, opponent_model, history)
         self.opponent_belief = None
+
+    def reset(self):
+        self.belief_distribution = self.prior_belief
+
+    def reset_prior(self):
+        self.reset_prior()
+
+    def get_current_belief(self):
+        return self.belief_distribution
 
     def compute_likelihood(self, action, observation, prior, iteration_number=None):
         pass
@@ -140,13 +156,6 @@ class DoMZeroBelief(BeliefDistribution):
 
 
 class DoMZeroEnvironmentModel(EnvironmentModel):
-
-    def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-                     iteration_number: int, *args):
-        pass
-
-    def compute_future_values(self, value, value1, iteration_number, duration):
-        pass
 
     def __init__(self, opponent_model: SubIntentionalAgent,
                  reward_function,
@@ -204,6 +213,13 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         return interactive_state, counter_offer, reward, observation_probability
 
     def update_persona(self, observation, action, iteration_number):
+        pass
+
+    def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
+                     iteration_number: int, *args):
+        pass
+
+    def compute_future_values(self, value, value1, iteration_number, duration):
         pass
 
 

@@ -6,33 +6,25 @@ from agents_models.subintentional_agents.subintentional_senders import *
 class DoMTwoBelief(DoMOneBelief):
 
     def __init__(self,
-                 self_belief_distribution_support,
-                 other_belief_distribution_support,
-                 second_level_belief, zero_level_belief, include_persona_inference: bool,
+                 zero_order_belief_distribution_support,
                  opponent_model: Optional[Union[DoMOneSender, SubIntentionalAgent]],
-                 history: History):
+                 history: History,
+                 include_persona_inference: bool):
         """
-
-        :param self_belief_distribution_support: this is the support of the ego agent - in this case the DoM(2) receiver
-        [random, 0.1, 0.5]
-        :param other_belief_distribution_support: this is the support of the sender - [random, 0.1, 0.5]
-        :param second_level_belief:
-        .. math::
-            P_2(P_1(P_0(\hat \theta))) -
-        what my opponent thinks I think
-
-        :param zero_level_belief: P_0(\hat \theta) - what is the type of my opponent
-        :param include_persona_inference: do we infer about the persona?
-        :param opponent_model: DoM(1) sender object
-        :param history: history object
+        :param zero_order_belief_distribution_support: np.array, representing the DoM(1) zero order beliefs about theta
+        :param opponent_model: DoMZeroSender agent
+        :param history:
+        :param include_persona_inference: bool, should the DoM(1) infer about the persona of the DoM(0) agent
         """
-        super().__init__(other_belief_distribution_support, second_level_belief, include_persona_inference,
-                         opponent_model, history)
-        # What I think about the receiver's type
-        self.self_belief_distribution_support = self_belief_distribution_support
-        self.zero_level_belief = zero_level_belief
-        # What I think the sender thinks I think
+        super().__init__(zero_order_belief_distribution_support,
+                         opponent_model, history,
+                         include_persona_inference)
         self.nested_belief = opponent_model.belief.belief_distribution
+        # These are nested dictionaries
+        self.supports = {"zero_order_belief": zero_order_belief_distribution_support[:, 0],
+                         "nested_beliefs": opponent_model.belief.supports}
+        self.belief_distribution = {"zero_order_belief": self.zero_order_belief,
+                                    "nested_beliefs": self.nested_belief}
 
     def update_distribution(self, action, observation, iteration_number):
         """
@@ -42,16 +34,20 @@ class DoMTwoBelief(DoMOneBelief):
         :param iteration_number:
         :return:
         """
-        if iteration_number <= 0:
+        if iteration_number < 1:
             return None
-        second_order_prior = np.copy(self.belief_distribution[-1, :])
-        type_likelihood = self.compute_likelihood(action, observation, second_order_prior, iteration_number)
+        self.nested_mental_state = False
+        prior = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
+        likelihood = self.compute_likelihood(action, observation, prior, iteration_number)
         if self.include_persona_inference:
             # Compute P(observation|action, history)
-            posterior = type_likelihood * second_order_prior
-            self.belief_distribution = np.vstack([self.belief_distribution, posterior / posterior.sum()])
+            posterior = likelihood * prior
+            self.belief_distribution['zero_order_belief'] = np.vstack(
+                [self.belief_distribution['zero_order_belief'], posterior / posterior.sum()])
         # Store nested belief
         self.nested_belief = self.opponent_model.belief.belief_distribution
+        self.belief_distribution["nested_beliefs"] = self.nested_belief
+        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
         """
@@ -97,7 +93,8 @@ class DoMTwoBelief(DoMOneBelief):
 
 
 class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
-    def __init__(self, intentional_opponent_model: DoMOneSender, reward_function, actions,
+
+    def __init__(self, intentional_opponent_model: Union[DoMOneSender], reward_function, actions,
                  belief_distribution: DoMTwoBelief):
         super().__init__(intentional_opponent_model, reward_function, actions, belief_distribution)
         self.random_sender = RandomSubIntentionalSender(
@@ -118,7 +115,7 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
 
-    def reset(self):
+    def reset(self, iteration_number):
         self.low = self.opponent_model.low
         self.high = self.opponent_model.high
         self.random_sender.reset()
@@ -154,17 +151,13 @@ class DoMTwoReceiver(DoMZeroReceiver):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed, task_duration)
         self._planning_parameters = dict(seed=seed, threshold=self._threshold)
         self.memoization_table = memoization_table
-        self.threshold = 0.0
-        self.belief = DoMTwoBelief(prior_belief, self.opponent_model.belief.belief_distribution,
-                                   None,
-                                   self.opponent_model.belief.belief_distribution,
-                                   True, self.opponent_model, self.history)
+        self.belief = DoMTwoBelief(prior_belief, self.opponent_model, self.history, True)
         self.environment_model = DoMTwoEnvironmentModel(self.opponent_model, self.utility_function, actions,
                                                         self.belief)
         self.exploration_policy = DoMTwoReceiverExplorationPolicy(self.potential_actions, self.utility_function,
                                                                   self.config.get_from_env("rollout_rejecting_bonus"),
                                                                   self.belief.belief_distribution,
                                                                   self.belief.support)
-        self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
+        self.solver = IPOMCP(2, self.belief, self.environment_model, self.memoization_table,
                              self.exploration_policy, self.utility_function, self._planning_parameters, seed)
         self.name = "DoM(2)_receiver"
