@@ -63,13 +63,18 @@ parse_experiment_file <- function(file_name)
 ```
 
 ```{r set experiment path, include=FALSE}
-results_path = "~/Max_Planck/Hierarchical-modelling/data/first_task/2_rational_agents/short_duration/"
+results_path = "~/Max_Planck/Hierarchical-modelling/data"
 dom_levels = list(
                c("0","-1"),
                c("0","1"))
 agents_beliefs <- c("receiver_beliefs", "sender_beliefs")
+nested_beliefs <- c("type_belief", "nested_beliefs")
 directory_pattern <- "DoM%s_receiver_DoM%s_sender_softmax_temp_0.1"
 path_to_game_results <- paste0(results_path, directory_pattern)
+```
+
+```{r}
+first_task_data <- load_simulations_results(results_path, "first_task", "first_task/2_rational_agents/short_duration", directory_pattern, dom_levels)
 ```
 
 
@@ -203,18 +208,12 @@ cumulative_reward
 # ggsave("../figures/cumulative_reward_by_agent.png", width = 40, height = 20, units = "cm")
 ```
 
-```{r}
-game_results %>% 
-  filter(sender_dom_level == -1, receiver_threshold == 0.2, sender_threshold==0.0)
-beliefs %>% 
-  filter(sender_dom_level == 1, receiver_threshold == 0.2, sender_threshold==0.7,
-          seed == 760)
-```
+# Convergence of beliefs
 
 ```{r}
-game_results %>% 
-  filter(sender_dom_level == 1, receiver_threshold == 0.0, sender_threshold==0.7)
+beliefs
 ```
+
 
 ## Detrimental effect of overmetaliastion
 

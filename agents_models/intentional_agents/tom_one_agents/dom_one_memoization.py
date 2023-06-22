@@ -4,7 +4,7 @@ import os
 from os.path import exists
 
 
-belief_columns = ["0.0", "0.3", "0.7", "trial_number", "seed", "sender_threshold"]
+belief_columns = ["p1", "p2", "q1", "q2", "q3", "trial_number", "seed", "sender_threshold"]
 history_columns = ["offer", "response", "trial_number", "seed", "sender_threshold"]
 q_values_columns = ["action", "q_value", "trial_number", "seed", "sender_threshold"]
 
@@ -108,13 +108,14 @@ class DoMOneMemoization(MemoizationTable):
         # filter nested beliefs
         beliefs = raw_beliefs.loc[raw_beliefs['agent_name'] == 'DoM(0)_receiver'][belief_columns]
         # round beliefs
-        beliefs = beliefs.assign(p1=np.round(beliefs["0.0"], 3),
-                                 p2=np.round(beliefs["0.3"], 3),
-                                 p3=np.round(beliefs["0.7"], 3))
+        beliefs = beliefs.assign(q1=np.round(beliefs["0.0"], 3),
+                                 q2=np.round(beliefs["0.3"], 3),
+                                 q3=np.round(beliefs["0.7"], 3))
         beliefs['trial_number'] = beliefs['trial_number']+1
         # Join tables to get unified view
         q_values_and_beliefs = pd.merge(q_values, beliefs, on=["trial_number", "seed", "sender_threshold"])
-        q_values_and_beliefs_and_history = pd.merge(q_values_and_beliefs, history, on=["trial_number", "seed", "sender_threshold"])
+        q_values_and_beliefs_and_history = pd.merge(q_values_and_beliefs, history, on=["trial_number", "seed",
+                                                                                       "sender_threshold"])
         return q_values_and_beliefs_and_history
 
     def query_table(self, query_parameters: dict):
@@ -128,15 +129,22 @@ class DoMOneMemoization(MemoizationTable):
             return q_values
         trial = query_parameters['trial']
         threshold = query_parameters['threshold']
-        belief = query_parameters['belief']
-        belief = np.round(belief, 3)
-        p1 = belief[0]
-        p2 = belief[1]
+        zero_order_beliefs = query_parameters['belief']['zero_order_belief'][-1]
+        nested_beliefs = query_parameters['belief']['nested_beliefs'][-1]
+        zero_order_beliefs = np.round(zero_order_beliefs, 3)
+        nested_beliefs = np.round(nested_beliefs, 3)
+        p1 = zero_order_beliefs[0]
+        p2 = zero_order_beliefs[1]
+        q1 = nested_beliefs[0]
+        q2 = nested_beliefs[1]
+        q3 = nested_beliefs[2]
         if self.config.get_from_general("number_of_rational_agents"):
-            results = self.data.loc[(self.data['trial_number'] == trial) & (self.data['sender_threshold'] == threshold) &
-                                    (self.data['p1'] == p1) & (self.data['p2'] == p2)]
+            results = self.data.loc[(self.data['trial_number'] == trial) &
+                                    (self.data['sender_threshold'] == threshold) &
+                                    (self.data['p1'] == p1) & (self.data['p2'] == p2) &
+                                    (self.data['q1'] == q1) & (self.data['q2'] == q2) & (self.data['q3'] == q3)]
         else:
-            p3 = belief[2]
+            p3 = zero_order_beliefs[2]
             results = self.data.loc[
                 (self.data['trial_number'] == trial) & (self.data['sender_threshold'] == threshold) &
                 (self.data['p1'] == p1) & (self.data['p2'] == p2) & (self.data['p3'] == p3)]
@@ -157,9 +165,12 @@ class DoMOneMemoization(MemoizationTable):
         :return:
         """
         trial_data = np.array([game_parameters['trial'], game_parameters['seed'], game_parameters['threshold']])
-        beliefs = np.r_[beliefs, np.round(beliefs, 3)]
-        data_to_append = pd.DataFrame(np.c_[q_values, np.tile(trial_data, (q_values.shape[0], 1)),
-                                            np.tile(beliefs, (q_values.shape[0], 1)),
+        zero_order_belief = np.round(beliefs["zero_order_belief"][-1, :], 3)
+        nested_beliefs = np.round(beliefs["nested_beliefs"][-1, :], 3)
+        data_to_append = pd.DataFrame(np.c_[q_values,
+                                            np.tile(trial_data, (q_values.shape[0], 1)),
+                                            np.tile(zero_order_belief, (q_values.shape[0], 1)),
+                                            np.tile(nested_beliefs, (q_values.shape[0], 1)),
                                             np.tile(history, (q_values.shape[0], 1))],
                                       columns=self.columns)
         self.new_data = pd.concat([self.new_data, data_to_append])
@@ -168,11 +179,11 @@ class DoMOneMemoization(MemoizationTable):
 
     def _get_memoization_columns(self):
         if self.config.get_from_general("number_of_rational_agents") == 1:
-            columns = ["action", "q_value", "trial_number", "seed", "sender_threshold", "random",
-                       "rational_1", "p1", "p2", "offer", "response"]
+            columns = ["action", "q_value", "trial_number", "seed", "sender_threshold", "p1", "p2",
+                       "q1", "q2", "offer", "response"]
         else:
-            columns = ["action", "q_value", "trial_number", "seed", "sender_threshold", "random",
-                       "rational_1", "rational_2", "p1", "p2", "p3", "offer", "response"]
+            columns = ["action", "q_value", "trial_number", "seed", "sender_threshold", "p1", "p2",
+                       "q1", "q2", "q3", "offer", "response"]
         return columns
 
 

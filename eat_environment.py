@@ -1,4 +1,7 @@
 from typing import Tuple
+
+import numpy as np
+
 from agents_models.abstract_agents import *
 
 
@@ -15,19 +18,24 @@ class EAT:
         self.trail_results = []
 
     def export_nested_beliefs(self, beliefs: Optional[dict], supports: Optional[dict], agent_name: str,
+                              agent_dom_level,
                               receiver_threshold: str, agent_threshold: str):
         nested_beliefs = dict()
         for level in beliefs.keys():
-            belief_df = self.export_type_beliefs(beliefs[level], supports[level], agent_name,
+            prefix = 'p' + f'_{agent_dom_level}' if level == 'zero_order_belief' else 'q'
+            belief_df = self.export_type_beliefs(beliefs[level], prefix, supports[level], agent_name,
                                                  receiver_threshold, agent_threshold)
             nested_beliefs[level] = belief_df
-        return nested_beliefs
+        unified_df = nested_beliefs['zero_order_belief'].merge(nested_beliefs['nested_beliefs'])
+        return unified_df
 
-    def export_type_beliefs(self, beliefs: Optional[np.array], support, agent_name: str,
+    def export_type_beliefs(self, beliefs: Optional[np.array], columns_prefix: str,
+                            support, agent_name: str,
                             receiver_threshold: str, agent_threshold: str):
         beliefs_df = None
         if not pd.isna(beliefs).all():
-            beliefs_df = pd.DataFrame(beliefs, columns=support)
+            columns = [columns_prefix + "_" + str(x) for x in np.arange(len(support))]
+            beliefs_df = pd.DataFrame(beliefs, columns=columns)
             beliefs_df['agent_name'] = agent_name
             beliefs_df['seed'] = self.seed
             beliefs_df['trial_number'] = np.arange(0, beliefs_df.shape[0], 1)
@@ -65,20 +73,19 @@ class EAT:
         agents_q_values = self.add_experiment_data_to_df(agents_q_values, receiver_threshold,
                                                          sender_threshold)
         if receiver.name == 'DoM(0)_receiver':
-            receiver_belief = self.export_type_beliefs(receiver.belief.belief_distribution,
+            receiver_belief = self.export_type_beliefs(receiver.belief.belief_distribution, "p_0",
                                                        receiver.belief.support,
                                                        receiver.name, receiver_threshold, sender_threshold)
         else:
             receiver_belief = self.export_nested_beliefs(receiver.belief.belief_distribution,
-                                                       receiver.belief.supports,
-                                                       receiver.name, receiver_threshold, sender_threshold)
-
+                                                         receiver.belief.supports,
+                                                         receiver.name, "2", receiver_threshold, sender_threshold)
         if sender.name == 'DoM(1)_sender':
             sender_belief = self.export_nested_beliefs(sender.belief.belief_distribution,
-                                                     sender.belief.supports,
-                                                     sender.name, receiver_threshold, sender_threshold)
+                                                       sender.belief.supports,
+                                                       sender.name, "1", receiver_threshold, sender_threshold)
         else:
-            sender_belief = self.export_type_beliefs(sender.belief.belief_distribution,
+            sender_belief = self.export_type_beliefs(sender.belief.belief_distribution, "p(-1)",
                                                      sender.belief.support,
                                                      sender.name, receiver_threshold, sender_threshold)
         if self.config.env == "x_ipomdp":

@@ -267,6 +267,10 @@ class DoMOneSender(DoMZeroSender):
                              self.exploration_policy, self.utility_function, self._planning_parameters, seed)
         self.name = "DoM(1)_sender"
 
+    @staticmethod
+    def get_mental_state():
+        return False
+
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
         self.opponent_model.history.rewards.append(action.value * observation.value)
 

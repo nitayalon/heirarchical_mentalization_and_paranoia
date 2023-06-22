@@ -86,10 +86,13 @@ class DoMTwoBelief(DoMOneBelief):
         :param n_samples:
         :return:
         """
-        probabilities = self.belief_distribution[-1:, ][0]
+        probabilities = self.belief_distribution['zero_order_belief'][-1, :]
         rng_generator = np.random.default_rng(rng_key)
-        particles = rng_generator.choice(self.support, size=n_samples, p=probabilities)
-        return particles
+        idx = rng_generator.choice(self.belief_distribution['zero_order_belief'].shape[1], size=n_samples,
+                                   p=probabilities)
+        particles = self.support[idx]
+        mental_state = [False] * n_samples
+        return list(zip(particles, mental_state))
 
 
 class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
@@ -100,6 +103,9 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
         self.random_sender = RandomSubIntentionalSender(
             intentional_opponent_model.opponent_model.opponent_model.potential_actions,
             intentional_opponent_model.opponent_model.opponent_model.softmax_temp, 0.0)
+
+    def get_persona(self):
+        return [self.opponent_model.threshold, self.opponent_model.get_mental_state()]
 
     def _simulate_opponent_response(self, seed, observation, action, iteration_number):
         if self.opponent_model.threshold == 0.0:
@@ -122,11 +128,12 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
 
 
 class DoMTwoReceiverExplorationPolicy(DoMZeroExplorationPolicy):
+
     def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array,
                  type_support: np.array):
         super().__init__(actions, reward_function, exploration_bonus, belief, type_support)
 
-    def init_q_values(self, observation: Action):
+    def init_q_values(self, observation: Action, *args):
         if observation.value is None:
             return np.array([0.5, 0.5])
         reward_from_accept = self.reward_function(True, observation.value)
