@@ -95,7 +95,7 @@ class DoMTwoBelief(DoMOneBelief):
         return list(zip(particles, mental_state))
 
 
-class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
+class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
 
     def __init__(self, intentional_opponent_model: Union[DoMOneSender], reward_function, actions,
                  belief_distribution: DoMTwoBelief):
@@ -103,6 +103,18 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
         self.random_sender = RandomSubIntentionalSender(
             intentional_opponent_model.opponent_model.opponent_model.potential_actions,
             intentional_opponent_model.opponent_model.opponent_model.softmax_temp, 0.0)
+
+    def compute_expected_reward(self, action, observation, counter_offer, observation_probability):
+        expected_reward = self.reward_function(action.value, observation.value,
+                                               counter_offer.value)
+        return expected_reward
+
+    def update_interactive_state(self, interactive_state, mental_model):
+        interactive_state.state.terminal = interactive_state.state.name == 10
+        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
+        interactive_state.persona = [interactive_state.persona[0], mental_model]
+        interactive_state.opponent_belief = self.opponent_model.belief.get_current_belief()
+        return interactive_state
 
     def get_persona(self):
         return [self.opponent_model.threshold, self.opponent_model.get_mental_state()]
@@ -116,10 +128,18 @@ class DoMTwoEnvironmentModel(DoMOneEnvironmentModel):
                 self.opponent_model.act(seed, observation, action, iteration_number-1)
         return counter_offer, observation_probability, q_values, opponent_policy
 
-    def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
-        self.opponent_model.threshold = persona
+    @staticmethod
+    def _represent_nested_beliefs_as_table(interactive_state):
+        beliefs = [np.round(x, 3) for x in interactive_state.get_nested_belief.values()]
+        return str(beliefs[0]) + str(beliefs[1])
+
+    def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
+        nested_beliefs_values = [x[:iteration_number + 1, :] for x in nested_beliefs.values()]
+        nested_beliefs_keys = [x for x in nested_beliefs.keys()]
+        current_nested_beliefs = dict(zip(nested_beliefs_keys, nested_beliefs_values))
+        self.opponent_model.threshold = persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
-        self.opponent_model.belief.belief_distribution = nested_beliefs
+        self.opponent_model.belief.belief_distribution = current_nested_beliefs
 
     def reset(self, iteration_number):
         self.low = self.opponent_model.low
@@ -168,3 +188,6 @@ class DoMTwoReceiver(DoMZeroReceiver):
         self.solver = IPOMCP(2, self.belief, self.environment_model, self.memoization_table,
                              self.exploration_policy, self.utility_function, self._planning_parameters, seed)
         self.name = "DoM(2)_receiver"
+
+    def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        self.opponent_model.opponent_model.history.observations.append(observation)
