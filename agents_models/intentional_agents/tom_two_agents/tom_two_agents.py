@@ -19,6 +19,7 @@ class DoMTwoBelief(DoMOneBelief):
         super().__init__(zero_order_belief_distribution_support,
                          opponent_model, history,
                          include_persona_inference)
+        self.prior_nested_belief = opponent_model.belief.belief_distribution
         self.nested_belief = opponent_model.belief.belief_distribution
         # These are nested dictionaries
         self.supports = {"zero_order_belief": zero_order_belief_distribution_support[:, 0],
@@ -94,6 +95,10 @@ class DoMTwoBelief(DoMOneBelief):
         mental_state = [False] * n_samples
         return list(zip(particles, mental_state))
 
+    def reset(self):
+        self.belief_distribution['zero_order_belief'] = self.prior_belief
+        self.belief_distribution['nested_beliefs'] = self.prior_nested_belief
+
 
 class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
 
@@ -103,6 +108,10 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         self.random_sender = RandomSubIntentionalSender(
             intentional_opponent_model.opponent_model.opponent_model.potential_actions,
             intentional_opponent_model.opponent_model.opponent_model.softmax_temp, 0.0)
+
+    @staticmethod
+    def compute_iteration(iteration_number):
+        return iteration_number
 
     def compute_expected_reward(self, action, observation, counter_offer, observation_probability):
         expected_reward = self.reward_function(action.value, observation.value,
@@ -134,7 +143,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         return str(beliefs[0]) + str(beliefs[1])
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
-        nested_beliefs_values = [x[:iteration_number + 1, :] for x in nested_beliefs.values()]
+        nested_beliefs_values = [x[:iteration_number, :] for x in nested_beliefs.values()]
         nested_beliefs_keys = [x for x in nested_beliefs.keys()]
         current_nested_beliefs = dict(zip(nested_beliefs_keys, nested_beliefs_values))
         self.opponent_model.threshold = persona[0]

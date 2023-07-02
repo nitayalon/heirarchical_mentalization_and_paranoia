@@ -136,6 +136,10 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.upper_bounds = opponent_model.opponent_model.upper_bounds
         self.lower_bounds = opponent_model.opponent_model.lower_bounds
 
+    @staticmethod
+    def compute_iteration(iteration_number):
+        return iteration_number + 1
+
     def compute_expected_reward(self, action, observation, counter_offer, observation_probability):
         expected_reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
                  self.reward_function(action.value, observation.value, not counter_offer.value) * (
