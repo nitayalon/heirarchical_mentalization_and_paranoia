@@ -13,18 +13,12 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --exclusive=user
 #
-#SBATCH --mail-type=END,FAIL, BEGIN
+#SBATCH --mail-type=END,FAIL
 ## *** YOU NEED TO FILL IN YOUR KYB EMAIL ADDRESS HERE ***
 #SBATCH --mail-user=nitay.alon@tuebingen.mpg.de
 #
 # Wall clock limit:
 #SBATCH --time=1-12:30
-
-secs_to_human(){
-    echo "$(( ${1} / 3600 )):$(( (${1} / 60) % 60 )):$(( ${1} % 60 ))"
-}
-start=$(date +%s)
-echo "$(date -d @${start} "+%Y-%m-%d %H:%M:%S"): ${SLURM_JOB_NAME} start id=${SLURM_JOB_ID}\n"
 
 omp_threads=$SLURM_CPUS_PER_TASK
 export OMP_NUM_THREADS=$omp_threads
@@ -35,7 +29,7 @@ module load singularity
 export SINGULARITY_BIND="/run,/ptmp,/scratch,/tmp,/opt/ohpc,${HOME}"
 export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-02-ec95d31ea677.sif
 
-ENV=x_ipomdp
+ENV=first_task
 SOFTMAX_TEMP=0.1
 RECEIVER_TOM=DoM0
 SENDER_TOM=DoM1
