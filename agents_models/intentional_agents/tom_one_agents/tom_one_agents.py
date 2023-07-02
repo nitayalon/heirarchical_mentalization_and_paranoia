@@ -97,6 +97,11 @@ class DoMOneBelief(DoMZeroBelief):
         mental_state = [False] * n_samples
         return list(zip(particles, mental_state))
 
+    def get_current_belief(self):
+        values = [x[-1] for x in self.belief_distribution.values()]
+        keys = [x for x in self.belief_distribution.keys()]
+        return dict(zip(keys, values))
+
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
 
@@ -105,7 +110,8 @@ class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
                  belief_distribution: DoMOneBelief):
         super().__init__(opponent_model, reward_function, actions, belief_distribution)
 
-    def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
+    def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
+        nested_beliefs = nested_beliefs[:iteration_number + 1, :]
         self.opponent_model.threshold = persona
         if action_length == 0 and observation_length == 0:
             return None
@@ -130,20 +136,15 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.upper_bounds = opponent_model.opponent_model.upper_bounds
         self.lower_bounds = opponent_model.opponent_model.lower_bounds
 
-    def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
-                     iteration_number: int, *args):
-        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
-                                                                                                    action,
-                                                                                                    iteration_number)
-        mental_model = self.opponent_model.get_mental_state()
-        reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
+    @staticmethod
+    def compute_iteration(iteration_number):
+        return iteration_number + 1
+
+    def compute_expected_reward(self, action, observation, counter_offer, observation_probability):
+        expected_reward = self.reward_function(action.value, observation.value, counter_offer.value) * observation_probability + \
                  self.reward_function(action.value, observation.value, not counter_offer.value) * (
                          1 - observation_probability)
-        interactive_state.state.terminal = interactive_state.state.name == 10
-        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        interactive_state.persona = [interactive_state.persona[0], mental_model]
-        interactive_state.opponent_belief = self.opponent_model.belief.belief_distribution[-1, :]
-        return interactive_state, counter_offer, reward, observation_probability
+        return expected_reward
 
     def compute_future_values(self, observation, action, iteration_number, duration):
         current_reward = self.reward_function(action, observation)
@@ -159,7 +160,8 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
         self.lower_bounds = self.opponent_model.opponent_model.lower_bounds
 
-    def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
+    def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
+        nested_beliefs = nested_beliefs[:iteration_number + 1, :]
         self.opponent_model.threshold = persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
@@ -195,11 +197,22 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.environment_model.update_parameters()
         return counter_offer, observation_probability, q_values, opponent_policy
 
+    def update_interactive_state(self, interactive_state, mental_model):
+        interactive_state.state.terminal = interactive_state.state.name == 10
+        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
+        interactive_state.persona = [interactive_state.persona[0], mental_model]
+        interactive_state.opponent_belief = self.opponent_model.belief.belief_distribution[-1, :]
+        return interactive_state
+
+    @staticmethod
+    def _represent_nested_beliefs_as_table(interactive_state):
+        return np.round(interactive_state.get_nested_belief, 3)
+
     def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,
              seed: int, iteration_number: int, *args):
         action = action_node.action
         observation = history_node.observation
-        nested_beliefs = np.round(interactive_state.get_nested_belief, 3)
+        nested_beliefs = self._represent_nested_beliefs_as_table(interactive_state)
         key = f'{nested_beliefs}-{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
         # If we already visited this node
         if key in action_node.opponent_response.keys():
@@ -212,15 +225,19 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         mental_model = self.opponent_model.get_mental_state()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
-        expected_reward = self.reward_function(action.value, observation.value,
-                                               counter_offer.value) * observation_probability + \
-                          self.reward_function(action.value, observation.value, not counter_offer.value) * (
-                                      1 - observation_probability)
-        interactive_state.state.terminal = interactive_state.state.name == 10
-        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        interactive_state.persona = [interactive_state.persona[0], mental_model]
-        interactive_state.opponent_belief = self.opponent_model.belief.belief_distribution[-1, :]
+        expected_reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
+        interactive_state = self.update_interactive_state(interactive_state, mental_model)
         return interactive_state, counter_offer, expected_reward, observation_probability
+
+    def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
+                     iteration_number: int, *args):
+        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
+                                                                                                    action,
+                                                                                                    iteration_number)
+        mental_model = self.opponent_model.get_mental_state()
+        reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
+        interactive_state = self.update_interactive_state(interactive_state, mental_model)
+        return interactive_state, counter_offer, reward, observation_probability
 
 
 class DoMOneSenderExplorationPolicy(DoMZeroSenderExplorationPolicy):
@@ -283,3 +300,14 @@ class DoMOneSender(DoMZeroSender):
         self._threshold = gamma
         self._high = 1 - gamma if gamma is not None else 1.0
         self.solver.planning_parameters["threshold"] = self._threshold
+
+    def reset(self, high: Optional[float] = None, low: Optional[float] = None,
+              action_length: Optional[float] = 0, observation_length: Optional[float] = 0,
+              terminal: Optional[bool] = False):
+        self.high = 1.0
+        self.low = 0.0
+        self.history.reset(action_length, observation_length)
+        self.opponent_model.reset(1.0, 0.0, observation_length, action_length, terminal=terminal)
+        self.environment_model.reset(action_length)
+        self.reset_belief()
+        self.reset_solver(action_length)

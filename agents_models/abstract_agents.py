@@ -124,7 +124,7 @@ class DoMZeroBelief(BeliefDistribution):
         self.reset_prior()
 
     def get_current_belief(self):
-        return self.belief_distribution
+        return self.belief_distribution[-1]
 
     def compute_likelihood(self, action, observation, prior, iteration_number=None):
         pass
@@ -183,7 +183,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         self.low = observation.value * (1 - action.value) + self.low * action.value
         self.high = observation.value * action.value + self.high * (1 - action.value)
 
-    def reset_persona(self, persona, action_length, observation_length, nested_beliefs):
+    def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
         self.opponent_model.threshold = persona
         if action_length == 0 and observation_length == 0:
             return None
@@ -204,7 +204,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
     def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,
              seed: int, iteration_number: int, *args):
         observation = history_node.observation
-        action = action_node.observation
+        action = action_node.action
         counter_offer, observation_probability, q_values, opponent_policy = \
             self._simulate_opponent_response(seed, observation, action, iteration_number)
         reward = self.reward_function(action.value, observation.value, counter_offer.value)

@@ -162,7 +162,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         for threshold in self.belief.support:
             # Reset nested model
             self.reset_persona(threshold, action_length, observation_length,
-                               self.opponent_model.belief)
+                               self.opponent_model.belief, iteration_number)
             future_values = functools.partial(self.recursive_tree_spanning,
                                               observation=observation,
                                               current_low=self.low,
@@ -173,7 +173,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
             q_values = list(map(future_values, self.surrogate_actions))
             q_values_array.append(q_values)
         self.reset_persona(None, action_length, observation_length,
-                           self.opponent_model.belief)
+                           self.opponent_model.belief, iteration_number)
         weighted_q_values = self.belief.belief_distribution[-1, :] @ np.array(q_values_array)
         n_visits = np.repeat(self.planning_horizon, self.actions.size)
         return {str(a.value): a for a in self.surrogate_actions}, None, np.c_[self.actions, weighted_q_values, n_visits]
