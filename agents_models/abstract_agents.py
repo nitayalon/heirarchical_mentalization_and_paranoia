@@ -222,6 +222,10 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
     def compute_future_values(self, value, value1, iteration_number, duration):
         pass
 
+    def step_from_is(self, new_interactive_state: InteractiveState, previous_observation: Action, action: Action,
+                     seed: int):
+        pass
+
 
 class DoMZeroExplorationPolicy:
     def __init__(self, actions: np.array, reward_function, exploration_bonus: float, belief: np.array,

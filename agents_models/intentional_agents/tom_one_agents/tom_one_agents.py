@@ -154,7 +154,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         return total_reward
 
     def get_persona(self):
-        return [self.opponent_model.threshold, self.opponent_model.get_mental_state()]
+        return Persona(self.opponent_model.threshold, self.opponent_model.get_mental_state())
 
     def update_parameters(self):
         self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
@@ -162,7 +162,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
         nested_beliefs = nested_beliefs[:iteration_number + 1, :]
-        self.opponent_model.threshold = persona[0]
+        self.opponent_model.threshold = persona.persona
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
         iteration_number = action_length
@@ -197,20 +197,41 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.environment_model.update_parameters()
         return counter_offer, observation_probability, q_values, opponent_policy
 
-    def update_interactive_state(self, interactive_state, mental_model):
-        interactive_state.state.terminal = interactive_state.state.name == 10
-        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        interactive_state.persona = [interactive_state.persona[0], mental_model]
-        interactive_state.opponent_belief = self.opponent_model.belief.belief_distribution[-1, :]
-        return interactive_state
+    def update_interactive_state(self, interactive_state, mental_model, updated_nested_beliefs, q_values):
+        new_state_name = int(interactive_state.state.name) + 1
+        new_state = State(str(new_state_name), new_state_name == 10)
+        new_persona = Persona(interactive_state.persona.persona, q_values)
+        new_interactive_state = InteractiveState(new_state, new_persona, updated_nested_beliefs)
+        return new_interactive_state
 
     @staticmethod
     def _represent_nested_beliefs_as_table(interactive_state):
         return np.round(interactive_state.get_nested_belief, 3)
 
+    def step_from_is(self, new_interactive_state: InteractiveState, previous_observation: Action, action: Action,
+                     seed: int):
+        # update nested history:
+        if int(new_interactive_state.get_state.name) > 0:
+            self.opponent_model.history.update_observations(action)
+            self.opponent_model.opponent_model.history.update_actions(action)
+        observation_probabilities = self.opponent_model.softmax_transformation(new_interactive_state.persona.q_values[:,1])
+        random_number_generator = np.random.default_rng(seed)
+        optimal_action_idx = random_number_generator.choice(new_interactive_state.persona.q_values.shape[0],
+                                                            p=observation_probabilities)
+        new_observation = Action(bool(new_interactive_state.persona.q_values[optimal_action_idx, 0]), False)
+        observation_probability = observation_probabilities[optimal_action_idx]
+        expected_reward = self.compute_expected_reward(action, previous_observation, new_observation,
+                                                       observation_probability)
+        # update nested history:
+        self.opponent_model.history.update_actions(new_observation)
+        self.opponent_model.environment_model.opponent_model.history.update_observations(new_observation)
+        return new_observation, expected_reward, observation_probability
+
     def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,
              seed: int, iteration_number: int, *args):
+        # a_t
         action = action_node.action
+        # o_{t-1}
         observation = history_node.observation
         nested_beliefs = self._represent_nested_beliefs_as_table(interactive_state)
         key = f'{nested_beliefs}-{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
@@ -223,11 +244,13 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
                 self.opponent_model.act(seed, observation, action, iteration_number)
             action_node.add_opponent_response(key, q_values, opponent_policy)
         mental_model = self.opponent_model.get_mental_state()
+        updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
         expected_reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
-        interactive_state = self.update_interactive_state(interactive_state, mental_model)
-        return interactive_state, counter_offer, expected_reward, observation_probability
+        new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
+                                                              q_values)
+        return new_interactive_state, counter_offer, expected_reward, observation_probability
 
     def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
                      iteration_number: int, *args):
@@ -236,8 +259,10 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
                                                                                                     iteration_number)
         mental_model = self.opponent_model.get_mental_state()
         reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
-        interactive_state = self.update_interactive_state(interactive_state, mental_model)
-        return interactive_state, counter_offer, reward, observation_probability
+        updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
+        new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
+                                                              q_values)
+        return new_interactive_state, counter_offer, reward, observation_probability
 
 
 class DoMOneSenderExplorationPolicy(DoMZeroSenderExplorationPolicy):
@@ -252,7 +277,7 @@ class DoMOneSenderExplorationPolicy(DoMZeroSenderExplorationPolicy):
         acceptance_odds = np.c_[np.repeat(True, len(self.actions)), acceptance_odds]
         current_beliefs = interactive_state.get_nested_belief
         acceptance_probability = np.multiply(current_beliefs, acceptance_odds).sum(axis=1) * 1.0
-        opponents_reward = self.actions - interactive_state.persona[0]
+        opponents_reward = self.actions - interactive_state.persona.persona[0]
         weights = (opponents_reward > 0.0) * 0.5
         expected_reward_from_offer = self.reward_function(self.actions, True) * acceptance_probability + weights
         optimal_action_idx = np.argmax(expected_reward_from_offer)

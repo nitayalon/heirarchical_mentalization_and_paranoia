@@ -146,7 +146,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         nested_beliefs_values = [x[:iteration_number, :] for x in nested_beliefs.values()]
         nested_beliefs_keys = [x for x in nested_beliefs.keys()]
         current_nested_beliefs = dict(zip(nested_beliefs_keys, nested_beliefs_values))
-        self.opponent_model.threshold = persona[0]
+        self.opponent_model.threshold = persona.persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = current_nested_beliefs
 
@@ -199,4 +199,8 @@ class DoMTwoReceiver(DoMZeroReceiver):
         self.name = "DoM(2)_receiver"
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        # update history for nested models
+        # update nested DoM(0) observations
         self.opponent_model.opponent_model.history.observations.append(observation)
+        # update nested DoM(-1) observations
+        self.opponent_model.opponent_model.opponent_model.history.actions.append(observation)
