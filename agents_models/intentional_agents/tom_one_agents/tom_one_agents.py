@@ -102,6 +102,23 @@ class DoMOneBelief(DoMZeroBelief):
         keys = [x for x in self.belief_distribution.keys()]
         return dict(zip(keys, values))
 
+    def update_distribution_from_particles(self, particles: dict, action, observation, iteration_number):
+        persona = [x for x in particles.keys()]
+        interactive_states_per_persona = [x[0] for x in particles.values()]
+        likelihood = [x[1] for x in interactive_states_per_persona]
+        prior_distribution = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
+        posterior_distribution = prior_distribution * likelihood / np.sum(prior_distribution * likelihood)
+        nested_beliefs = [x[0].get_nested_belief for x in interactive_states_per_persona]
+        # Update beliefs
+        self.belief_distribution['zero_order_belief'] = np.vstack(
+            [self.belief_distribution['zero_order_belief'], posterior_distribution])
+        # Store nested belief
+        self.nested_belief = nested_beliefs
+        # Update nested model beliefs
+        # self.opponent_model.belief.belief_distribution
+        self.belief_distribution["nested_beliefs"] = nested_beliefs
+        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
+
 
 class DoMOneEnvironmentModel(DoMZeroEnvironmentModel):
 
@@ -154,7 +171,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         return total_reward
 
     def get_persona(self):
-        return Persona(self.opponent_model.threshold, self.opponent_model.get_mental_state())
+        return Persona([self.opponent_model.threshold,False], self.opponent_model.get_mental_state())
 
     def update_parameters(self):
         self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
@@ -162,7 +179,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
         nested_beliefs = nested_beliefs[:iteration_number + 1, :]
-        self.opponent_model.threshold = persona.persona
+        self.opponent_model.threshold = persona.persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
         iteration_number = action_length
