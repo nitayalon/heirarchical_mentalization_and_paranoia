@@ -104,19 +104,24 @@ class DoMOneBelief(DoMZeroBelief):
 
     def update_distribution_from_particles(self, particles: dict, action, observation, iteration_number):
         persona = [x for x in particles.keys()]
+        thresholds = [float(x.split("-")[0]) for x in persona]
         interactive_states_per_persona = [x[0] for x in particles.values()]
         likelihood = [x[1] for x in interactive_states_per_persona]
         prior_distribution = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
-        posterior_distribution = prior_distribution * likelihood / np.sum(prior_distribution * likelihood)
+        _, sorted_likelihood = zip(*sorted(zip(thresholds, likelihood)))
+        posterior_distribution = prior_distribution * sorted_likelihood / np.sum(prior_distribution * sorted_likelihood)
         nested_beliefs = [x[0].get_nested_belief for x in interactive_states_per_persona]
         # Update beliefs
         self.belief_distribution['zero_order_belief'] = np.vstack(
             [self.belief_distribution['zero_order_belief'], posterior_distribution])
         # Store nested belief
-        self.nested_belief = nested_beliefs
+        # Note! since the nested belief is single - we average those
+        average_nested_beliefs = np.mean(nested_beliefs, axis=0)
+        self.nested_belief = np.vstack([self.nested_belief, average_nested_beliefs])
         # Update nested model beliefs
-        # self.opponent_model.belief.belief_distribution
-        self.belief_distribution["nested_beliefs"] = nested_beliefs
+        self.opponent_model.belief.belief_distribution = np.vstack(
+            [self.opponent_model.belief.belief_distribution, average_nested_beliefs])
+        self.belief_distribution["nested_beliefs"] = np.copy(self.opponent_model.belief.belief_distribution)
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
 
@@ -239,9 +244,11 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         observation_probability = observation_probabilities[optimal_action_idx]
         expected_reward = self.compute_expected_reward(action, previous_observation, new_observation,
                                                        observation_probability)
-        # update nested history:
+        # update nested model:
         self.opponent_model.history.update_actions(new_observation)
         self.opponent_model.environment_model.opponent_model.history.update_observations(new_observation)
+        self.opponent_model.belief.belief_distribution = np.vstack(
+            [self.opponent_model.belief.belief_distribution, new_interactive_state.get_nested_belief])
         return new_observation, expected_reward, observation_probability
 
     def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,

@@ -286,9 +286,9 @@ class DoMZeroModel(SubIntentionalAgent):
                                                  self.config.experiment_name)
             mcts_tree.to_csv(mcts_tree_output_name + f'_iteration_number_{iteration_number}_seed_{self.config.seed}.csv',
                              index=False)
-        # prng = np.random.default_rng(seed)
-        # best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
-        best_action_idx = np.random.choice(a=len(action_nodes), p=softmax_transformation)
+        prng = np.random.default_rng(seed)
+        best_action_idx = prng.choice(a=len(action_nodes), p=softmax_transformation)
+        # best_action_idx = np.random.choice(a=len(action_nodes), p=softmax_transformation)
         actions = list(action_nodes.keys())
         action_probability = softmax_transformation[best_action_idx]
         if self.solver.name == "IPOMCP":
