@@ -68,7 +68,7 @@ class DoMZeroSenderExplorationPolicy(DoMZeroExplorationPolicy):
         is_irritated = 1
         if len(args) > 0:
             if len(args[0]) > 0:
-                persona = [x.get_persona[1] for x in args[0]]
+                persona = [x.get_persona[1] for x in args[0].values()]
                 is_irritated = 1 - np.any(persona)
         reward_from_action = self.reward_function(self.actions, True)
         acceptance_probability = self.acceptance_probability_per_type(self.support)
