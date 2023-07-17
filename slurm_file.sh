@@ -11,23 +11,10 @@
 #SBATCH --nodes=1
 #SBATCH --tasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --exclusive=user
 #
-#SBATCH --mail-type=END,FAIL, BEGIN
+#SBATCH --mail-type=BEGIN,END,FAIL
 ## *** YOU NEED TO FILL IN YOUR KYB EMAIL ADDRESS HERE ***
 #SBATCH --mail-user=nitay.alon@tuebingen.mpg.de
-#
-# Wall clock limit:
-#SBATCH --time=1-12:30
-
-secs_to_human(){
-    echo "$(( ${1} / 3600 )):$(( (${1} / 60) % 60 )):$(( ${1} % 60 ))"
-}
-start=$(date +%s)
-echo "$(date -d @${start} "+%Y-%m-%d %H:%M:%S"): ${SLURM_JOB_NAME} start id=${SLURM_JOB_ID}\n"
-
-omp_threads=$SLURM_CPUS_PER_TASK
-export OMP_NUM_THREADS=$omp_threads
 
 module purge
 module load singularity
@@ -35,10 +22,10 @@ module load singularity
 export SINGULARITY_BIND="/run,/ptmp,/scratch,/tmp,/opt/ohpc,${HOME}"
 export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-02-ec95d31ea677.sif
 
-ENV=x_ipomdp
-SOFTMAX_TEMP=0.1
+ENV=first_task
+SOFTMAX_TEMP=0.05
 RECEIVER_TOM=DoM0
-SENDER_TOM=DoM1
+SENDER_TOM=DoM-1
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
 time singularity exec ${CONTAINER_PATH} python main.py  --environment $ENV --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --sender_tom $SENDER_TOM --receiver_tom  $RECEIVER_TOM 

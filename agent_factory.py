@@ -75,21 +75,21 @@ class AgentFactory:
                                            self.task_duration)
         return output_agent
 
-    def dom_one_constructor(self, agent_role):
+    def dom_one_constructor(self, agent_role, nested=False):
         if agent_role == "rational_sender":
             opponent_model = self.dom_zero_constructor("rational_receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.receiver_theta)
             memoization_table = DoMOneMemoization(self.path_to_memoization_data)
             output_agent = DoMOneSender(self.agent_actions, self.config.softmax_temperature, None,
                                         memoization_table, opponent_theta_hat_distribution, opponent_model,
-                                        self.config.seed)
+                                        self.config.seed, nested)
         else:
             output_agent = None
             raise NotImplementedError('Missing implementation')
         return output_agent
 
     def dom_two_constructor(self, agent_role):
-        opponent_model = self.dom_one_constructor("rational_sender")
+        opponent_model = self.dom_one_constructor("rational_sender", True)
         opponent_theta_hat_distribution = self._create_prior_distribution(self.sender_theta)
         memoization_table = DoMTwoMemoization(self.path_to_memoization_data)
         output_agent = DoMTwoReceiver(self.subject_actions, self.config.softmax_temperature, None, memoization_table,

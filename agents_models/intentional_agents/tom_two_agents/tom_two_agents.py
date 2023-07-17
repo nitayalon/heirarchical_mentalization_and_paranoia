@@ -118,15 +118,41 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
                                                counter_offer.value)
         return expected_reward
 
-    def update_interactive_state(self, interactive_state, mental_model):
-        interactive_state.state.terminal = interactive_state.state.name == 10
-        interactive_state.state.name = str(int(interactive_state.state.name) + 1)
-        interactive_state.persona = [interactive_state.persona[0], mental_model]
-        interactive_state.opponent_belief = self.opponent_model.belief.get_current_belief()
-        return interactive_state
+    def update_interactive_state(self, interactive_state, mental_model, updated_nested_beliefs, q_values):
+        new_state_name = int(interactive_state.state.name)
+        new_state = State(str(new_state_name), new_state_name == 10)
+        new_persona = Persona(interactive_state.persona.persona, q_values)
+        new_interactive_state = InteractiveState(new_state, new_persona, updated_nested_beliefs)
+        return new_interactive_state
+
+    def step_from_is(self, new_interactive_state: InteractiveState, previous_observation: Action, action: Action,
+                     seed: int):
+        # update nested history:
+        if int(new_interactive_state.get_state.name) > 0:
+            self.opponent_model.history.update_observations(action)
+            self.opponent_model.opponent_model.history.update_actions(action)
+        observation_probabilities = self.opponent_model.softmax_transformation(new_interactive_state.persona.q_values[:,1])
+        random_number_generator = np.random.default_rng(seed)
+        optimal_action_idx = random_number_generator.choice(new_interactive_state.persona.q_values.shape[0],
+                                                            p=observation_probabilities)
+        new_observation = Action(new_interactive_state.persona.q_values[optimal_action_idx, 0], False)
+        observation_probability = observation_probabilities[optimal_action_idx]
+        expected_reward = self.compute_expected_reward(action, previous_observation, new_observation,
+                                                       observation_probability)
+        # update nested model:
+        self.opponent_model.history.update_actions(new_observation)
+        self.opponent_model.environment_model.opponent_model.history.update_observations(new_observation)
+        updated_opponent_beliefs = new_interactive_state.get_nested_belief
+        updated_zero_order_belief = updated_opponent_beliefs['zero_order_belief']
+        updated_first_order_beliefs = updated_opponent_beliefs['nested_beliefs']
+        self.opponent_model.belief.belief_distribution['zero_order_belief'] = np.vstack(
+            [self.opponent_model.belief.belief_distribution['zero_order_belief'], updated_zero_order_belief])
+        self.opponent_model.belief.belief_distribution['nested_beliefs'] = np.vstack(
+            [self.opponent_model.belief.belief_distribution['nested_beliefs'], updated_first_order_beliefs])
+        return new_observation, expected_reward, observation_probability
 
     def get_persona(self):
-        return [self.opponent_model.threshold, self.opponent_model.get_mental_state()]
+        return Persona([self.opponent_model.threshold, False], self.opponent_model.get_mental_state())
 
     def _simulate_opponent_response(self, seed, observation, action, iteration_number):
         if self.opponent_model.threshold == 0.0:
@@ -194,8 +220,8 @@ class DoMTwoReceiver(DoMZeroReceiver):
                                                                   self.config.get_from_env("rollout_rejecting_bonus"),
                                                                   self.belief.belief_distribution,
                                                                   self.belief.support)
-        self.solver = IPOMCP(2, self.belief, self.environment_model, self.memoization_table,
-                             self.exploration_policy, self.utility_function, self._planning_parameters, seed)
+        self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
+                             self.exploration_policy, self.utility_function, self._planning_parameters, seed, False)
         self.name = "DoM(2)_receiver"
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
