@@ -4,12 +4,17 @@ general:
   report_ipocmp_statistics: False
   output_planning_tree: False
   include_random: True
-  skip_random: True
+  skip_random: False
   skip_rational: False
   number_of_rational_agents: 2
+<<<<<<< HEAD
+  sender_thresholds: [0.0,0.1,0.7]
+  receiver_thresholds: [0.0,0.25]
+=======
   sender_thresholds: [0.0,0.15,0.6]
   receiver_thresholds: [0.0,0.3]
   state: debug
+>>>>>>> origin/new_belief_structure
 
 environments:
   first_task:

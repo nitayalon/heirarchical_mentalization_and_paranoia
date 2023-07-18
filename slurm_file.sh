@@ -8,13 +8,16 @@
 #SBATCH --partition=compute # nyx partitions: compute, highmem, gpu
 #
 # Number of nodes and MPI tasks per node:
-#SBATCH --nodes=1
-#SBATCH --tasks=1
-#SBATCH --cpus-per-task=1
-#
-#SBATCH --mail-type=BEGIN,END,FAIL
+#SBATCH --cpus-per-task=4
+#SBATCH -a 10-999:50%20
+#SBATCH —exclusive=user
+
+
+#SBATCH --mail-type=END,FAIL
 ## *** YOU NEED TO FILL IN YOUR KYB EMAIL ADDRESS HERE ***
 #SBATCH --mail-user=nitay.alon@tuebingen.mpg.de
+# Wall clock limit:
+#SBATCH --time=1-12:30
 
 module purge
 module load singularity
