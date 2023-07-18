@@ -4,7 +4,7 @@ import os
 from os.path import exists
 
 
-belief_columns = ["p1", "p2", "q1", "q2", "q3", "trial_number", "seed", "sender_threshold"]
+belief_columns = ["p_1_0", "p_1_1", "q0", "q1", "q2", "trial_number", "seed", "sender_threshold"]
 history_columns = ["offer", "response", "trial_number", "seed", "sender_threshold"]
 q_values_columns = ["action", "q_value", "trial_number", "seed", "sender_threshold"]
 
