@@ -9,7 +9,7 @@ general:
   number_of_rational_agents: 2
   sender_thresholds: [0.0,0.15,0.6]
   receiver_thresholds: [0.0,0.3]
-  state: test
+  state: debug
 
 environments:
   first_task:
