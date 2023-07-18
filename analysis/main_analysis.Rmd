@@ -22,6 +22,7 @@ library(ARTool)
 library(car)        
 library(forcats) 
 library(RColorBrewer)
+library(wesanderson)
 ```
 
 ```{r Plotting settings for aliasing on windows, include=FALSE}
@@ -65,8 +66,7 @@ parse_experiment_file <- function(file_name)
 ```{r set experiment path, include=FALSE}
 results_path = "~/Max_Planck/Hierarchical-modelling/data"
 dom_levels = list(
-               c("0","-1"),
-               c("0","1"))
+               c("0","-1"))
 agents_beliefs <- c("receiver_beliefs", "sender_beliefs")
 nested_beliefs <- c("type_belief", "nested_beliefs")
 directory_pattern <- "DoM%s_receiver_DoM%s_sender_softmax_temp_0.1"
@@ -77,78 +77,12 @@ path_to_game_results <- paste0(results_path, directory_pattern)
 first_task_data <- load_simulations_results(results_path, "first_task", "first_task/2_rational_agents/short_duration", directory_pattern, dom_levels)
 ```
 
-
-```{r Load and merge game data, include=FALSE}
-game_results <- c()
-for(dom_level in dom_levels)
-{
-  receiver_dom_level = dom_level[1]
-  sender_dom_level = dom_level[2]
-  path_to_experiments_results <- sprintf(path_to_game_results, receiver_dom_level, sender_dom_level)
-  path_to_dir <- paste(path_to_experiments_results, "simulation_results" ,sep="/")
-  temp = list.files(path=path_to_dir, pattern="*.csv")
-  if (length(temp) == 0)
-    {
-      next
-    }
-  myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
-  interim_results <- bind_rows(myfiles)
-  game_results <- rbind(game_results, cbind(interim_results, receiver_dom_level, sender_dom_level))
-}
-```
-
-```{r Load and merge beliefs, include=FALSE}
-beliefs <- c()
-for(dom_level in dom_levels)
-{
-  receiver_dom_level = dom_level[1]
-  sender_dom_level = dom_level[2]
-  for(agent_name in agents_beliefs)
-  {
-    path_to_experiments_results <- sprintf(path_to_game_results, receiver_dom_level, sender_dom_level)
-    path_to_dir <- paste(path_to_experiments_results, "beliefs" ,sep="/")
-    updated_path = paste(path_to_dir, agent_name, sep="/")
-    temp = list.files(path=updated_path, pattern="*.csv")
-    if (length(temp) == 0)
-    {
-      next
-    }
-    myfiles = lapply(paste(updated_path, temp, sep="/"), read.csv)
-    interim_results <- bind_rows(myfiles)
-    beliefs <- rbind(beliefs, cbind(interim_results, receiver_dom_level, sender_dom_level))
-  }
-}
-```
-
-
-```{r load and merge q_values, include=FALSE}
-q_values <- c()
-for(dom_level in dom_levels)
-{
-  receiver_dom_level = dom_level[1]
-  sender_dom_level = dom_level[2]
-  path_to_experiments_results <- sprintf(path_to_game_results, receiver_dom_level, sender_dom_level)
-  path_to_dir <- paste(path_to_experiments_results, "q_values" ,sep="/")
-  temp = list.files(path=path_to_dir, pattern="*.csv")
-  if (length(temp) == 0)
-    {
-      next
-    }
-  myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
-  interim_results <- bind_rows(myfiles)
-  issue_list <- sapply(myfiles, function(x){class(x$q_value)})
-  temp[issue_list == "character"][1]
-  myfiles[issue_list == "character"][1]
-  q_values <- rbind(q_values, cbind(interim_results, receiver_dom_level, sender_dom_level))
-}
-```
-
-
 # Comparing game results by DoM levels
 
 ```{r data for cumulative reward plots}
 cumulative_reward_results <- 
-  game_results %>% 
+  first_task_data$game_results %>% 
+  filter(sender_dom_level < 0) %>% 
   mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
   mutate(sender_dom_level = factor(sender_dom_level),
          sender_threshold = factor(sender_threshold),
@@ -173,47 +107,150 @@ custom_colors <- list(
 ```{r cumulative reward by experiment setting}
 sender_reward_plot <- 
   cumulative_reward_results %>% 
-  ggplot(aes(sender_threshold, total_sender_reward, fill = sender_threshold)) + 
-  geom_col() + 
-  facet_grid(receiver_threshold~sender_dom_level) + 
+  ggplot(aes(receiver_threshold, total_sender_reward, fill = sender_threshold)) + 
+  geom_col(position = "dodge2") + 
+  facet_grid(.~sender_dom_level) + 
   ylab("Cumulative sender reward") + 
   xlab("Trial number") + 
   scale_y_continuous(
       expand = c(0,0),
-      name = "Sum of sender reward",
+      name = "Total sender reward",
       limits = c(0,8),
       breaks = seq(0,8,1)
     ) +
-  scale_fill_manual(values = brewer.pal(5, "Blues")[c(2,3,5)],
-                      name = "Sender Theta", labels = c("0.3","0.7","Random"))
+  scale_fill_manual(values = brewer.pal(5, "Blues")[c(3,5,7,9)],
+                      name = "Sender Theta", labels = c("0.15","0.75","Random"))
 
 receiver_reward_plot <-
   cumulative_reward_results %>% 
-  ggplot(aes(sender_threshold, total_receiver_reward, fill = sender_threshold)) + 
-  geom_col() + 
+  ggplot(aes(receiver_threshold, total_receiver_reward, fill = sender_threshold)) + 
+  geom_col(position = "dodge2") + 
   ylab("Cumulative receiver reward") + 
   xlab("Trial number") + 
-  scale_fill_manual(values = brewer.pal(5, "Blues")[c(2,3,5)],
-                      name = "Sender Theta", labels = c("0.3","0.7","Random"))+ 
+  scale_fill_manual(values = brewer.pal(5, "Blues")[c(3,5,7,9)],
+                      name = "Sender Theta", labels = c("0.15","0.75","Random"))+ 
   scale_y_continuous(
       expand = c(0,0),
-      name = "Sum of receiver reward",
+      name = "Total receiver reward",
       limits = c(0,8),
       breaks = seq(0,8,1)
     ) +
-  facet_grid(receiver_threshold~sender_dom_level) 
+  facet_grid(.~sender_dom_level) 
 
 cumulative_reward <- sender_reward_plot + receiver_reward_plot
 cumulative_reward
 # ggsave("../figures/cumulative_reward_by_agent.png", width = 40, height = 20, units = "cm")
 ```
 
-# Convergence of beliefs
+## In depth analysis of the total reward
 
 ```{r}
-beliefs
+first_task_data$game_results %>% 
+  filter(sender_threshold == 0.75, receiver_threshold == 0.25)
+  
 ```
 
+## Typical policy
+
+```{r typical sender behaviour}
+typical_offer_sequence <- 
+  first_task_data$game_results %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(average_offer = mean(offer),
+            sd_offer = sd(offer),
+            low_offer = min(offer),
+            high_offer = max(offer))
+```
+```{r}
+typical_offer_sequence %>% 
+  filter(sender_threshold != "Random") %>% 
+  ggplot(aes(x= trial_number, y = average_offer, color = sender_threshold, fill=sender_threshold)) + 
+  geom_line(size = 2.5) + 
+  geom_ribbon(aes(ymin=average_offer-sd_offer, ymax=average_offer+sd_offer), linetype=2, alpha=0.1) + 
+  scale_color_manual(name = 'Sender threshold', values=wes_palette(n=4, name="Darjeeling1")) + 
+  scale_fill_manual(name = 'Sender threshold', values=wes_palette(n=4, name="Darjeeling1")) + 
+  facet_wrap(.~receiver_threshold)
+```
+
+
+## IRL verification
+
+```{r IRL verification}
+average_beliefs <- 
+  first_task_data$receiver_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = mean(p_0_0),
+            p_low = mean(p_0_1),
+            p_high = mean(p_0_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Average")
+
+sd_beliefs <- 
+  first_task_data$receiver_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = sd(p_0_0),
+            p_low = sd(p_0_1),
+            p_high = sd(p_0_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "SD")
+
+min_beliefs <- 
+  first_task_data$receiver_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = min(p_0_0),
+            p_low = min(p_0_1),
+            p_high = min(p_0_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Min")
+
+max_beliefs <- 
+  first_task_data$receiver_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = max(p_0_0),
+            p_low = max(p_0_1),
+            p_high = max(p_0_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Max")
+
+agregated_beliefs <- 
+  average_beliefs %>% 
+  inner_join(sd_beliefs) %>% 
+  inner_join(min_beliefs) %>% 
+  inner_join(max_beliefs)
+```
+
+```{r}
+agregated_beliefs %>% 
+  ggplot(aes(x= trial_number, y = Average, color = Type, fill=Type)) + 
+  geom_line(size = 2.5) + 
+  geom_ribbon(aes(ymin=Min, ymax=Max), linetype=2, alpha=0.1) + 
+  facet_grid(vars(sender_threshold), vars(receiver_threshold))
+```
 
 ## Detrimental effect of overmetaliastion
 

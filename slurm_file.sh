@@ -26,10 +26,9 @@ export SINGULARITY_BIND="/run,/ptmp,/scratch,/tmp,/opt/ohpc,${HOME}"
 export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-02-ec95d31ea677.sif
 
 ENV=first_task
-SOFTMAX_TEMP=0.1
+SOFTMAX_TEMP=0.05
+RECEIVER_TOM=DoM0
 SENDER_TOM=DoM-1
-RECEIVER_TOM=DoM2
-
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
 time singularity exec ${CONTAINER_PATH} python main.py  --environment $ENV --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --sender_tom $SENDER_TOM --receiver_tom  $RECEIVER_TOM 

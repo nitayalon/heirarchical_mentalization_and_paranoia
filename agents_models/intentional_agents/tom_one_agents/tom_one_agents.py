@@ -278,7 +278,8 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
 
     def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
                      iteration_number: int, *args):
-        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed, observation,
+        counter_offer, observation_probability, q_values, opponent_policy = self.opponent_model.act(seed + iteration_number,
+                                                                                                    observation,
                                                                                                     action,
                                                                                                     iteration_number)
         mental_model = self.opponent_model.get_mental_state()
@@ -316,7 +317,7 @@ class DoMOneSender(DoMZeroSender):
                  memoization_table: DoMOneMemoization,
                  prior_belief: np.array,
                  opponent_model: DoMZeroReceiver,
-                 seed: int):
+                 seed: int, nested_model=False):
         super().__init__(actions, softmax_temp, threshold, prior_belief, opponent_model, seed)
         self._planning_parameters = dict(seed=seed, threshold=self._threshold)
         self.memoization_table = memoization_table
@@ -324,13 +325,15 @@ class DoMOneSender(DoMZeroSender):
         self.environment_model = DoMOneSenderEnvironmentModel(self.opponent_model, self.utility_function,
                                                               actions,
                                                               self.belief)
-        self.exploration_policy = DoMOneSenderExplorationPolicy(self.potential_actions, self.utility_function,
+        self.exploration_policy = DoMOneSenderExplorationPolicy(self.potential_actions,
+                                                                self.utility_function,
                                                                 self.config.get_from_env("rollout_rejecting_bonus"),
                                                                 self.belief.belief_distribution,
                                                                 self.belief.support,
                                                                 self.opponent_model.belief.support)
-        self.solver = IPOMCP(1, self.belief, self.environment_model, self.memoization_table,
-                             self.exploration_policy, self.utility_function, self._planning_parameters, seed)
+        self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
+                             self.exploration_policy, self.utility_function, self._planning_parameters, seed,
+                             nested_model)
         self.name = "DoM(1)_sender"
 
     @staticmethod
