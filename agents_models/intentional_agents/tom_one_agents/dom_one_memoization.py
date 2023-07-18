@@ -83,7 +83,7 @@ class DoMOneMemoization(MemoizationTable):
         data = []
         path = f'{os.path.dirname(self.config.planning_results_dir)}/{directory_name}'
         if directory_name == "beliefs":
-            path = f'{self.config.beliefs_dir}/receiver_beliefs'
+            path = f'{self.config.beliefs_dir}/sender_beliefs'
         files = os.listdir(path)
         if len(files) == 0:
             raise FileNotFoundError('No files founds')
@@ -106,7 +106,7 @@ class DoMOneMemoization(MemoizationTable):
         # Compose game history
         history = raw_game_results.loc[raw_game_results['sender_threshold'] > 0][history_columns]
         # filter nested beliefs
-        beliefs = raw_beliefs.loc[raw_beliefs['agent_name'] == 'DoM(0)_receiver'][belief_columns]
+        beliefs = raw_beliefs.loc[raw_beliefs['agent_name'] == 'DoM(1)_sender'][belief_columns]
         # round beliefs
         beliefs = beliefs.assign(q1=np.round(beliefs["0.0"], 3),
                                  q2=np.round(beliefs["0.3"], 3),
