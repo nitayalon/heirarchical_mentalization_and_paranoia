@@ -1,5 +1,6 @@
 general:
   fee_discount: 0.95
+  offers_step_size: 0.1
   results_folder: "data/"
   report_ipocmp_statistics: False
   output_planning_tree: False
