@@ -105,10 +105,13 @@ class DoMOneBelief(DoMZeroBelief):
     def update_distribution_from_particles(self, particles: dict, action, observation, iteration_number):
         persona = [x for x in particles.keys()]
         thresholds = [float(x.split("-")[0]) for x in persona]
+        # Validate that we have representation of all the types
+        all_types_represented = self.support == thresholds
         interactive_states_per_persona = [x[0] for x in particles.values()]
         likelihood = [x[1] for x in interactive_states_per_persona]
+        full_likelihood = likelihood * all_types_represented + 0.001 * (1-all_types_represented)
         prior_distribution = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
-        _, sorted_likelihood = zip(*sorted(zip(thresholds, likelihood)))
+        _, sorted_likelihood = zip(*sorted(zip(self.support, full_likelihood)))
         posterior_distribution = prior_distribution * sorted_likelihood / np.sum(prior_distribution * sorted_likelihood)
         nested_beliefs = [x[0].get_nested_belief for x in interactive_states_per_persona]
         # Update beliefs

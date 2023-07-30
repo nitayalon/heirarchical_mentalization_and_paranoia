@@ -20,6 +20,7 @@ class DoMOneMemoization(MemoizationTable):
         self.target_table_name = f'{self._table_name}.csv'
         self.path_to_dir = path_to_memoization_dir
         self.path_to_table = os.path.join(self.path_to_dir, self.target_table_name)
+        self.use_memoization = bool(self.config.get_from_general("use_memoization"))
         super().__init__(path_to_memoization_dir)
         self.path_to_buffer_file = self.create_buffer_file()
 
@@ -38,28 +39,31 @@ class DoMOneMemoization(MemoizationTable):
 
     def load_data(self):
         # First - see if we already have memoization data there
-        print(self.path_to_dir, flush=True)
-        if len(os.listdir(self.path_to_dir)) > 0:
-            print('Load memoization data', flush=True)
-            data = []
-            files = os.listdir(self.path_to_dir)
-            for file in files:
-                df = pd.read_csv(f'{self.path_to_dir}/{file}', header=None)
-                data.append(df)
-            df = pd.concat(data, axis=0, ignore_index=True)
-            df.columns = self.columns
-            return df
-        # If not - we create the data
+        if self.use_memoization:
+            print(self.path_to_dir, flush=True)
+            if len(os.listdir(self.path_to_dir)) > 0:
+                print('Load memoization data', flush=True)
+                data = []
+                files = os.listdir(self.path_to_dir)
+                for file in files:
+                    df = pd.read_csv(f'{self.path_to_dir}/{file}', header=None)
+                    data.append(df)
+                df = pd.concat(data, axis=0, ignore_index=True)
+                df.columns = self.columns
+                return df
+            # If not - we create the data
+            else:
+                try:
+                    print('Loading from memory', flush=True)
+                    q_values = self._read_and_process_table("q_values")
+                    game_results = self._read_and_process_table("simulation_results")
+                    nested_beliefs = self._read_and_process_table("beliefs")
+                    data = self.combine_results(q_values, game_results, nested_beliefs)
+                except FileNotFoundError:
+                    print('First time simulating - no data!')
+                    data = None
         else:
-            try:
-                print('Loading from memory', flush=True)
-                q_values = self._read_and_process_table("q_values")
-                game_results = self._read_and_process_table("simulation_results")
-                nested_beliefs = self._read_and_process_table("beliefs")
-                data = self.combine_results(q_values, game_results, nested_beliefs)
-            except FileNotFoundError:
-                print('First time simulating - no data!')
-                data = None
+            data = None
         return data
 
     def save_data(self):
