@@ -9,7 +9,7 @@ general:
   skip_rational: False
   number_of_rational_agents: 2
   sender_thresholds: [0.0,0.1,0.5]
-  receiver_thresholds: [0.0,0.4]
+  receiver_thresholds: [0.0,0.35]
   state: simulation
 
 environments:
