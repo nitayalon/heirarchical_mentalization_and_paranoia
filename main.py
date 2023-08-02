@@ -78,7 +78,7 @@ if __name__ == "__main__":
     i = 0
     np.random.seed(config.seed)
     eat_task_simulator = EAT(config.seed)
-    if args.senders_threshold > 0 and args.receivers_threshold > 0:
+    if config.get_from_general("state") == 'debug':
         simulate_iug_task(rational_sender, rational_receiver, args.senders_threshold, args.receivers_threshold)
     else:
         for sender_threshold in sender_parameters:
