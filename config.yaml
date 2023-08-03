@@ -11,8 +11,7 @@ general:
   sender_thresholds: [0.0,0.1,0.5]
   receiver_thresholds: [0.0,0.35]
   state: simulation
-  state: debug
-  use_memoization: False
+  use_memoization: True
 
 environments:
   first_task:
