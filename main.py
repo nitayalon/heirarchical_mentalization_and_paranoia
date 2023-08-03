@@ -1,4 +1,4 @@
-from eat_environment import *
+from iug_task import *
 from agent_factory import *
 import argparse
 
