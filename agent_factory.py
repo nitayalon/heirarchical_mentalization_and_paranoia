@@ -9,7 +9,7 @@ class AgentFactory:
         self.softmax_temp = float(self.config.softmax_temperature)
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.subintentional_weight = float(self.config.get_from_env("subintentional_weight"))
-        self.agent_actions = np.round(np.arange(0, 1.05, float(self.config.get_from_general("offers_step_size"))), 2)
+        self.agent_actions = np.sort(np.r_[np.round(np.arange(0, 1.05, float(self.config.get_from_general("offers_step_size"))), 2),0.05])
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
         self.task_duration = self.config.get_from_env("n_trials")
