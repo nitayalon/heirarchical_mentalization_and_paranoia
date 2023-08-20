@@ -24,7 +24,7 @@ class RandomSubIntentionalSender(SubIntentionalAgent):
         return self.potential_actions, q_values, probabilities
 
     def forward(self, action: Action, observation: Action, iteration_number=None):
-        q_values = self.potential_actions
+        q_values = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
         probabilities = np.repeat(1 / len(self.potential_actions), len(self.potential_actions))
         return self.potential_actions, q_values, probabilities
 

@@ -113,6 +113,42 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
     def compute_iteration(iteration_number):
         return iteration_number
 
+    def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,
+             seed: int, iteration_number: int, *args):
+        # a_t
+        action = action_node.action
+        # o_{t-1}
+        observation = history_node.observation
+        nested_beliefs = self._represent_nested_beliefs_as_table(interactive_state)
+        key = f'{nested_beliefs}-{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
+        # If we already visited this node
+        if key in action_node.opponent_response.keys():
+            counter_offer, observation_probability, q_values, opponent_policy = \
+                self.recall_opponents_actions_from_memory(key, iteration_number, action, observation, action_node, seed)
+        else:
+            counter_offer, observation_probability, q_values, opponent_policy = \
+                self._simulate_opponent_response(seed, observation, action, iteration_number)
+            action_node.add_opponent_response(key, q_values, opponent_policy)
+        mental_model = self.opponent_model.get_mental_state()
+        updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
+        opponent_reward = counter_offer.value * action.value
+        self.opponent_model.history.update_rewards(opponent_reward)
+        expected_reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
+        new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
+                                                              q_values)
+        return new_interactive_state, counter_offer, expected_reward, observation_probability
+
+    def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
+                     iteration_number: int, *args):
+        counter_offer, observation_probability, q_values, opponent_policy = \
+            self._simulate_opponent_response(seed, observation, action, iteration_number)
+        mental_model = self.opponent_model.get_mental_state()
+        reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
+        updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
+        new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
+                                                              q_values)
+        return new_interactive_state, counter_offer, reward, observation_probability
+
     def compute_expected_reward(self, action, observation, counter_offer, observation_probability):
         expected_reward = self.reward_function(action.value, observation.value,
                                                counter_offer.value)
@@ -126,17 +162,22 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         return new_interactive_state
 
     def step_from_is(self, new_interactive_state: InteractiveState, previous_observation: Action, action: Action,
-                     seed: int):
+                     seed: int, iteration_number):
         # update nested history:
         if int(new_interactive_state.get_state.name) > 0:
             self.opponent_model.history.update_observations(action)
             self.opponent_model.opponent_model.history.update_actions(action)
-        observation_probabilities = self.opponent_model.softmax_transformation(new_interactive_state.persona.q_values[:,1])
-        random_number_generator = np.random.default_rng(seed)
-        optimal_action_idx = random_number_generator.choice(new_interactive_state.persona.q_values.shape[0],
-                                                            p=observation_probabilities)
-        new_observation = Action(new_interactive_state.persona.q_values[optimal_action_idx, 0], False)
-        observation_probability = observation_probabilities[optimal_action_idx]
+        opponent_policy = self.opponent_model.softmax_transformation(new_interactive_state.persona.q_values[:,1])
+        if new_interactive_state.persona.persona[0] == 0.0:
+            optimal_action_idx = 0
+            new_observation = Action(0.5, False)
+        else:
+            seed_for_resampling = seed + iteration_number
+            random_number_generator = np.random.default_rng(seed_for_resampling)
+            optimal_action_idx = random_number_generator.choice(new_interactive_state.persona.q_values.shape[0],
+                                                                p=opponent_policy)
+            new_observation = Action(new_interactive_state.persona.q_values[optimal_action_idx, 0], False)
+        observation_probability = opponent_policy[optimal_action_idx]
         expected_reward = self.compute_expected_reward(action, previous_observation, new_observation,
                                                        observation_probability)
         # update nested model:
@@ -155,9 +196,12 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         return Persona([self.opponent_model.threshold, False], self.opponent_model.get_mental_state())
 
     def _simulate_opponent_response(self, seed, observation, action, iteration_number):
+        # DoM(-1) random sender
         if self.opponent_model.threshold == 0.0:
             counter_offer, observation_probability, q_values, opponent_policy = \
-                self.random_sender.act(seed, observation, action, iteration_number)
+                self.random_sender.act(seed + iteration_number, observation, action, iteration_number)
+            counter_offer = Action(0.5, False)
+        # DoM(1) threshold sender
         else:
             counter_offer, observation_probability, q_values, opponent_policy = \
                 self.opponent_model.act(seed, observation, action, iteration_number-1)
@@ -196,8 +240,18 @@ class DoMTwoReceiverExplorationPolicy(DoMZeroExplorationPolicy):
         return np.array([reward_from_accept, reward_from_reject])
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float, iteration_number: int):
-        expected_reward_from_offer = np.array([self.reward_function(True, observation), self.exploration_bonus])
-        optimal_action_idx = np.argmax(expected_reward_from_offer)
+        # belief governed exploration
+        if interactive_state.persona.persona[0] == 0.0:  # Random sender - accept all
+            immediate_reward = self.reward_function(True, observation)
+            optimal_action_idx = 0
+            expected_future_reward = np.dot(interactive_state.persona.q_values[:, 0],
+                                            interactive_state.persona.q_values[:, 1])
+            expected_reward_from_offer = np.array([immediate_reward + expected_future_reward,
+                                                   expected_future_reward])
+            optimal_action_idx = np.argmax(expected_reward_from_offer)
+        else:
+            expected_reward_from_offer = np.array([self.reward_function(True, observation), self.exploration_bonus])
+            optimal_action_idx = np.argmax(expected_reward_from_offer)
         optimal_action = self.actions[optimal_action_idx]
         q_value = expected_reward_from_offer[optimal_action_idx]
         return Action(optimal_action, False), q_value

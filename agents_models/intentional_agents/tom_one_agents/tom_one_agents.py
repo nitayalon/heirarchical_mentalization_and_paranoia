@@ -234,7 +234,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         return np.round(interactive_state.get_nested_belief, 3)
 
     def step_from_is(self, new_interactive_state: InteractiveState, previous_observation: Action, action: Action,
-                     seed: int):
+                     seed: int, iteration_number):
         # update nested history:
         if int(new_interactive_state.get_state.name) > 0:
             self.opponent_model.history.update_observations(action)
@@ -338,7 +338,7 @@ class DoMOneSender(DoMZeroSender):
                              self.exploration_policy, self.utility_function, self._planning_parameters, seed,
                              nested_model)
         self.name = "DoM(1)_sender"
-
+    
     @staticmethod
     def get_mental_state():
         return False
