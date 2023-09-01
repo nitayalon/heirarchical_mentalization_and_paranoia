@@ -7,13 +7,14 @@ class DomZeroReceiverBelief(DoMZeroBelief):
     def __init__(self, support, zero_level_belief, opponent_model, history: History):
         super().__init__(support, zero_level_belief, opponent_model, history)
 
-    def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
+    def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None, nested=False):
         """
         Compute observation likelihood given opponent's type and last action
-        :param iteration_number:
         :param action:
         :param observation:
         :param prior:
+        :param iteration_number:
+        :param nested:
         :return:
         """
         last_observation = self.history.get_last_observation()

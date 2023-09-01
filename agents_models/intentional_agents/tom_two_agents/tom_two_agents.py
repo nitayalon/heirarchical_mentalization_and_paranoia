@@ -27,19 +27,21 @@ class DoMTwoBelief(DoMOneBelief):
         self.belief_distribution = {"zero_order_belief": self.zero_order_belief,
                                     "nested_beliefs": self.nested_belief}
 
-    def update_distribution(self, action, observation, iteration_number):
+    def update_distribution(self, action, observation, iteration_number, nested=False):
         """
         Update the belief based on the last action and observation (IRL)
         :param action:
         :param observation:
         :param iteration_number:
+        :param nested:
         :return:
         """
         if iteration_number < 1:
             return None
         self.nested_mental_state = False
         prior = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
-        likelihood = self.compute_likelihood(action, observation, prior, iteration_number)
+        # Compute P_1(a_t|theta)
+        likelihood = self.compute_likelihood(action, observation, prior, iteration_number, nested=True)
         if self.include_persona_inference:
             # Compute P(observation|action, history)
             posterior = likelihood * prior
@@ -50,20 +52,22 @@ class DoMTwoBelief(DoMOneBelief):
         self.belief_distribution["nested_beliefs"] = self.nested_belief
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
-    def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
+    def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None,
+                           nested=False):
         """
         Compute observation likelihood given opponent's type and last action
-        :param iteration_number:
         :param action:
         :param observation:
         :param prior:
+        :param iteration_number:
+        :param nested:
         :return:
         """
         last_observation = self.history.get_last_observation()
         offer_likelihood = np.empty_like(prior)
         original_threshold = self.opponent_model.threshold
-        # update nested belief
-        self.opponent_model.belief.update_distribution(last_observation, action, iteration_number-1)
+        # Update DoM(1) nested belief
+        self.opponent_model.belief.update_distribution(last_observation, action, iteration_number-1, nested)
         if self.include_persona_inference:
             for i in range(len(self.support)):
                 theta = self.support[i]
@@ -284,3 +288,15 @@ class DoMTwoReceiver(DoMZeroReceiver):
         self.opponent_model.opponent_model.history.observations.append(observation)
         # update nested DoM(-1) observations
         self.opponent_model.opponent_model.opponent_model.history.actions.append(observation)
+        # Update nested DoM(1) beliefs - if needed
+        # if iteration_number - 1 > 0:
+        #     last_observation = self.history.observations[iteration_number - 2]
+        #     last_action = self.history.observations[iteration_number - 1] if iteration_number - 1 > 2 else Action(None, False)
+        #     self.opponent_model.belief.update_distribution(last_action, last_observation, iteration_number-1, nested=True)
+
+    def post_action_selection_update_nested_models(self, action=None, iteration_number=None):
+        # update nested DoM(0) observations
+        self.opponent_model.opponent_model.history.actions.append(action)
+        # update nested DoM(-1) observations
+        self.opponent_model.opponent_model.opponent_model.history.observations.append(action)
+

@@ -1,3 +1,5 @@
+import numpy as np
+
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
 from agents_models.intentional_agents.tom_one_agents.dom_one_memoization import *
@@ -31,19 +33,21 @@ class DoMOneBelief(DoMZeroBelief):
         self.belief_distribution['zero_order_belief'] = self.prior_belief
         self.belief_distribution['nested_beliefs'] = self.prior_nested_belief
 
-    def update_distribution(self, action, observation, iteration_number):
+    def update_distribution(self, action, observation, iteration_number, nested=False):
         """
         Update the belief based on the last action and observation (IRL)
         :param action:
         :param observation:
         :param iteration_number:
+        :param nested:
         :return:
         """
         if iteration_number < 1:
             return None
         self.nested_mental_state = not self.opponent_model.detection_mechanism.verify_random_behaviour(iteration_number)
         prior = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
-        likelihood = self.compute_likelihood(action, observation, prior, iteration_number)
+        # Compute P_0(a_t|theta, h^{t-1})
+        likelihood = self.compute_likelihood(action, observation, prior, iteration_number, nested)
         if self.include_persona_inference:
             # Compute P(observation|action, history)
             posterior = likelihood * prior
@@ -54,20 +58,22 @@ class DoMOneBelief(DoMZeroBelief):
         self.belief_distribution["nested_beliefs"] = self.nested_belief
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
-    def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None):
+    def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None,
+                           nested=False):
         """
         Compute observation likelihood given opponent's type and last action
-        :param iteration_number:
         :param action:
         :param observation:
         :param prior:
+        :param iteration_number:
+        :param nested:
         :return:
         """
-        last_observation = self.history.get_last_observation()
+        last_observation = self.history.get_last_observation(nested)
         offer_likelihood = np.empty_like(prior)
         original_threshold = self.opponent_model.threshold
         # update nested belief
-        self.opponent_model.belief.update_distribution(last_observation, action, iteration_number)
+        self.opponent_model.belief.update_distribution(last_observation, action, iteration_number, nested)
         if self.include_persona_inference:
             for i in range(len(self.support)):
                 theta = self.support[i]
@@ -79,6 +85,8 @@ class DoMOneBelief(DoMZeroBelief):
                     np.where(self.opponent_model.potential_actions == observation.value)]
                 offer_likelihood[i] = observation_probability
             self.opponent_model.threshold = original_threshold
+            # Round up to account for numerical stability issues
+            offer_likelihood = np.round_(offer_likelihood, 4) + 1e-4
             return offer_likelihood
         return None
 
@@ -106,7 +114,7 @@ class DoMOneBelief(DoMZeroBelief):
         persona = [x for x in particles.keys()]
         thresholds = [float(x.split("-")[0]) for x in persona]
         # Validate that we have representation of all the types
-        all_types_represented = self.support == thresholds
+        all_types_represented = np.sort(self.support) == np.sort(thresholds)
         interactive_states_per_persona = [x[0] for x in particles.values()]
         likelihood = [x[1] for x in interactive_states_per_persona]
         full_likelihood = likelihood * all_types_represented + 0.001 * (1-all_types_represented)
@@ -186,7 +194,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.lower_bounds = self.opponent_model.opponent_model.lower_bounds
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
-        nested_beliefs = nested_beliefs[:iteration_number + 1, :]
+        nested_beliefs = nested_beliefs[:iteration_number + 1,]
         self.opponent_model.threshold = persona.persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
@@ -366,3 +374,5 @@ class DoMOneSender(DoMZeroSender):
         self.environment_model.reset(action_length)
         self.reset_belief()
         self.reset_solver(action_length)
+
+
