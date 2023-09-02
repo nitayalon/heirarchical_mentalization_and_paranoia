@@ -162,3 +162,6 @@ class DoMZeroSender(DoMZeroModel):
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
         pass
+
+    def post_action_selection_update_nested_models(self, action=None, iteration_number=None):
+        pass

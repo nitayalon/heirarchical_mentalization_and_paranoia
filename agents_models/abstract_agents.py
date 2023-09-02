@@ -7,7 +7,7 @@ class SubIntentionalBelief(BeliefDistribution):
     def __init__(self, history: History):
         super().__init__(None, None, None, history)
 
-    def reset(self):
+    def reset(self, size=1):
         pass
 
     def reset_prior(self):
@@ -96,7 +96,7 @@ class SubIntentionalAgent(ABC):
     def reset_solver(self):
         pass
 
-    def reset_belief(self):
+    def reset_belief(self, size: int = 1):
         pass
 
     @abstractmethod
@@ -117,8 +117,8 @@ class DoMZeroBelief(BeliefDistribution):
         super().__init__(support, zero_level_belief, opponent_model, history)
         self.opponent_belief = None
 
-    def reset(self):
-        self.belief_distribution = self.prior_belief
+    def reset(self, size=1):
+        self.belief_distribution = self.belief_distribution[0:size,]
 
     def reset_prior(self):
         self.reset_prior()
@@ -126,21 +126,22 @@ class DoMZeroBelief(BeliefDistribution):
     def get_current_belief(self):
         return self.belief_distribution[-1]
 
-    def compute_likelihood(self, action, observation, prior, iteration_number=None):
+    def compute_likelihood(self, action, observation, prior, iteration_number=None, nested=False):
         pass
 
-    def update_distribution(self, action, observation, iteration_number):
+    def update_distribution(self, action, observation, iteration_number, nested=False):
         """
         Update the belief based on the last action and observation (IRL)
         :param action:
         :param observation:
         :param iteration_number:
+        :param nested:
         :return:
         """
         if iteration_number <= 0:
             return None
         prior = np.copy(self.belief_distribution[-1, :])
-        probabilities = self.compute_likelihood(action, observation, prior, iteration_number)
+        probabilities = self.compute_likelihood(action, observation, prior, iteration_number, nested)
         posterior = probabilities * prior
         self.belief_distribution = np.vstack([self.belief_distribution, posterior / posterior.sum()])
 
@@ -223,7 +224,7 @@ class DoMZeroEnvironmentModel(EnvironmentModel):
         pass
 
     def step_from_is(self, new_interactive_state: InteractiveState, previous_observation: Action, action: Action,
-                     seed: int):
+                     seed: int, iteration_number: int):
         pass
 
 
@@ -270,7 +271,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.history.reset(action_length, observation_length)
         self.opponent_model.reset(1.0, 0.0, terminal=terminal)
         self.environment_model.reset(action_length)
-        self.reset_belief()
+        self.reset_belief(int(action_length + 1))
         self.reset_solver(action_length)
 
     def act(self, seed, action=None, observation=None, iteration_number=None) -> [float, np.array]:
@@ -296,8 +297,12 @@ class DoMZeroModel(SubIntentionalAgent):
         else:
             best_action = action_nodes[actions[best_action_idx]]
         self.environment_model.update_persona(observation, best_action, iteration_number)
+        # Update self history
         self.history.update_actions(best_action)
+        # Update Opponent history
         self.environment_model.opponent_model.history.update_observations(best_action)
+        # Update nested models history
+        self.post_action_selection_update_nested_models(best_action)
         self.environment_model.update_parameters()
         if action_nodes is not None:
             self.solver.action_node = action_nodes[str(best_action.value)]
@@ -309,8 +314,8 @@ class DoMZeroModel(SubIntentionalAgent):
             q_values[:, 1] / self.softmax_temp).sum()
         return actions, q_values, softmax_transformation, mcts_tree
 
-    def reset_belief(self):
-        self.belief.reset()
+    def reset_belief(self, size=1):
+        self.belief.reset(size)
 
     def reset_solver(self, iteration_number: Optional[int]=None):
         self.solver.reset(iteration_number)
@@ -327,4 +332,7 @@ class DoMZeroModel(SubIntentionalAgent):
         self.opponent_model.history.update_history(observation, action, None)
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
+        pass
+
+    def post_action_selection_update_nested_models(self, action=None, iteration_number=None):
         pass

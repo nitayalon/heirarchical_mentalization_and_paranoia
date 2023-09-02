@@ -1,7 +1,4 @@
 from typing import Tuple
-
-import numpy as np
-
 from agents_models.abstract_agents import *
 
 
