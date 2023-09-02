@@ -1,5 +1,3 @@
-import numpy as np
-
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_sender import *
 from agents_models.intentional_agents.tom_zero_agents.tom_zero_receiver import *
 from agents_models.intentional_agents.tom_one_agents.dom_one_memoization import *
@@ -29,7 +27,7 @@ class DoMOneBelief(DoMZeroBelief):
         self.belief_distribution = {"zero_order_belief": self.zero_order_belief, "nested_beliefs": self.nested_belief}
         self.nested_mental_state = False
 
-    def reset(self):
+    def reset(self, size: int = 1):
         self.belief_distribution['zero_order_belief'] = self.prior_belief
         self.belief_distribution['nested_beliefs'] = self.prior_nested_belief
 

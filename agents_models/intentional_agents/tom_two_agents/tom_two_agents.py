@@ -99,7 +99,7 @@ class DoMTwoBelief(DoMOneBelief):
         mental_state = [False] * n_samples
         return list(zip(particles, mental_state))
 
-    def reset(self):
+    def reset(self, size: int = 1):
         self.belief_distribution['zero_order_belief'] = self.prior_belief
         self.belief_distribution['nested_beliefs'] = self.prior_nested_belief
 
