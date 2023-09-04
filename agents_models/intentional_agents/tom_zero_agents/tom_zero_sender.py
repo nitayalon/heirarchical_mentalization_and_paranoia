@@ -157,7 +157,7 @@ class DoMZeroSender(DoMZeroModel):
         else:
             receiver_counter_action = args[0]
         game_reward = (1 - action - self.threshold) * receiver_counter_action
-        self.history.rewards.append(game_reward)
+        # self.history.rewards.append(game_reward)
         return game_reward
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
