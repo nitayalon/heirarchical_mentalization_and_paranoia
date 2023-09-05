@@ -1,5 +1,5 @@
 general:
-  fee_discount: 0.95
+  fee_discount: 0.99
   offers_step_size: 0.1
   results_folder: "data/"
   report_ipocmp_statistics: False
