@@ -28,8 +28,8 @@ class DoMOneBelief(DoMZeroBelief):
         self.nested_mental_state = False
 
     def reset(self, size: int = 1):
-        self.belief_distribution['zero_order_belief'] = self.prior_belief
-        self.belief_distribution['nested_beliefs'] = self.prior_nested_belief
+        self.belief_distribution['zero_order_belief'] = self.belief_distribution['zero_order_belief'][0:size,]
+        self.belief_distribution['nested_beliefs'] = self.belief_distribution['nested_beliefs'][0:size,]
 
     def update_distribution(self, action, observation, iteration_number, nested=False):
         """
@@ -370,7 +370,7 @@ class DoMOneSender(DoMZeroSender):
         self.history.reset(action_length, observation_length)
         self.opponent_model.reset(1.0, 0.0, observation_length, action_length, terminal=terminal)
         self.environment_model.reset(action_length)
-        self.reset_belief()
+        self.reset_belief(action_length)
         self.reset_solver(action_length)
 
 
