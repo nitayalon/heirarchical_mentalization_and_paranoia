@@ -1,5 +1,5 @@
 general:
-  fee_discount: 0.95
+  fee_discount: 0.99
   offers_step_size: 0.1
   results_folder: "data/"
   report_ipocmp_statistics: False
@@ -10,7 +10,7 @@ general:
   number_of_rational_agents: 2
   sender_thresholds: [0.0,0.1,0.5]
   receiver_thresholds: [0.0,0.35]
-  state: debug
+  state: simulation
   use_memoization: True
 
 environments:
