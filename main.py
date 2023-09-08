@@ -35,8 +35,8 @@ def simulate_iug_task(sender_agent, receiver_agent, senders_threshold, receivers
         eat_task_simulator.simulate_task(sender_agent, receiver_agent, receiver_agent.threshold, sender_agent.threshold)
     if sender_agent.name == "DoM(1)_sender":
         sender_agent.memoization_table.save_data()
-    sender_agent.reset()
-    receiver_agent.reset()
+    sender_agent.reset(terminal=True)
+    receiver_agent.reset(terminal=True)
     experiment_name = config.experiment_name
     if config.args.save_results == "True":
         output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'

@@ -370,7 +370,7 @@ class DoMOneSender(DoMZeroSender):
         self.history.reset(action_length, observation_length)
         self.opponent_model.reset(1.0, 0.0, observation_length, action_length, terminal=terminal)
         self.environment_model.reset(action_length)
-        self.reset_belief(action_length)
+        self.reset_belief(action_length + 1 * terminal)
         self.reset_solver(action_length)
 
 
