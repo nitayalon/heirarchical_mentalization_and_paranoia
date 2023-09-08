@@ -15,13 +15,21 @@ class EAT:
         self.trail_results = []
 
     def export_nested_beliefs(self, beliefs: Optional[dict], supports: Optional[dict], agent_name: str,
-                              agent_dom_level,
-                              receiver_threshold: str, agent_threshold: str):
+                              agent_dom_level, receiver_threshold: str, agent_threshold: str,
+                              recursion_depth: int):
         nested_beliefs = dict()
         for level in beliefs.keys():
-            prefix = 'p' + f'_{agent_dom_level}' if level == 'zero_order_belief' else 'q'
-            belief_df = self.export_type_beliefs(beliefs[level], prefix, supports[level], agent_name,
-                                                 receiver_threshold, agent_threshold)
+            if level == 'zero_order_belief':
+                prefix = 'p' + f'_{agent_dom_level}_{recursion_depth}'
+                belief_df = self.export_type_beliefs(beliefs[level], prefix, supports[level], agent_name,
+                                                     receiver_threshold, agent_threshold)
+            elif level == 'nested_beliefs' and recursion_depth < 2:
+                prefix = 'q' + f'_{agent_dom_level}_{recursion_depth}'
+                belief_df = self.export_type_beliefs(beliefs[level], prefix, supports[level], agent_name,
+                                                     receiver_threshold, agent_threshold)
+            else:
+                belief_df = self.export_nested_beliefs(beliefs[level], supports[level], agent_name, agent_dom_level,
+                                                       receiver_threshold, agent_threshold, recursion_depth - 1)
             nested_beliefs[level] = belief_df
         unified_df = nested_beliefs['zero_order_belief'].merge(nested_beliefs['nested_beliefs'])
         return unified_df
@@ -76,11 +84,13 @@ class EAT:
         else:
             receiver_belief = self.export_nested_beliefs(receiver.belief.belief_distribution,
                                                          receiver.belief.supports,
-                                                         receiver.name, "2", receiver_threshold, sender_threshold)
+                                                         receiver.name, "2", receiver_threshold, sender_threshold,
+                                                         2)
         if sender.name == 'DoM(1)_sender':
             sender_belief = self.export_nested_beliefs(sender.belief.belief_distribution,
                                                        sender.belief.supports,
-                                                       sender.name, "1", receiver_threshold, sender_threshold)
+                                                       sender.name, "1", receiver_threshold, sender_threshold,
+                                                       1)
         else:
             sender_belief = self.export_type_beliefs(sender.belief.belief_distribution, "p(-1)",
                                                      sender.belief.support,
@@ -91,7 +101,7 @@ class EAT:
             receiver_mental_state['seed'] = self.seed
             receiver_mental_state['sender_threshold'] = sender.threshold
         else:
-            receiver_mental_state = None
+             receiver_mental_state = None
         return experiment_results, agents_q_values, receiver_belief, sender_belief, receiver_mental_state
 
     @staticmethod
