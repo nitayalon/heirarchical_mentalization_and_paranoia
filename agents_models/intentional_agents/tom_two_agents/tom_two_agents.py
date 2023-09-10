@@ -84,6 +84,37 @@ class DoMTwoBelief(DoMOneBelief):
             return offer_likelihood
         return None
 
+    def update_distribution_from_particles(self, particles: dict, action, observation, iteration_number):
+        persona = [x for x in particles.keys()]
+        thresholds = [float(x.split("-")[0]) for x in persona]
+        # Validate that we have representation of all the types
+        all_types_represented = np.sort(self.support) == np.sort(thresholds)
+        interactive_states_per_persona = [x[0] for x in particles.values()]
+        likelihood = [x[1] for x in interactive_states_per_persona]
+        full_likelihood = likelihood * all_types_represented + 0.001 * (1-all_types_represented)
+        prior_distribution = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
+        _, sorted_likelihood = zip(*sorted(zip(self.support, full_likelihood)))
+        posterior_distribution = prior_distribution * sorted_likelihood / np.sum(prior_distribution * sorted_likelihood)
+        # Update beliefs
+        self.belief_distribution['zero_order_belief'] = np.vstack(
+            [self.belief_distribution['zero_order_belief'], posterior_distribution])
+        # Store nested belief
+        nested_beliefs = [x[0].get_nested_belief for x in interactive_states_per_persona]
+        # Note! since the nested belief is single - we average those
+        zero_order_nested_beliefs = [x['zero_order_belief'] for x in nested_beliefs]
+        first_order_nested_beliefs = [x['nested_beliefs'] for x in nested_beliefs]
+        average_zero_order_nested_beliefs = np.mean(zero_order_nested_beliefs, axis=0)
+        first_order_order_nested_beliefs = np.mean(first_order_nested_beliefs, axis=0)
+        self.nested_belief['zero_order_belief'] = np.vstack([self.nested_belief['zero_order_belief'], average_zero_order_nested_beliefs])
+        self.nested_belief['nested_beliefs'] = np.vstack([self.nested_belief['nested_beliefs'], first_order_order_nested_beliefs])
+        # Update nested model beliefs
+        self.opponent_model.belief.belief_distribution['zero_order_belief'] = np.vstack(
+            [self.opponent_model.belief.belief_distribution['zero_order_belief'], average_zero_order_nested_beliefs])
+        self.opponent_model.belief.belief_distribution['nested_beliefs'] = np.vstack(
+            [self.opponent_model.belief.belief_distribution['nested_beliefs'], first_order_order_nested_beliefs])
+        self.belief_distribution["nested_beliefs"] = np.copy(self.opponent_model.belief.belief_distribution)
+        self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
+
     def sample(self, rng_key, n_samples):
         """
         Sample nested beliefs
