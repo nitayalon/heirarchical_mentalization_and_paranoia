@@ -112,7 +112,7 @@ class DoMTwoBelief(DoMOneBelief):
             [self.opponent_model.belief.belief_distribution['zero_order_belief'], average_zero_order_nested_beliefs])
         self.opponent_model.belief.belief_distribution['nested_beliefs'] = np.vstack(
             [self.opponent_model.belief.belief_distribution['nested_beliefs'], first_order_order_nested_beliefs])
-        self.belief_distribution["nested_beliefs"] = np.copy(self.opponent_model.belief.belief_distribution)
+        self.belief_distribution["nested_beliefs"] = self.opponent_model.belief.belief_distribution
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
     def sample(self, rng_key, n_samples):
