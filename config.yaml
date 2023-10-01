@@ -5,12 +5,12 @@ general:
   report_ipocmp_statistics: False
   output_planning_tree: False
   include_random: True
-  skip_random: False
+  skip_random: True
   skip_rational: False
   number_of_rational_agents: 2
   sender_thresholds: [0.0,0.1,0.5]
   receiver_thresholds: [0.0,0.35]
-  state: simulation
+  state: debug
   use_memoization: True
 
 environments:
