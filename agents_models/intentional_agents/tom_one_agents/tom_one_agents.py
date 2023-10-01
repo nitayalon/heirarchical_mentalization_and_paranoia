@@ -341,7 +341,7 @@ class DoMOneSender(DoMZeroSender):
                                                                 self.belief.support,
                                                                 self.opponent_model.belief.support)
         self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
-                             self.exploration_policy, self.utility_function, self._planning_parameters, seed,
+                             self.exploration_policy, self.utility_function, self._planning_parameters, seed, 1,
                              nested_model)
         self.name = "DoM(1)_sender"
     

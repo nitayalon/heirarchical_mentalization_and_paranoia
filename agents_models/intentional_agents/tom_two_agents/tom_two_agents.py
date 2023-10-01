@@ -312,7 +312,7 @@ class DoMTwoReceiver(DoMZeroReceiver):
                                                                   self.belief.belief_distribution,
                                                                   self.belief.support)
         self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
-                             self.exploration_policy, self.utility_function, self._planning_parameters, seed, False)
+                             self.exploration_policy, self.utility_function, self._planning_parameters, seed, 2, False)
         self.name = "DoM(2)_receiver"
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
