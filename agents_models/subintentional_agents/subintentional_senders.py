@@ -67,6 +67,9 @@ class SoftMaxRationalRandomSubIntentionalSender(RandomSubIntentionalSender):
 
     def _compute_weights(self, offers, iteration_number, low_bound, up_bound):
         w = np.logical_not(np.logical_and(low_bound < offers, offers <= up_bound))
+        # If the low and high are the same:
+        if low_bound == up_bound:
+            w = np.logical_not(np.logical_and(low_bound <= offers, offers <= up_bound))
         # If both bounds are equal to the threshold we do not penalize it
         if low_bound >= np.round(1 - self.threshold, 3) or iteration_number == 0:
             w = np.logical_not(np.logical_and(low_bound <= offers, offers <= up_bound))
