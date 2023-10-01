@@ -283,7 +283,10 @@ class DoMZeroReceiver(DoMZeroModel):
         """
         if observation is None:
             return 0.0
-        game_reward = (action - self.threshold) * observation
+        if isinstance(observation, float):
+            game_reward = (observation - self.threshold) * action
+        else:
+            game_reward = (action - self.threshold) * observation
         return game_reward
 
     def update_belief(self, action, observation):
