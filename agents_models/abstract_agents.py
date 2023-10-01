@@ -238,7 +238,7 @@ class DoMZeroExplorationPolicy:
         self.support = type_support
 
     def update_belief(self, belief: np.array):
-        if belief["zero_order_belief"].sum() != 1:
+        if belief["zero_order_belief"][-1].sum() != 1:
             return None
         self.belief = belief
 
