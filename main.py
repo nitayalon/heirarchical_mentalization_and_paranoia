@@ -60,9 +60,9 @@ if __name__ == "__main__":
     parser.add_argument('--softmax_temp', type=float, default='0.05', metavar='N',
                         help='set softmax temp (default: 0.05)')
     parser.add_argument('--senders_threshold', type=float, default='0.0', metavar='N',
-                        help='set softmax temp (default: 0.0)')
+                        help='set senders threshold (default: 0.0)')
     parser.add_argument('--receivers_threshold', type=float, default='0.0', metavar='N',
-                        help='set softmax temp (default: 0.0)')
+                        help='set receivers threshold (default: 0.0)')
     parser.add_argument('--save_results', type=str, default='True', metavar='N',
                         help='save simulation results (default: True)')
     args = parser.parse_args()

@@ -111,8 +111,14 @@ senders_types <- c(expression(paste(eta,"=0.1")),
 receivers_colours <- c("#ee531f", "#f59879")
 receivers_types <- c(expression(paste(eta,"=0.0")),
                       expression(paste(eta,"=0.35")))
+
+custom_colors <- list(
+  sender_tom = brewer.pal(5, "Reds")[c(2,5)],
+  receiver_tom = brewer.pal(5, "Blues")[c(3,5)]
+)
 ```
 
+# Overview of the results
 
 ```{r cumulative reward by experiment setting}
 sender_reward_plot <- 
@@ -564,9 +570,151 @@ agregated_beliefs <-
   inner_join(max_beliefs)
 ```
 
+# Paper plots
+
+## Figure 2 - adaptive DoM 
+
+### Game dynamics 
+
+```{r dom minus one vs dom zero, fig.width=12, fig.height=4}
+sid = 110
+
+pl_domminus1_offers <- 
+  first_task_data$game_results %>% 
+  filter(receiver_dom_level == 0, 
+         sender_dom_level == -1,
+         seed == sid) %>% 
+  mutate(sender_threshold = factor(sender_threshold),
+         response = factor(response, labels = c('reject','accept'))) %>%
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  ggplot(aes(x = trial_number, y = offer)) + 
+    geom_line(aes(colour = sender_threshold), size = 1.5) + 
+    geom_point(aes(
+      color = sender_threshold, 
+      fill = response ,
+      shape = factor(response)), 
+      size = shape_size) + 
+    scale_fill_manual(values = custom_colors$accept_reject,
+                       name = "Receiver response") +
+    scale_color_manual(
+      values = custom_colors$sender_type,
+      name = expression(paste('Sender threshold')),
+      labels = c("random", "\u03B7 = 0.1" ,"\u03B7 = 0.5")
+      )+
+    scale_shape_manual(
+      values=c(custom_shape$reject, custom_shape$accept),
+      name = "Receiver response",
+      labels = c("Reject","Accept")) +
+    scale_x_continuous(name="Trial", breaks=seq(0, 12, 2)) +
+    scale_y_continuous(limits = c(0,1),breaks = c(0,.5,1)) +
+    labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
+    ggtitle('DoM(-1) vs. DoM(0)') +
+    theme(aspect.ratio = dynamics_plot_aspect_ratio) +
+    facet_grid(.~factor(receiver_threshold)) + 
+    theme(text=element_text(size=25)) + 
+    guides(color = "none", shape = "none", fill = "none", linetype="none")
+pl_domminus1_offers
+ggsave("../figures/main_paper/figure_2_A.png", plot=pl_domminus1_offers, width = 45, height = 25, units = "cm")
+```
+
+```{r dom one vs dom zero, fig.width=12, fig.height=4}
+pl_dom1_offers <- 
+  first_task_data$game_results %>% 
+  filter(receiver_dom_level == 0, 
+         sender_dom_level == 1,
+         seed == sid) %>% 
+  mutate(sender_threshold = factor(sender_threshold),
+         response = factor(response, labels = c('reject','accept'))) %>%
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  ggplot(aes(x = trial_number, y = offer)) + 
+    geom_line(
+      aes(
+        colour = sender_threshold, 
+        linetype = sender_threshold,
+        alpha = sender_threshold),
+      size = 1.5) + 
+    geom_point(aes(
+      color = sender_threshold, 
+      fill = response ,
+      shape = factor(response)), 
+      size = shape_size) + 
+    scale_fill_manual(values = custom_colors$accept_reject,
+                       name = "Receiver response") +
+    scale_color_manual(
+      values = custom_colors$sender_type,
+      name = expression(paste('Sender threshold')),
+      labels = c("random", "\u03B7 = 0.1" ,"\u03B7 = 0.5")
+      )+
+    scale_shape_manual(
+      values=c(custom_shape$reject, custom_shape$accept),
+      name = "Receiver response",
+      labels = c("Reject","Accept")) + 
+    scale_linetype_manual(values = c("longdash", "solid", "solid")) +
+    scale_alpha_manual(values = c(0.3, 1, 1)) +
+    scale_x_continuous(name="Trial", breaks=seq(0, 12, 2)) +
+    scale_y_continuous(limits = c(0,1),breaks = c(0,.5,1)) +
+    labs(y = '', x= 'Trial') + 
+    ggtitle('DoM(1) vs. DoM(0)') +
+    facet_grid(.~factor(receiver_threshold)) + 
+    theme(aspect.ratio = dynamics_plot_aspect_ratio) +
+    theme(text=element_text(size=25)) + 
+    # guides(linetype = "none", alpha = "none", fill = "none")
+  guides(color = "none", shape = "none", fill = "none", linetype="none", alpha = "none")
+
+pl_dom1_offers
+ggsave("../figures/main_paper/figure_2_B.png", plot=pl_dom1_offers, width = 45, height = 25, units = "cm")
+```
+
+```{r dom one vs dom two, fig.width=12, fig.height=4}
+pl_dom1_dom2_offers <- 
+  first_task_data$game_results %>% 
+  filter(receiver_dom_level == 2, 
+         sender_dom_level == 1,
+         seed == sid) %>% 
+  mutate(sender_threshold = factor(sender_threshold),
+         response = factor(response, labels = c('reject','accept'))) %>%
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  ggplot(aes(x = trial_number, y = offer)) + 
+    geom_line(
+      aes(
+        colour = sender_threshold, 
+        linetype = sender_threshold,
+        alpha = sender_threshold),
+      size = 1.5) + 
+    geom_point(aes(
+      color = sender_threshold, 
+      fill = response ,
+      shape = factor(response)), 
+      size = shape_size) + 
+    scale_fill_manual(values = custom_colors$accept_reject,
+                       name = "Receiver response") +
+    scale_color_manual(
+      values = custom_colors$sender_type,
+      name = expression(paste('Sender threshold')),
+      labels = c("random", "\u03B7 = 0.1" ,"\u03B7 = 0.5")
+      )+
+    scale_shape_manual(
+      values=c(custom_shape$reject, custom_shape$accept),
+      name = "Receiver response",
+      labels = c("Reject","Accept")) + 
+    scale_linetype_manual(values = c("longdash", "solid", "solid")) +
+    scale_alpha_manual(values = c(0.3, 1, 1)) +
+    scale_x_continuous(name="Trial", breaks=seq(0, 12, 2)) +
+    scale_y_continuous(limits = c(0,1),breaks = c(0,.5,1)) +
+    labs(y = '', x= 'Trial') + 
+    ggtitle('DoM(1) vs. DoM(2)') +
+    facet_grid(.~factor(receiver_threshold)) + 
+    theme(aspect.ratio = dynamics_plot_aspect_ratio) +
+    theme(text=element_text(size=25)) + 
+    # guides(linetype = "none", alpha = "none", fill = "none")
+  guides(color = "none", shape = "none", fill = "none", linetype="none", alpha = "none")
+
+pl_dom1_dom2_offers
+ggsave("../figures/main_paper/figure_2_C.png", plot=pl_dom1_dom2_offers, width = 45, height = 25, units = "cm")
+```
 
 
-# OLD ANALYSIS - we can remove it
+
 
 ## Detrimental effect of overmetaliastion
 
