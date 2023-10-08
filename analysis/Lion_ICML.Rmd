@@ -412,7 +412,8 @@ pl_domminus1_offers + pl_dom1_offers +
 
 
 ```{r, fig.width=10, fig.height=4}
-pl_beliefs_dom0_domminus1 <- beliefs %>% 
+pl_beliefs_dom0_domminus1 <- 
+  beliefs %>% 
   filter(receiver_dom_level == 0, 
          sender_dom_level == -1,
          seed == sid) %>%  

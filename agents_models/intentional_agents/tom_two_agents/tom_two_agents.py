@@ -114,6 +114,9 @@ class DoMTwoBelief(DoMOneBelief):
             [self.opponent_model.belief.belief_distribution['zero_order_belief'], average_zero_order_nested_beliefs])
         self.opponent_model.belief.belief_distribution['nested_beliefs'] = np.vstack(
             [self.opponent_model.belief.belief_distribution['nested_beliefs'], first_order_order_nested_beliefs])
+        # Update nested nested model beliefs
+        self.opponent_model.opponent_model.belief.belief_distribution = np.vstack(
+            [self.opponent_model.opponent_model.belief.belief_distribution, first_order_order_nested_beliefs])
         self.belief_distribution["nested_beliefs"] = self.opponent_model.belief.belief_distribution
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
@@ -241,7 +244,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         # DoM(1) threshold sender
         else:
             counter_offer, observation_probability, q_values, opponent_policy = \
-                self.opponent_model.act(seed, observation, action, iteration_number-1)
+                self.opponent_model.act(seed, observation, action, iteration_number)
         return counter_offer, observation_probability, q_values, opponent_policy
 
     @staticmethod
