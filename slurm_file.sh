@@ -9,7 +9,7 @@
 #
 # Number of nodes and MPI tasks per node:
 #SBATCH --cpus-per-task=4
-#SBATCH -a 10-999:50%20
+#SBATCH -a 10-999:20%50
 #SBATCH —exclusive=user
 
 
@@ -27,7 +27,7 @@ export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-0
 
 ENV=first_task
 SOFTMAX_TEMP=0.01
-RECEIVER_TOM=DoM0
+RECEIVER_TOM=DoM2
 SENDER_TOM=DoM1
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
