@@ -105,14 +105,20 @@ custom_colors <- list(
   receiver_tom = brewer.pal(5, "Blues")[c(3,5)]
 )
 senders_colours <- c("#F191BC", "#E6007E", "#9363A6")
-receivers_colours <- c("#ee531f", "#f59879")
 senders_types <- c(expression(paste(eta,"=0.1")),
                   expression(paste(eta,"=0.5")),
                   "Random")
+receivers_colours <- c("#ee531f", "#f59879")
 receivers_types <- c(expression(paste(eta,"=0.0")),
                       expression(paste(eta,"=0.35")))
+
+custom_colors <- list(
+  sender_tom = brewer.pal(5, "Reds")[c(2,5)],
+  receiver_tom = brewer.pal(5, "Blues")[c(3,5)]
+)
 ```
 
+# Overview of the results
 
 ```{r cumulative reward by experiment setting}
 sender_reward_plot <- 
@@ -192,12 +198,12 @@ typical_offer_sequence %>%
   ggplot(aes(x= trial_number, y = average_offer, color = sender_threshold, fill=sender_threshold)) + 
   geom_line(size = 2.5) + 
   geom_ribbon(aes(ymin=average_offer-sd_offer, ymax=average_offer+sd_offer), linetype=2, alpha=0.1) + 
-  scale_color_manual(values = senders_colours[2:3], 
+  scale_color_manual(values = senders_colours[1:2], 
                      name = (expression(paste("Sender's ",theta))),
-                    labels = senders_types[2:3]) + 
-  scale_fill_manual(values = senders_colours[2:3], 
+                    labels = senders_types[1:2]) + 
+  scale_fill_manual(values = senders_colours[1:2], 
                      name = (expression(paste("Sender's ",theta))),
-                    labels = senders_types[2:3]) + 
+                    labels = senders_types[1:2]) + 
   scale_x_continuous(
       expand = c(0,0),
       name = "Trial number",
@@ -221,12 +227,12 @@ typical_offer_sequence %>%
   ggplot(aes(x= trial_number, y = average_offer, color = sender_threshold, fill=sender_threshold)) + 
   geom_line(size = 2.5) + 
   geom_ribbon(aes(ymin=average_offer-sd_offer, ymax=average_offer+sd_offer), linetype=2, alpha=0.1) + 
-  scale_color_manual(values = senders_colours[2:3], 
+  scale_color_manual(values = senders_colours[1:2], 
                      name = (expression(paste("Sender's ",theta))),
-                    labels = senders_types[2:3]) + 
-  scale_fill_manual(values = senders_colours[2:3], 
+                    labels = senders_types[1:2]) + 
+  scale_fill_manual(values = senders_colours[1:2], 
                      name = (expression(paste("Sender's ",theta))),
-                    labels = senders_types[2:3]) + 
+                    labels = senders_types[1:2]) + 
   xlab("Trial number") + 
   scale_y_continuous(
       expand = c(0,0),
@@ -362,6 +368,7 @@ agregated_beliefs <-
   inner_join(min_beliefs) %>% 
   inner_join(max_beliefs)
 ```
+# DoM(0) beliefs
 
 ```{r}
 corretct_beliefs <- 
@@ -371,12 +378,12 @@ corretct_beliefs <-
   ggplot(aes(x= trial_number, y = Average, color = Type, fill=Type)) + 
   geom_line(size = 2.5) + 
   geom_ribbon(aes(ymin=Min, ymax=Max), linetype=2, alpha=0.1) + 
-  scale_color_manual(values = senders_colours, 
+  scale_color_manual(values = senders_colours[c(3,1,2)], 
                      name = (expression(paste("Sender's ",theta))),
-                    labels = senders_types) + 
-  scale_fill_manual(values = senders_colours, 
+                    labels = senders_types[c(3,2,2)]) + 
+  scale_fill_manual(values = senders_colours[c(3,1,2)], 
                      name = (expression(paste("Sender's ",theta))),
-                    labels = senders_types) + 
+                    labels = senders_types[c(3,1,2)]) + 
   facet_grid(vars(sender_threshold), vars(receiver_threshold))
 
 corretct_beliefs
@@ -388,16 +395,19 @@ miscallibrated_beliefs <-
   ggplot(aes(x= trial_number, y = Average, color = Type, fill=Type)) + 
   geom_line(size = 2.5) + 
   geom_ribbon(aes(ymin=Min, ymax=Max), linetype=2, alpha=0.1) + 
-  scale_color_manual(values = senders_colours, 
+  scale_color_manual(values = senders_colours[c(3,2,1)], 
                      name = (expression(paste("Sender's ",theta))),
-                    labels = senders_types) + 
-  scale_fill_manual(values = senders_colours, 
+                    labels = senders_types[c(3,2,1)]) + 
+  scale_fill_manual(values = senders_colours[c(3,2,1)], 
                      name = (expression(paste("Sender's ",theta))),
-                    labels = senders_types) + 
+                    labels = senders_types[c(3,2,1)]) + 
   facet_grid(vars(sender_threshold), vars(receiver_threshold))
 
 miscallibrated_beliefs
 ```
+# DoM(1) beliefs
+
+## Zero order beliefs
 
 ```{r}
 average_beliefs <- 
@@ -474,7 +484,7 @@ corretct_beliefs <-
   scale_fill_manual(values = receivers_colours, 
                      name = (expression(paste("Receiver's ",theta))),
                     labels = receivers_types) + 
-  facet_grid(vars(sender_threshold), vars(receiver_threshold))
+  facet_grid(vars(receiver_threshold), vars(sender_threshold))
 
 corretct_beliefs
 
@@ -492,12 +502,219 @@ misplaced_beliefs <-
   scale_fill_manual(values = receivers_colours, 
                      name = (expression(paste("Receiver's ",theta))),
                     labels = receivers_types) + 
-  facet_grid(vars(sender_threshold), vars(receiver_threshold))
+  facet_grid(vars(receiver_threshold), vars(sender_threshold))
 
 misplaced_beliefs
 ```
 
-# OLD ANALYSIS - we can remove it
+## First order beliefs
+
+```{r}
+average_beliefs <- 
+  first_task_data$sender_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = mean(q_1_1_0),
+            p_low = mean(q_1_1_1),
+            p_high = mean(q_1_1_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Average")
+
+sd_beliefs <- 
+  first_task_data$sender_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_low = sd(p_1_1_0),
+            p_high = sd(p_1_1_1)) %>%  
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "SD")
+
+min_beliefs <- 
+  first_task_data$sender_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_low = min(p_1_1_0),
+            p_high = min(p_1_1_1)) %>%  
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Min")
+
+max_beliefs <- 
+  first_task_data$sender_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_low = max(p_1_1_0),
+            p_high = max(p_1_1_1)) %>%  
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Max")
+
+agregated_beliefs <- 
+  average_beliefs %>% 
+  inner_join(sd_beliefs) %>% 
+  inner_join(min_beliefs) %>% 
+  inner_join(max_beliefs)
+```
+
+# Paper plots
+
+## Figure 2 - adaptive DoM 
+
+### Game dynamics 
+
+```{r dom minus one vs dom zero, fig.width=12, fig.height=4}
+sid = 110
+
+pl_domminus1_offers <- 
+  first_task_data$game_results %>% 
+  filter(receiver_dom_level == 0, 
+         sender_dom_level == -1,
+         seed == sid) %>% 
+  mutate(sender_threshold = factor(sender_threshold),
+         response = factor(response, labels = c('reject','accept'))) %>%
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  ggplot(aes(x = trial_number, y = offer)) + 
+    geom_line(aes(colour = sender_threshold), size = 1.5) + 
+    geom_point(aes(
+      color = sender_threshold, 
+      fill = response ,
+      shape = factor(response)), 
+      size = shape_size) + 
+    scale_fill_manual(values = custom_colors$accept_reject,
+                       name = "Receiver response") +
+    scale_color_manual(
+      values = custom_colors$sender_type,
+      name = expression(paste('Sender threshold')),
+      labels = c("random", "\u03B7 = 0.1" ,"\u03B7 = 0.5")
+      )+
+    scale_shape_manual(
+      values=c(custom_shape$reject, custom_shape$accept),
+      name = "Receiver response",
+      labels = c("Reject","Accept")) +
+    scale_x_continuous(name="Trial", breaks=seq(0, 12, 2)) +
+    scale_y_continuous(limits = c(0,1),breaks = c(0,.5,1)) +
+    labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
+    ggtitle('DoM(-1) vs. DoM(0)') +
+    theme(aspect.ratio = dynamics_plot_aspect_ratio) +
+    facet_grid(.~factor(receiver_threshold)) + 
+    theme(text=element_text(size=25)) + 
+    guides(color = "none", shape = "none", fill = "none", linetype="none")
+pl_domminus1_offers
+ggsave("../figures/main_paper/figure_2_A.png", plot=pl_domminus1_offers, width = 45, height = 25, units = "cm")
+```
+
+```{r dom one vs dom zero, fig.width=12, fig.height=4}
+pl_dom1_offers <- 
+  first_task_data$game_results %>% 
+  filter(receiver_dom_level == 0, 
+         sender_dom_level == 1,
+         seed == sid) %>% 
+  mutate(sender_threshold = factor(sender_threshold),
+         response = factor(response, labels = c('reject','accept'))) %>%
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  ggplot(aes(x = trial_number, y = offer)) + 
+    geom_line(
+      aes(
+        colour = sender_threshold, 
+        linetype = sender_threshold,
+        alpha = sender_threshold),
+      size = 1.5) + 
+    geom_point(aes(
+      color = sender_threshold, 
+      fill = response ,
+      shape = factor(response)), 
+      size = shape_size) + 
+    scale_fill_manual(values = custom_colors$accept_reject,
+                       name = "Receiver response") +
+    scale_color_manual(
+      values = custom_colors$sender_type,
+      name = expression(paste('Sender threshold')),
+      labels = c("random", "\u03B7 = 0.1" ,"\u03B7 = 0.5")
+      )+
+    scale_shape_manual(
+      values=c(custom_shape$reject, custom_shape$accept),
+      name = "Receiver response",
+      labels = c("Reject","Accept")) + 
+    scale_linetype_manual(values = c("longdash", "solid", "solid")) +
+    scale_alpha_manual(values = c(0.3, 1, 1)) +
+    scale_x_continuous(name="Trial", breaks=seq(0, 12, 2)) +
+    scale_y_continuous(limits = c(0,1),breaks = c(0,.5,1)) +
+    labs(y = '', x= 'Trial') + 
+    ggtitle('DoM(1) vs. DoM(0)') +
+    facet_grid(.~factor(receiver_threshold)) + 
+    theme(aspect.ratio = dynamics_plot_aspect_ratio) +
+    theme(text=element_text(size=25)) + 
+    # guides(linetype = "none", alpha = "none", fill = "none")
+  guides(color = "none", shape = "none", fill = "none", linetype="none", alpha = "none")
+
+pl_dom1_offers
+ggsave("../figures/main_paper/figure_2_B.png", plot=pl_dom1_offers, width = 45, height = 25, units = "cm")
+```
+
+```{r dom one vs dom two, fig.width=12, fig.height=4}
+pl_dom1_dom2_offers <- 
+  first_task_data$game_results %>% 
+  filter(receiver_dom_level == 2, 
+         sender_dom_level == 1,
+         seed == sid) %>% 
+  mutate(sender_threshold = factor(sender_threshold),
+         response = factor(response, labels = c('reject','accept'))) %>%
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  ggplot(aes(x = trial_number, y = offer)) + 
+    geom_line(
+      aes(
+        colour = sender_threshold, 
+        linetype = sender_threshold,
+        alpha = sender_threshold),
+      size = 1.5) + 
+    geom_point(aes(
+      color = sender_threshold, 
+      fill = response ,
+      shape = factor(response)), 
+      size = shape_size) + 
+    scale_fill_manual(values = custom_colors$accept_reject,
+                       name = "Receiver response") +
+    scale_color_manual(
+      values = custom_colors$sender_type,
+      name = expression(paste('Sender threshold')),
+      labels = c("random", "\u03B7 = 0.1" ,"\u03B7 = 0.5")
+      )+
+    scale_shape_manual(
+      values=c(custom_shape$reject, custom_shape$accept),
+      name = "Receiver response",
+      labels = c("Reject","Accept")) + 
+    scale_linetype_manual(values = c("longdash", "solid", "solid")) +
+    scale_alpha_manual(values = c(0.3, 1, 1)) +
+    scale_x_continuous(name="Trial", breaks=seq(0, 12, 2)) +
+    scale_y_continuous(limits = c(0,1),breaks = c(0,.5,1)) +
+    labs(y = '', x= 'Trial') + 
+    ggtitle('DoM(1) vs. DoM(2)') +
+    facet_grid(.~factor(receiver_threshold)) + 
+    theme(aspect.ratio = dynamics_plot_aspect_ratio) +
+    theme(text=element_text(size=25)) + 
+    # guides(linetype = "none", alpha = "none", fill = "none")
+  guides(color = "none", shape = "none", fill = "none", linetype="none", alpha = "none")
+
+pl_dom1_dom2_offers
+ggsave("../figures/main_paper/figure_2_C.png", plot=pl_dom1_dom2_offers, width = 45, height = 25, units = "cm")
+```
+
+
+
 
 ## Detrimental effect of overmetaliastion
 

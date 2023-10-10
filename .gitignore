@@ -131,16 +131,17 @@ dmypy.json
 
 
 # directories
-data/
-logs/
-figures/	
+data/*
+logs/*
+figures/*
 *.err
 *.out
 *.Rdata
 *.xlsx
 *.png
 *.jpeg
+*.jpg
+*.pdf
 *.zip
 *.Rhistory
-
 
