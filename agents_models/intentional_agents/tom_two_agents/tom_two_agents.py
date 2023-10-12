@@ -279,6 +279,10 @@ class DoMTwoReceiverExplorationPolicy(DoMZeroExplorationPolicy):
         reward_from_reject = self.exploration_bonus
         return np.array([reward_from_accept, reward_from_reject])
 
+    def compute_final_round_q_values(self, observation:Action) -> np.array:
+        final_q_values = np.array([self.reward_function(True, observation.value), 0.0])
+        return final_q_values
+
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float, iteration_number: int):
         # belief governed exploration
         if interactive_state.persona.persona[0] == 0.0:  # Random sender - accept all

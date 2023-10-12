@@ -32,6 +32,7 @@ class EAT:
                                                        receiver_threshold, agent_threshold, recursion_depth - 1)
             nested_beliefs[level] = belief_df
         unified_df = nested_beliefs['zero_order_belief'].merge(nested_beliefs['nested_beliefs'])
+        assert unified_df.shape[0] == self.n_trails
         return unified_df
 
     def export_type_beliefs(self, beliefs: Optional[np.array], columns_prefix: str,

@@ -319,6 +319,10 @@ class DoMOneSenderExplorationPolicy(DoMZeroSenderExplorationPolicy):
         q_value = expected_reward_from_offer[optimal_action_idx]
         return Action(optimal_action, False), q_value
 
+    def compute_final_round_q_values(self, observation: Action) -> np.array:
+        final_q_values = self.init_q_values(observation)
+        return final_q_values
+
 
 class DoMOneSender(DoMZeroSender):
 
