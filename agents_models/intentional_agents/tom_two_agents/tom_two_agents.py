@@ -1,3 +1,5 @@
+import numpy as np
+
 from agents_models.intentional_agents.tom_one_agents.tom_one_agents import *
 from agents_models.intentional_agents.tom_two_agents.dom_two_memoization import *
 from agents_models.subintentional_agents.subintentional_senders import *
@@ -279,8 +281,8 @@ class DoMTwoReceiverExplorationPolicy(DoMZeroExplorationPolicy):
         reward_from_reject = self.exploration_bonus
         return np.array([reward_from_accept, reward_from_reject])
 
-    def compute_final_round_q_values(self, observation:Action) -> np.array:
-        final_q_values = np.array([self.reward_function(True, observation.value), 0.0])
+    def compute_final_round_q_values(self, observation: np.float) -> np.array:
+        final_q_values = np.array([self.reward_function(True, observation), 0.0])
         return final_q_values
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float, iteration_number: int):

@@ -160,9 +160,10 @@ pl_domminus1_offers <-
     scale_x_continuous(name="Trial", breaks=seq(0, 12, 2)) +
     scale_y_continuous(limits = c(0,1),breaks = c(0,.5,1)) +
     labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
-    theme(aspect.ratio = dynamics_plot_aspect_ratio) +
+    theme(aspect.ratio = 0.9) +
     facet_grid(.~factor(receiver_threshold)) + 
     theme(text=element_text(size=20)) + 
+    ggtitle('DoM(-1) Sender vs. DoM(0) game dynamics') +
     guides(color = "none", fill = "none", linetype="none")
 pl_domminus1_offers
 ```
@@ -202,14 +203,17 @@ dom_zero_beliefs_vs_dom_m1
 ```
 
 ```{r dom minus one vs dom zero game results, fig.width=30, fig.height=15}
-pl_domminus1_offers / dom_zero_beliefs_vs_dom_m1 + 
-  plot_layout(guides = "collect") + 
-  plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold'))
+w_h <- 1.67
+pl_domminus1_offers + dom_zero_beliefs_vs_dom_m1 + 
+  plot_layout(widths=c(2,w_h), heights=c(2,w_h), guides = "collect") + 
+  plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold'),
+                                            plot.margin =)
 ggsave("../figures/main_paper/figure_2.png", width = 40, height = 20, units = "cm")
 ```
 ### DoM(1) vs DoM(0)
 
 ```{r DoM1 ruse, fig.width=10, fig.height=5}
+first_action_by_sender_dom_level <- 
 first_task_data$game_results %>% 
   filter(trial_number == 1) %>% 
   mutate(receiver_threshold = factor(receiver_threshold),
@@ -231,8 +235,9 @@ first_task_data$game_results %>%
   scale_y_continuous(name="Average first offer",
                      limits = c(0,1),
                      breaks = seq(0,1,0.2)) +
+  ggtitle('Sender first offer by\nDoM level') +
   theme(text=element_text(size=25)) 
-ggsave("../figures/main_paper/figure_3.png", width = 40, height = 20, units = "cm")  
+first_action_by_sender_dom_level
 ```
 
 ```{r dom one vs dom zero, fig.width=10, fig.height=5}
@@ -275,6 +280,7 @@ pl_dom1_offers <-
     facet_grid(.~factor(receiver_threshold)) + 
     theme(aspect.ratio = dynamics_plot_aspect_ratio) +
     theme(text=element_text(size=20)) + 
+    ggtitle('DoM(1) Sender vs. DoM(0)\ngame dynamics') +
     guides(color = "none", fill = "none", linetype="none", alpha="none")
 
 pl_dom1_offers
@@ -348,10 +354,11 @@ dom_one_beliefs_vs_dom_zero
 
 
 ```{r dom one vs dom zero game results, fig.width=15, fig.height=10}
-pl_dom1_offers / (dom_zero_beliefs_vs_dom_one + dom_one_beliefs_vs_dom_zero) + 
-  plot_layout(guides = "collect") + 
+(pl_dom1_offers | dom_zero_beliefs_vs_dom_one) /
+  (first_action_by_sender_dom_level | dom_one_beliefs_vs_dom_zero) + 
+  plot_layout(widths=c(2,w_h), heights=c(2,w_h), guides = "collect") + 
   plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold'))
-ggsave("../figures/main_paper/figure_4.png", width = 50, height = 30, units = "cm")
+ggsave("../figures/main_paper/figure_3.png", width = 50, height = 30, units = "cm")
 ```
 
 
@@ -397,8 +404,8 @@ pl_dom1_dom2_offers <-
     ggtitle('DoM(1) vs. DoM(2)') +
     facet_grid(.~factor(receiver_threshold)) + 
     theme(aspect.ratio = dynamics_plot_aspect_ratio) +
-    theme(text=element_text(size=25)) + 
-    # guides(linetype = "none", alpha = "none", fill = "none")
+    theme(text=element_text(size=20)) + 
+    ggtitle('DoM(1) Sender vs. DoM(2)\ngame dynamics') +
   guides(color = "none", shape = "none", fill = "none", linetype="none", alpha = "none")
 pl_dom1_dom2_offers
 ```
@@ -430,7 +437,7 @@ first_task_data$dom_2_receiver_beliefs %>%
     facet_grid(.~sender_threshold) + 
     scale_x_continuous(name="Trial", breaks=c(0,4,8,11)) +
     scale_y_continuous(name = "Posterior P.", breaks = c(0,1)) +
-    ggtitle('Receiver beliefs:\nDoM(2) vs. DoM(-1)') +
+    ggtitle('Receiver beliefs:\nDoM(2) vs. DoM(1)') +
     theme(aspect.ratio = 1) +
     guides(color = "none") + 
   theme(text=element_text(size=20)) + 
@@ -469,16 +476,8 @@ first_task_data$sender_beliefs %>%
 dom_one_beliefs_vs_dom_two
 ```
 
-```{r dom one vs dom two game results, fig.width=15, fig.height=10}
-pl_dom1_dom2_offers / (dom_two_beliefs_vs_dom_one + dom_one_beliefs_vs_dom_two) + 
-  plot_layout(guides = "collect") + 
-  plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold'))
-ggsave("../figures/main_paper/figure_5.png", width = 50, height = 30, units = "cm")
-```
-
-### Relative reward distribution
-
 ```{r relative reward distribution}
+relative_reward_by_dom_levels <- 
 first_task_data$game_results %>% 
   filter(sender_threshold > 0) %>% 
   mutate(dom_difference = abs(as.numeric(receiver_dom_level) - as.numeric(sender_dom_level))) %>% 
@@ -499,15 +498,22 @@ first_task_data$game_results %>%
            stat = "identity") +
   scale_fill_manual(values = custom_colors$sender_tom,
                       name = "Sender\nDoM", labels = c(-1,1)) + 
-  theme(text=element_text(size=30)) + 
-  ggtitle('Total reward ratio: receiver to sender') +
+  theme(text=element_text(size=20)) + 
+  ggtitle('Total reward ratio') +
   xlab("Receiver DoM level")+
   scale_y_continuous(name="Payout Ratio: R/S", 
                      expand = c(0,0),
                      limits = c(-0.4,0.8),
                      breaks = seq(-0.4,0.8,0.2),
                      labels = seq(0.6,1.8,0.2))
-ggsave("../figures/main_paper/figure_6.png", width = 50, height = 30, units = "cm")
+relative_reward_by_dom_levels
+```
+
+```{r dom one vs dom two game results, fig.width=15, fig.height=10}
+(pl_dom1_dom2_offers | dom_two_beliefs_vs_dom_one) / (relative_reward_by_dom_levels | dom_one_beliefs_vs_dom_two) + 
+  plot_layout(guides = "collect") + 
+  plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold'))
+ggsave("../figures/main_paper/figure_4.png", width = 50, height = 30, units = "cm")
 ```
 
 ### DoM(1) deception in action
@@ -591,11 +597,10 @@ dom_zero_random_identification %>%
     scale_x_discrete(name = "Receiver DoM", labels = c(0,2)) +
     ggtitle("Trials until receiver identifies random sender") +
     theme(aspect.ratio = 1, legend.position = c(0.80, 0.8)) +
-    theme(text=element_text(size=25)) + 
+    theme(text=element_text(size=20)) + 
     scale_fill_manual(values = receivers_colours,
                       name = "Receiver\nDoM level", labels = c(0,2))
 time_to_random_sender_identification
-ggsave("../figures/main_paper/figure_7.png", width = 50, height = 30, units = "cm")
 ```
 
 #### Effect on the reward
@@ -664,6 +669,7 @@ first_task_data$game_results %>%
   ggtitle('Total reward ratio: receiver to sender') +
   xlab("Receiver DoM level")+
   guides(color = "none") + 
+  theme(aspect.ratio = 0.9) +
   scale_y_continuous(name="Payout Ratio: R/S", 
                      expand = c(0,0),
                      limits = c(-0.4,0.8),
@@ -711,9 +717,9 @@ first_task_data$dom_2_receiver_beliefs %>%
 dom_two_beliefs_vs_minus_one
 ```
 ```{r dom 2 vs dom m1 total effect, fig.width=15, fig.height=10}
-dom_two_beliefs_vs_minus_one + all_dyads_reward_ratio  + 
+(time_to_random_sender_identification /dom_two_beliefs_vs_minus_one) | (all_dyads_reward_ratio) +
   plot_layout(guides = "collect") + 
   plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold'))
-ggsave("../figures/main_paper/figure_8.png", width = 50, height = 30, units = "cm")
+ggsave("../figures/main_paper/figure_5.png", width = 50, height = 30, units = "cm")
 ```
 
