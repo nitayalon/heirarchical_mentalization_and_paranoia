@@ -9,7 +9,10 @@ general:
   skip_rational: False
   number_of_rational_agents: 2
   sender_thresholds: [0.0,0.1,0.5]
-  receiver_thresholds: [0.0,0.35]
+  receiver_thresholds: [0.0]
+  aleph_ipomdp_awareness: True
+  strong_typicality_delta: 20.0
+  expected_reward_omega: 1.96
   state: debug
   use_memoization: False
 
@@ -26,7 +29,7 @@ environments:
     active_detection_mechanism: False
     subintentional_type: softmax
     subintentional_weight: -0.95
-  x_ipomdp:
+  aleph_ipomdp:
     n_trials: 12
     planning_depth: 12
     uct_exploration_bonus: 5.0

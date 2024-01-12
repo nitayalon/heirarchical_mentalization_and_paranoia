@@ -9,7 +9,6 @@ class AgentFactory:
         self.softmax_temp = float(self.config.softmax_temperature)
         self.exploration_bonus = float(self.config.get_from_env("uct_exploration_bonus"))
         self.subintentional_weight = float(self.config.get_from_env("subintentional_weight"))
-        # self.agent_actions = np.sort(np.r_[np.round(np.arange(0, 1.05, float(self.config.get_from_general("offers_step_size"))), 2),0.05])
         self.agent_actions = np.round(np.arange(0, 1.05, float(self.config.get_from_general("offers_step_size"))), 2)
         self.subject_actions = np.array([True, False])
         self.include_random = bool(self.config.get_from_general("include_random"))
@@ -21,6 +20,9 @@ class AgentFactory:
         self.grid_size = 0
         self.include_subject_threshold = self.config.get_from_env("subintentional_type")
         self.path_to_memoization_data = self.config.path_to_memoization_data
+        self.aleph_ipomdp_delta_parameter = float(self.config.get_from_general("strong_typicality_delta"))
+        self.aleph_ipomdp_omega_parameter = float(self.config.get_from_general("expected_reward_omega"))
+        self.aleph_ipomdp_awareness = bool(self.config.get_from_general("aleph_ipomdp_awareness"))
 
     def create_experiment_grid(self):
         receiver_parameters = self.receiver_theta
@@ -62,7 +64,7 @@ class AgentFactory:
             agent = SubIntentionalReceiver(self.subject_actions, self.softmax_temp)
         return agent
 
-    def dom_zero_constructor(self, agent_role):
+    def dom_zero_constructor(self, agent_role, aleph_ipomdp_activated: bool = True):
         if agent_role == "rational_sender":
             opponent_model = self.dom_minus_one_constructor("rational_receiver")
             opponent_theta_hat_distribution = self._create_prior_distribution(self.sender_theta)
@@ -73,7 +75,10 @@ class AgentFactory:
             opponent_theta_hat_distribution = self._create_prior_distribution(self.sender_theta)
             output_agent = DoMZeroReceiver(self.subject_actions, self.config.softmax_temperature, 0.0,
                                            opponent_theta_hat_distribution, opponent_model, self.config.seed,
-                                           self.task_duration)
+                                           self.task_duration,
+                                           aleph_ipomdp_activated,
+                                           self.aleph_ipomdp_delta_parameter,
+                                           self.aleph_ipomdp_omega_parameter)
         return output_agent
 
     def dom_one_constructor(self, agent_role, nested=False):

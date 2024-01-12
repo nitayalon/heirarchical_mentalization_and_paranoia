@@ -180,12 +180,12 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
     def compute_future_values(self, observation, action, iteration_number, duration):
         current_reward = self.reward_function(action, observation)
         # We can expect to get this reward if the opponent isn't angry with us
-        reward = current_reward * (1 - self.opponent_model.get_mental_state())
+        reward = current_reward * (1 - self.opponent_model.get_aleph_mechanism_status())
         total_reward = reward * max(duration - iteration_number, 1)
         return total_reward
 
     def get_persona(self):
-        return Persona([self.opponent_model.threshold,False], self.opponent_model.get_mental_state())
+        return Persona([self.opponent_model.threshold,False], self.opponent_model.get_aleph_mechanism_status())
 
     def update_parameters(self):
         self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
@@ -276,7 +276,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             counter_offer, observation_probability, q_values, opponent_policy = \
                 self.opponent_model.act(seed, observation, action, iteration_number)
             action_node.add_opponent_response(key, q_values, opponent_policy)
-        mental_model = self.opponent_model.get_mental_state()
+        mental_model = self.opponent_model.get_aleph_mechanism_status()
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
@@ -291,7 +291,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
                                                                                                     observation,
                                                                                                     action,
                                                                                                     iteration_number)
-        mental_model = self.opponent_model.get_mental_state()
+        mental_model = self.opponent_model.get_aleph_mechanism_status()
         reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
         new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
@@ -350,7 +350,7 @@ class DoMOneSender(DoMZeroSender):
         self.name = "DoM(1)_sender"
     
     @staticmethod
-    def get_mental_state():
+    def get_aleph_mechanism_status():
         return False
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):

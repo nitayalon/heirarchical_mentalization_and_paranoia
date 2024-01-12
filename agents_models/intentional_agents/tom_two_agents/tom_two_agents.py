@@ -171,7 +171,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
             counter_offer, observation_probability, q_values, opponent_policy = \
                 self._simulate_opponent_response(seed, observation, action, iteration_number)
             action_node.add_opponent_response(key, q_values, opponent_policy)
-        mental_model = self.opponent_model.get_mental_state()
+        mental_model = self.opponent_model.get_aleph_mechanism_status()
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
@@ -184,7 +184,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
                      iteration_number: int, *args):
         counter_offer, observation_probability, q_values, opponent_policy = \
             self._simulate_opponent_response(seed, observation, action, iteration_number)
-        mental_model = self.opponent_model.get_mental_state()
+        mental_model = self.opponent_model.get_aleph_mechanism_status()
         reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
         new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
@@ -235,7 +235,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         return new_observation, expected_reward, observation_probability
 
     def get_persona(self):
-        return Persona([self.opponent_model.threshold, False], self.opponent_model.get_mental_state())
+        return Persona([self.opponent_model.threshold, False], self.opponent_model.get_aleph_mechanism_status())
 
     def _simulate_opponent_response(self, seed, observation, action, iteration_number):
         # DoM(-1) random sender
@@ -281,7 +281,7 @@ class DoMTwoReceiverExplorationPolicy(DoMZeroExplorationPolicy):
         reward_from_reject = self.exploration_bonus
         return np.array([reward_from_accept, reward_from_reject])
 
-    def compute_final_round_q_values(self, observation: np.float) -> np.array:
+    def compute_final_round_q_values(self, observation: float) -> np.array:
         final_q_values = np.array([self.reward_function(True, observation), 0.0])
         return final_q_values
 
