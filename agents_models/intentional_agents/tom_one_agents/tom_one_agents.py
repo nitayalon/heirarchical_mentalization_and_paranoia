@@ -216,8 +216,8 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         # update distribution
         self.opponent_model.belief.update_distribution(observation, action, iteration_number)
         # update persona
-        if self.opponent_model.solver.x_ipomdp_model:
-            mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
+        if self.opponent_model.solver.aleph_ipomdp_model:
+            mental_model = self.opponent_model.solver.aleph_mechanism.nonrandom_sender_detection(iteration_number,
                                                                                                      self.opponent_model.belief.belief_distribution)
             self.opponent_model.solver.detection_mechanism.mental_state.append(mental_model)
         # sample previous Q-values
@@ -264,8 +264,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.environment_model.opponent_model.history.update_observations(new_observation)
         self.opponent_model.belief.belief_distribution = np.vstack(
             [self.opponent_model.belief.belief_distribution, new_interactive_state.get_nested_belief])
-        self.opponent_model.belief.likelihood = np.c_[self.opponent_model.belief.likelihood,
-                                                      new_interactive_state.get_nested_likelihood]
+        self.opponent_model.belief.likelihood = new_interactive_state.get_nested_likelihood
         return new_observation, expected_reward, observation_probability
 
     def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,
@@ -275,7 +274,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         # o_{t-1}
         observation = history_node.observation
         nested_beliefs = self._represent_nested_beliefs_as_table(interactive_state)
-        key = f'{nested_beliefs}-{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
+        key = f'{nested_beliefs}-{str(interactive_state)}-{observation.value}-{action.value}-{iteration_number}'
         # If we already visited this node
         if key in action_node.opponent_response.keys():
             counter_offer, observation_probability, q_values, opponent_policy = \
