@@ -192,10 +192,15 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.lower_bounds = self.opponent_model.opponent_model.lower_bounds
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
-        nested_beliefs = nested_beliefs[:iteration_number + 1,]
+        nested_beliefs = nested_beliefs[:iteration_number + 1, ]
+        try:
+            nested_likelihood = self.opponent_model.belief.likelihood[:, :iteration_number + 1]
+        except IndexError:
+            nested_likelihood = self.opponent_model.belief.likelihood
         self.opponent_model.threshold = persona.persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
+        self.opponent_model.belief.likelihood = nested_likelihood
         iteration_number = action_length
         if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length - 1]
@@ -228,11 +233,12 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.environment_model.update_parameters()
         return counter_offer, observation_probability, q_values, opponent_policy
 
-    def update_interactive_state(self, interactive_state, mental_model, updated_nested_beliefs, q_values):
+    def update_interactive_state(self, interactive_state, mental_model, updated_nested_beliefs, q_values,
+                                 updated_nested_likelihood=None):
         new_state_name = int(interactive_state.state.name) + 1
         new_state = State(str(new_state_name), new_state_name == 10)
-        new_persona = Persona(interactive_state.persona.persona, q_values)
-        new_interactive_state = InteractiveState(new_state, new_persona, updated_nested_beliefs)
+        new_persona = Persona([interactive_state.persona.persona[0], mental_model], q_values)
+        new_interactive_state = InteractiveState(new_state, new_persona, updated_nested_beliefs, updated_nested_likelihood)
         return new_interactive_state
 
     @staticmethod
@@ -258,6 +264,8 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.environment_model.opponent_model.history.update_observations(new_observation)
         self.opponent_model.belief.belief_distribution = np.vstack(
             [self.opponent_model.belief.belief_distribution, new_interactive_state.get_nested_belief])
+        self.opponent_model.belief.likelihood = np.c_[self.opponent_model.belief.likelihood,
+                                                      new_interactive_state.get_nested_likelihood]
         return new_observation, expected_reward, observation_probability
 
     def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,
@@ -278,11 +286,12 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             action_node.add_opponent_response(key, q_values, opponent_policy)
         mental_model = self.opponent_model.get_aleph_mechanism_status()
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
+        updated_nested_likelihood = self.opponent_model.belief.get_current_likelihood()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
         expected_reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
         new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
-                                                              q_values)
+                                                              q_values, updated_nested_likelihood)
         return new_interactive_state, counter_offer, expected_reward, observation_probability
 
     def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,

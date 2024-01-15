@@ -1,5 +1,9 @@
 import functools
+
+import numpy as np
+
 from agents_models.abstract_agents import *
+import pandas as pd
 
 
 class DomZeroReceiverBelief(DoMZeroBelief):
@@ -12,6 +16,9 @@ class DomZeroReceiverBelief(DoMZeroBelief):
 
     def get_current_belief(self):
         return self.belief_distribution[-1]
+
+    def get_current_likelihood(self):
+        return self.likelihood
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None, nested=False):
         """
@@ -94,12 +101,13 @@ class DoMZeroAlephMechanism:
 
     def delta_strong_typicality(self, trial_number: int, likelihood: np.array) -> np.array:
         observations = [x.value for x in self.history.observations]
-        unique_observations, number_of_appearance = np.unique(observations, return_counts=True)
-        observed_frequency = np.reshape(number_of_appearance / trial_number, (1, len(unique_observations)))
-        adapted_observed_frequency = np.repeat(observed_frequency, number_of_appearance)
+        unique_observations, location, number_of_appearance = np.unique(observations, return_counts=True, return_index=True)
+        observed_frequency = np.reshape(number_of_appearance[np.argsort(location)] / trial_number, (1, len(unique_observations)))
+        adapted_observed_frequency = np.repeat(observed_frequency, number_of_appearance[np.argsort(location)])
         expected_frequency = likelihood[:, 1:(trial_number + 1)]
         distance = np.absolute(adapted_observed_frequency - expected_frequency)
-        typical_set = distance <= self.delta * expected_frequency
+        adapted_delta = np.max([(11 - trial_number) / trial_number, 0.8])
+        typical_set = distance <= adapted_delta * expected_frequency
         return np.all(typical_set, axis=1)
 
     def expected_reward_monitoring(self, trial_number, history, likelihood, utility_function,
@@ -119,7 +127,8 @@ class DoMZeroAlephMechanism:
         sigma_offer = np.sqrt(
             np.diag(np.dot(offer_likelihood, np.power(self.observations[:, np.newaxis] - mean_offer, 2))))
         bounds = np.array([expected_reward - sigma_offer * self.omega, expected_reward + sigma_offer * self.omega])
-        return np.logical_and(expected_observed_reward > bounds[0, :], expected_observed_reward < bounds[1, :])
+        is_observed_reward_in_bounds = np.logical_and(expected_observed_reward > bounds[0, :], expected_observed_reward < bounds[1, :])
+        return is_observed_reward_in_bounds
 
     def compute_z_vector(self, trial_number, observation_likelihood, total_likelihood,
                          history, utility_function, softmax_transformation):

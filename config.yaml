@@ -11,8 +11,8 @@ general:
   sender_thresholds: [0.0,0.1,0.5]
   receiver_thresholds: [0.0]
   aleph_ipomdp_awareness: True
-  strong_typicality_delta: 20.0
-  expected_reward_omega: 1.96
+  strong_typicality_delta: 10.0
+  expected_reward_omega: 1.0
   state: debug
   use_memoization: False
 
