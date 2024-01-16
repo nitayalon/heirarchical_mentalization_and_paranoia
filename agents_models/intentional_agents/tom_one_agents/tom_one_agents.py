@@ -109,6 +109,7 @@ class DoMOneBelief(DoMZeroBelief):
         return dict(zip(keys, values))
 
     def update_distribution_from_particles(self, particles: dict, action, observation, iteration_number):
+        # Sample persona from particles
         persona = [x for x in particles.keys()]
         thresholds = [float(x.split("-")[0]) for x in persona]
         # Validate that we have representation of all the types
@@ -119,17 +120,21 @@ class DoMOneBelief(DoMZeroBelief):
         prior_distribution = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
         _, sorted_likelihood = zip(*sorted(zip(self.support, full_likelihood)))
         posterior_distribution = prior_distribution * sorted_likelihood / np.sum(prior_distribution * sorted_likelihood)
+        # Sample nested beliefs and running likelihood
         nested_beliefs = [x[0].get_nested_belief for x in interactive_states_per_persona]
+        nested_likelihood = [x[0].get_nested_likelihood for x in interactive_states_per_persona]
         # Update beliefs
         self.belief_distribution['zero_order_belief'] = np.vstack(
             [self.belief_distribution['zero_order_belief'], posterior_distribution])
         # Store nested belief
         # Note! since the nested belief is single - we average those
         average_nested_beliefs = np.mean(nested_beliefs, axis=0)
+        average_nested_likelihood = np.mean(nested_likelihood, axis=0)
         self.nested_belief = np.vstack([self.nested_belief, average_nested_beliefs])
         # Update nested model beliefs
         self.opponent_model.belief.belief_distribution = np.vstack(
             [self.opponent_model.belief.belief_distribution, average_nested_beliefs])
+        self.opponent_model.belief.likelihood = average_nested_likelihood
         self.belief_distribution["nested_beliefs"] = np.copy(self.opponent_model.belief.belief_distribution)
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
@@ -215,13 +220,12 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.opponent_model.history.update_actions(action)
         # update distribution
         self.opponent_model.belief.update_distribution(observation, action, iteration_number)
-        # update persona
-        if self.opponent_model.solver.aleph_ipomdp_model:
-            mental_model = self.opponent_model.solver.aleph_mechanism.nonrandom_sender_detection(iteration_number,
-                                                                                                     self.opponent_model.belief.belief_distribution)
-            self.opponent_model.solver.detection_mechanism.mental_state.append(mental_model)
         # sample previous Q-values
         q_values, opponent_policy = action_node.opponent_response[key]
+        # update persona
+        if self.opponent_model.solver.aleph_ipomdp_model:
+            _, _, _ = self.opponent_model.solver.execute_aleph_ipomdp(q_values, iteration_number, None, None)
+            mental_model = self.opponent_model.solver.aleph_mechanism.is_aleph_mechanism_on[-1]
         prng = np.random.default_rng(seed + iteration_number)
         best_action_idx = prng.choice(a=len(q_values), p=opponent_policy)
         counter_offer, observation_probability = Action(self.opponent_model.potential_actions[best_action_idx], False), \
@@ -229,7 +233,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.environment_model.update_persona(action, counter_offer, iteration_number)
         self.opponent_model.history.update_actions(counter_offer)
         self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
-        # In case we're in the XIPOMDP env:
+        # In case we're in the א-IPOMDP env:
         self.opponent_model.environment_model.update_parameters()
         return counter_offer, observation_probability, q_values, opponent_policy
 

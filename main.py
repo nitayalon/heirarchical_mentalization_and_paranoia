@@ -33,7 +33,7 @@ def simulate_iug_task(sender_agent, receiver_agent, senders_threshold, receivers
     print(f'Receiver parameters: gamma = {receiver_agent.threshold}', flush=True)
     experiment_results, q_values, receiver_belief, sender_belief, receiver_mental_state = \
         eat_task_simulator.simulate_task(sender_agent, receiver_agent, receiver_agent.threshold, sender_agent.threshold)
-    if sender_agent.name == "DoM(1)_sender":
+    if sender_agent.name == "DoM(1)_sender" and config.get_from_general("use_memoization"):
         sender_agent.memoization_table.save_data()
     sender_agent.reset(terminal=True)
     receiver_agent.reset(terminal=True)

@@ -213,6 +213,17 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
             self.aleph_mechanism.update_aleph_mechanism(iteration_number, False)
         return actions, mcts_tree, q_values
 
+    def execute_aleph_ipomdp(self, q_values, iteration_number, actions, mcts_tree):
+        softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(
+            q_values[:, 1] / self.softmax_temp).sum()
+        is_aleph_mechanism_triggered = self.aleph_mechanism.aleph_mechanism(iteration_number,
+                                                                            self.belief_distribution,
+                                                                            self.utility_function,
+                                                                            softmax_transformation)
+        actions, mcts_tree, q_values = self.aleph_policy(iteration_number, is_aleph_mechanism_triggered,
+                                                         actions, mcts_tree, q_values)
+        return actions, mcts_tree, q_values
+
     def plan(self, action, observation, iteration_number, update_belief):
         # Update history
         action_length = len(self.belief.history.actions)
@@ -228,17 +239,7 @@ class DoMZeroReceiverSolver(DoMZeroEnvironmentModel):
         actions, mcts_tree, q_values = self.expectimax_planning(observation, action_length, observation_length,
                                                                 iteration_number)
         if self.aleph_ipomdp_model:
-            softmax_transformation = np.exp(q_values[:, 1] / self.softmax_temp) / np.exp(
-                q_values[:, 1] / self.softmax_temp).sum()
-            is_aleph_mechanism_triggered = self.aleph_mechanism.aleph_mechanism(iteration_number,
-                                                                                self.belief_distribution,
-                                                                                self.utility_function,
-                                                                                softmax_transformation)
-            actions, mcts_tree, q_values = self.aleph_policy(iteration_number, is_aleph_mechanism_triggered,
-                                                             actions, mcts_tree, q_values)
-            # If the mismatch mechanism activated:
-            # if is_aleph_mechanism_triggered:
-            #     return actions, mcts_tree, q_values
+            actions, mcts_tree, q_values = self.execute_aleph_ipomdp(q_values, iteration_number, actions, mcts_tree)
         return actions, mcts_tree, q_values
 
     def expectimax_planning(self, observation, action_length, observation_length, iteration_number):
