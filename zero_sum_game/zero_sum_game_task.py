@@ -1,12 +1,9 @@
-import numpy as np
 import pandas as pd
 import argparse
 import itertools
 import os
-from dom_m1_agent import *
-from dom_zero_agent import *
-from dom_one_agent import * 
-from dom_two_agent import * 
+from dom_two_agent import *
+
 
 def simulate_row_column_task(payout_matrix, path_to_data_dir, duration, updated_beliefs, dom_levels, row_player, column_player, seed: int):
     row_player_dom_level = dom_levels[0]
@@ -60,8 +57,9 @@ if __name__ == "__main__":
                         help='save simulation results (default: True)')
     args = parser.parse_args()
     duration = args.duration
-    seed = args.seed           
-    payout_game = game_1 if args.payout_matrix == 'G1' else game_2           
+    seed = args.seed
+    payout_matrix_name = args.payout_matrix
+    payout_game = game_1 if payout_matrix_name == 'G1' else game_2
     initial_beliefs = np.repeat(1/3,3)    
     softmax_temp = args.softmax_temp       
 
@@ -70,13 +68,13 @@ if __name__ == "__main__":
     dom_one_agent = DoMOnePlayer(duration, softmax_temp, 0.99)
     dom_two_agent = DoMTwoPlayer(duration, softmax_temp, 0.99, initial_beliefs)
     agents_dictionary = {"-1": dom_m1_agent, "0": dom_zero_agent, "1": dom_one_agent, "2": dom_two_agent}
-    path_to_data_dir = f"data/{payout_game}"
+    path_to_data_dir = f"data/{payout_matrix_name}"
     os.makedirs(path_to_data_dir, exist_ok=True)        
     agents_list = [["-1","1"],["0","2"]]    
     for dyad in itertools.product(*agents_list):
         row_player = agents_dictionary[dyad[0]]
         column_player = agents_dictionary[dyad[1]]        
-        simulate_row_column_task(path_to_data_dir, duration, initial_beliefs, dyad, row_player, column_player, seed)
+        simulate_row_column_task(payout_game, path_to_data_dir, duration, initial_beliefs, dyad, row_player, column_player, seed)
     
     
          
