@@ -8,7 +8,7 @@ from dom_zero_agent import *
 from dom_one_agent import * 
 from dom_two_agent import * 
 
-def simulate_row_column_task(path_to_data_dir, duration, updated_beliefs, dom_levels, row_player, column_player, seed: int):
+def simulate_row_column_task(payout_matrix, path_to_data_dir, duration, updated_beliefs, dom_levels, row_player, column_player, seed: int):
     row_player_dom_level = dom_levels[0]
     column_player_dom_level = dom_levels[1]
     payoffs = np.array([0,0,0])
@@ -16,11 +16,11 @@ def simulate_row_column_task(path_to_data_dir, duration, updated_beliefs, dom_le
     column_player_beliefs = updated_beliefs
     for i in np.arange(0, duration):                
         column_player_policy = column_player.act(updated_beliefs)
-        row_player_policy = row_player.act(updated_beliefs, game_1, 0)
+        row_player_policy = row_player.act(updated_beliefs, payout_matrix, 0)
         prng = np.random.default_rng(seed)
         column_player_action = prng.choice(a=3, p=column_player_policy)
         row_player_action = prng.choice(a=2, p=row_player_policy)
-        reward = game_1[row_player_action,column_player_action]
+        reward = payout_matrix[row_player_action,column_player_action]
         payoffs = np.vstack([payoffs, np.array([i, reward, -reward])])
         updated_beliefs = column_player.irl(observation=row_player_action,prior=updated_beliefs, iteration=i)
         column_player_beliefs = np.vstack([column_player_beliefs, updated_beliefs])       
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     duration = args.duration
     seed = args.seed           
-    payout_game = args.payout_matrix           
+    payout_game = game_1 if args.payout_matrix == 'G1' else game_2           
     initial_beliefs = np.repeat(1/3,3)    
     softmax_temp = args.softmax_temp       
 
