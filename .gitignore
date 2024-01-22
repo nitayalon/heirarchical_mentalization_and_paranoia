@@ -144,4 +144,6 @@ figures/*
 *.pdf
 *.zip
 *.Rhistory
+zero_sum_game/.vscode/*
+zero_sum_game/data/*
 

@@ -12,11 +12,11 @@ class DoMOnePlayer:
         self.nested_beliefs = []
 
     def dom_1_expected_utility(self, action: int, beliefs:np.array, payout_matrix:np.array):
-        dom_zero_policy = softmax_transformation(self.opponent.dom_0_utility(beliefs))
+        dom_zero_policy = softmax_transformation(self.opponent.act(beliefs))
         expected_reward = np.matmul(payout_matrix[action,],dom_zero_policy)
         return expected_reward
 
-    def dom_1_expectimax(self, prior_beliefs, payout_matrix, iteration):
+    def act(self, prior_beliefs, payout_matrix, iteration):
         q_values_array = np.zeros(2)
         for action in np.array([0,1]):        
             q_values_array[action] = self.recursive_tree_span(action, prior_beliefs, payout_matrix, iteration)        
@@ -25,11 +25,11 @@ class DoMOnePlayer:
 
     def recursive_tree_span(self, action, beliefs, payout_matrix, iteration, depth=12):
         reward = self.dom_1_expected_utility(action, beliefs, payout_matrix)
-        updated_belief = np.round(self.opponent.dom_0_irl(beliefs, action),3)
+        updated_belief = np.round(self.opponent.irl(beliefs, action, iteration),3)
         # halting condition
         if iteration >= depth:
-            self.planning_tree.append(np.array([action, reward, reward, iteration]))
-            self.nested_beliefs.append(np.array([action, iteration, updated_belief[0], updated_belief[1],updated_belief[2]]))
+            # self.planning_tree.append(np.array([action, reward, reward, iteration]))
+            # self.nested_beliefs.append(np.array([action, iteration, updated_belief[0], updated_belief[1],updated_belief[2]]))
             return reward
         actions = np.array([0,1])
         expectimax_tree = functools.partial(self.recursive_tree_span,
@@ -38,6 +38,6 @@ class DoMOnePlayer:
                                             iteration=iteration + 1)
         future_q_values = list(map(expectimax_tree, actions))    
         q_value = reward + self.discount_factor * np.max(future_q_values)
-        self.planning_tree.append(np.array([action, reward, reward, iteration]))
-        self.nested_beliefs.append(np.array([action, iteration, updated_belief[0], updated_belief[1],updated_belief[2]]))        
+        # self.planning_tree.append(np.array([action, reward, reward, iteration]))
+        # self.nested_beliefs.append(np.array([action, iteration, updated_belief[0], updated_belief[1],updated_belief[2]]))        
         return(q_value)   
