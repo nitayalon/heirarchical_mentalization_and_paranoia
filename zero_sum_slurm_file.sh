@@ -30,4 +30,4 @@ SOFTMAX_TEMP=0.1
 DURATION=12
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
-time singularity exec ${CONTAINER_PATH} python zero_sum_game_task.py  --payout_matrix $GAME --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --duration $DURATION
+time singularity exec ${CONTAINER_PATH} python zero_sum_game/zero_sum_game_task.py  --payout_matrix $GAME --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --duration $DURATION

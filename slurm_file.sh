@@ -10,7 +10,7 @@
 # Number of nodes and MPI tasks per node:
 #SBATCH --cpus-per-task=4
 #SBATCH -a 10-999:20%50
-#SBATCH —exclusive=user
+#SBATCH --exclusive=user
 
 
 #SBATCH --mail-type=END,FAIL
