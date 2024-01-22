@@ -41,9 +41,9 @@ def simulate_row_column_task(path_to_data_dir, duration, updated_beliefs, dom_le
     beliefs_df["column_player_dom_level"] = column_player_dom_level
     actions_df["column_player_dom_level"] = column_player_dom_level
     payoff_df["column_player_dom_level"] = column_player_dom_level
-    beliefs_df.to_csv(f"{path_to_data_dir}/beliefs/dom_{row_player_dom_level}_vs_dom_{column_player_dom_level}_zero_sum_game_beliefs_{seed}.csv", index=False)
-    payoff_df.to_csv(f"{path_to_data_dir}/payoffs/dom_{row_player_dom_level}_vs_dom_{column_player_dom_level}_zero_sum_game_beliefs_{seed}.csv", index=False)
-    actions_df.to_csv(f"{path_to_data_dir}/actions/dom_{row_player_dom_level}_vs_dom_{column_player_dom_level}_zero_sum_game_beliefs_{seed}.csv", index=False)    
+    beliefs_df.to_csv(f"{path_to_data_dir}/beliefs/dom_{row_player_dom_level}_vs_dom_{column_player_dom_level}_seed_{seed}.csv", index=False)
+    payoff_df.to_csv(f"{path_to_data_dir}/payoffs/dom_{row_player_dom_level}_vs_dom_{column_player_dom_level}_seed_{seed}.csv", index=False)
+    actions_df.to_csv(f"{path_to_data_dir}/actions/dom_{row_player_dom_level}_vs_dom_{column_player_dom_level}_seed_{seed}.csv", index=False)    
 
 
 if __name__ == "__main__":    
