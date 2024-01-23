@@ -15,11 +15,10 @@ class DoMTwoPlayer:
         if iteration > 0:
             dom_zero_beliefs = self.opponent.opponent.irl(self.nested_nested_beliefs[-1], observation, iteration)
         else:
-            dom_zero_beliefs = self.nested_nested_beliefs[-1]
-        p_0 = np.repeat(1/2, 2)
+            dom_zero_beliefs = self.nested_nested_beliefs[-1]        
         p_1 = self.opponent.act(dom_zero_beliefs, game_1, iteration)
         p_2 = self.opponent.act(dom_zero_beliefs, game_2, iteration)
-        self.opponent_policies = np.array([p_0, p_1, p_2])
+        self.opponent_policies = np.array([p_1, p_2])
         return self.opponent_policies
 
     def irl(self, prior:np.array, observation:int, iteration: int):
