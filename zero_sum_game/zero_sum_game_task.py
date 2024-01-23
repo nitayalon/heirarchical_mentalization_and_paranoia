@@ -15,7 +15,7 @@ def simulate_row_column_task(payout_matrix, path_to_data_dir, duration, updated_
     for i in np.arange(0, duration):                
         column_player_policy = column_player.act(updated_beliefs)
         row_player_policy = row_player.act(updated_beliefs, payout_matrix, 0)
-        prng = np.random.default_rng(seed)
+        prng = np.random.default_rng(seed + i)
         column_player_action = prng.choice(a=3, p=column_player_policy)
         row_player_action = prng.choice(a=2, p=row_player_policy)
         reward = payout_matrix[row_player_action,column_player_action]
@@ -27,9 +27,9 @@ def simulate_row_column_task(payout_matrix, path_to_data_dir, duration, updated_
         os.makedirs(f"{path_to_data_dir}/payoffs/", exist_ok=True)
         os.makedirs(f"{path_to_data_dir}/actions/", exist_ok=True)
         os.makedirs(f"{path_to_data_dir}/beliefs/", exist_ok=True)
-        payoff_df = pd.DataFrame(payoffs, columns=["iteration","row_reward","column_reward"])
-        actions_df = pd.DataFrame(actions, columns=["iteration","row_action","column_action"])
-        beliefs_df = pd.DataFrame(column_player_beliefs, columns=["p_game_1","p_game_2"])
+        payoff_df = pd.DataFrame(payoffs, columns=["iteration", "row_reward", "column_reward"])
+        actions_df = pd.DataFrame(actions, columns=["iteration", "row_action", "column_action"])
+        beliefs_df = pd.DataFrame(column_player_beliefs, columns=["p_uninformed", "p_game_1", "p_game_2"])
         beliefs_df["iteration"] = np.arange(0, duration+1)
         beliefs_df["seed"] = seed
         actions_df["seed"] = seed
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     seed = args.seed
     payout_matrix_name = args.payout_matrix
     payout_game = game_1 if payout_matrix_name == 'G1' else game_2
-    initial_beliefs = np.repeat(1/2,2)    
+    initial_beliefs = np.repeat(1/3, 3)
     softmax_temp = args.softmax_temp
     save_results = args.save_results       
 

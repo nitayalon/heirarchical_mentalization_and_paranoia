@@ -13,7 +13,7 @@ class DoMOnePlayer:
         self.nested_beliefs = []
 
     def dom_1_expected_utility(self, action: int, beliefs: np.array, payout_matrix: np.array):
-        dom_zero_policy = softmax_transformation(self.opponent.act(beliefs))
+        dom_zero_policy = softmax_transformation(self.opponent.act(beliefs), self.softmax_temperature)
         expected_reward = np.matmul(payout_matrix[action,], dom_zero_policy)
         return expected_reward
 
@@ -21,7 +21,7 @@ class DoMOnePlayer:
         q_values_array = np.zeros(2)
         for action in np.array([0, 1]):
             q_values_array[action] = self.recursive_tree_span(action, prior_beliefs, payout_matrix, iteration)
-        policy = softmax_transformation(q_values_array / np.min(q_values_array))
+        policy = softmax_transformation(q_values_array / np.min(q_values_array), self.softmax_temperature)
         return policy
 
     def recursive_tree_span(self, action, beliefs, payout_matrix, iteration, depth=12):

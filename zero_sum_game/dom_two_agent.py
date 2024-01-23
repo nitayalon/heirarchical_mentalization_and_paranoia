@@ -34,4 +34,4 @@ class DoMTwoPlayer:
         u_1 = -1 * np.matmul(belief, self.opponent.opponent.dom_zero_utility_subroutine(0, self.opponent_policies))
         u_2 = -1 * np.matmul(belief, self.opponent.opponent.dom_zero_utility_subroutine(1, self.opponent_policies))
         u_3 = -1 * np.matmul(belief, self.opponent.opponent.dom_zero_utility_subroutine(2, self.opponent_policies))
-        return softmax_transformation(np.array([u_1, u_2, u_3]))
+        return softmax_transformation(np.array([u_1, u_2, u_3]), self.softmax_temperature)

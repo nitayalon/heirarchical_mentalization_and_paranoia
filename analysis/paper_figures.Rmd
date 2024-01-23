@@ -1079,4 +1079,101 @@ all_agents_population %>%
 
 
 ```
+# Zero sum game results
 
+```{r load results}
+
+results_path = "~/Max_Planck/Hierarchical-modelling/zero_sum_game/data/G_1/"
+
+game_results_path <- paste0(results_path,"actions", sep="/")
+temp = list.files(path=game_results_path, pattern="*.csv")
+myfiles = lapply(paste(game_results_path, temp, sep="/"), read.csv)
+game_results <- bind_rows(myfiles)
+
+belief_path <- paste0(results_path,"beliefs", sep="/")
+temp = list.files(path=belief_path, pattern="*.csv")
+myfiles = lapply(paste(belief_path, temp, sep="/"), read.csv)
+beliefs <- bind_rows(myfiles)
+
+payoff_path <- paste0(results_path,"payoffs", sep="/")
+temp = list.files(path=payoff_path, pattern="*.csv")
+myfiles = lapply(paste(payoff_path, temp, sep="/"), read.csv)
+payoffs <- bind_rows(myfiles)
+
+zero_sum_plot_font = 35
+```
+
+
+```{r plot misplaced beliefs,fig.width=10, fig.height=5}
+zero_sum_game_beliefs <- 
+  beliefs %>% 
+  mutate(row_player_dom_level = factor(row_player_dom_level),
+         column_player_dom_level = factor(column_player_dom_level)) %>% 
+  group_by(iteration, row_player_dom_level, column_player_dom_level) %>% 
+  summarise(
+    `P(random)` = mean(`p_random`),
+    `P(theta_1)` = mean(`p_game_1`),
+    `P(theta_2)` = mean(`p_game_2`)
+  ) %>% 
+  ggplot() +
+    geom_line(aes(x = iteration, y = `P(random)`, colour='`P(random)`'), size=belief_line_width, alpha=0.6) + 
+    geom_line(aes(x = iteration, y = `P(theta_1)`, colour='`P(theta_1)`'), size=belief_line_width, alpha=0.9) + 
+    geom_line(aes(x = iteration, y = `P(theta_2)`, colour='`P(theta_2)`'), size=belief_line_width, alpha=0.6) + 
+    scale_color_manual(
+      values = senders_colours,
+      name = expression(paste('Row player type')),
+      labels = c("random", "Game 1", "Game 2")) +
+    scale_x_continuous(name="Trial", breaks=c(0,4,8,11)) +
+    scale_y_continuous(name = "Posterior P.", breaks = c(0,1)) +
+    ggtitle('Column palyer beliefs') +
+    theme(aspect.ratio = 0.9) +
+  theme(text=element_text(size=zero_sum_plot_font)) + 
+  facet_grid(row_player_dom_level~column_player_dom_level)
+
+# ggsave("../figures/main_paper/figure_5_b.png", width = 50, height = 30, units = "cm")
+
+```
+```{r plot reward gap, fig.width=10, fig.height=5}
+
+all_dyads_reward_ratio <- 
+payoffs %>% 
+  mutate(dom_difference = abs(row_player_dom_level - column_player_dom_level),
+         row_player_dom_level = factor(row_player_dom_level),
+         column_player_dom_level = factor(column_player_dom_level)) %>% 
+  group_by(dom_difference, row_player_dom_level, column_player_dom_level, seed) %>% 
+  summarise(total_row_player_reward = sum(row_reward),
+            total_column_player_reward = sum(column_reward)) %>% 
+  group_by(dom_difference, column_player_dom_level, row_player_dom_level) %>% 
+  summarise(average_row_player_reward = mean(total_row_player_reward) / 12,
+            average_column_player_reward = mean(total_column_player_reward)/ 12) %>% 
+  mutate(reward_ratio = (average_row_player_reward - average_column_player_reward))
+
+all_dyads_reward_ratio_plot <- 
+all_dyads_reward_ratio %>% 
+  ggplot(aes(column_player_dom_level, y = reward_ratio, fill = row_player_dom_level,
+             colour = factor(dom_difference))) + 
+  geom_col(position = position_dodge2(0.9,preserve = 'single'),
+           stat = "identity", size = 1.5) +
+  scale_fill_manual(values = custom_colors$sender_tom,
+                      name = "Row player\nDoM", labels = c(-1,1)) + 
+  scale_color_manual(values = c("white","black"),
+                      name = "DoM difference", labels = c(1,2)) + 
+  scale_alpha_manual(values = c("1"=0.3, "3"=1), guide='none')+
+  theme(text=element_text(size=zero_sum_plot_font)) + 
+  ggtitle('Average reward diff') +
+  xlab("Column player DoM level")+
+  guides(color = "none") + 
+  theme(aspect.ratio = 0.9) +
+  scale_y_continuous(name="Avg reward diff: R-C", 
+                     expand = c(0,0),
+                     limits = c(-4.0,8.0),
+                     breaks = seq(-4.5,8.5,1.5))
+all_dyads_reward_ratio_plot
+```
+
+```{r dom 2 vs dom m1 total effect in zero sum games, fig.width=25, fig.height=10}
+zero_sum_game_beliefs | all_dyads_reward_ratio_plot + 
+  plot_layout(guides = "collect") + 
+  plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(face = 'bold'))
+# ggsave("../figures/main_paper/figure_5.png", width = 50, height = 30, units = "cm")
+```

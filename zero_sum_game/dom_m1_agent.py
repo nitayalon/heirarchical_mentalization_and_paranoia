@@ -23,7 +23,7 @@ class RandomPlayer:
         return softmax_transformation(q_values, self.softmax_temperature)
 
 
-def softmax_transformation(q_values: np.array, temperature=0.01) -> np.array:
+def softmax_transformation(q_values: np.array, temperature: float) -> np.array:
     softmax_transformation = np.exp(q_values / temperature)
     return softmax_transformation / np.sum(softmax_transformation)
 
