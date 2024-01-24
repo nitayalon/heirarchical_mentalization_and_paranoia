@@ -6,6 +6,9 @@ class DoMZeroPlayer:
         self.game_duration = game_duration
         self.softmax_temperature = softmax_temperature
         self.discount_factor = discount_factor
+        self.actions = []
+        self.beliefs = []
+        self.dom_level = 0
 
     def irl(self, prior: np.array, observation: int, iteration: int) -> np.array:
         p_0 = 1/2

@@ -5,22 +5,29 @@ from typing import Optional
 class DoMTwoPlayer:
 
     def __init__(self, game_duration: int, softmax_temperature: float, discount_factor: float,
-                 prior_zero_beliefs: np.array) -> None:
+                 prior_zero_beliefs: np.array, aleph_ipomdp: bool, delta: float) -> None:
         self.game_duration = game_duration
         self.softmax_temperature = softmax_temperature
         self.discount_factor = discount_factor
-        self.opponent = DoMOnePlayer(game_duration, softmax_temperature, discount_factor)
+        self.aleph_ipomdp = aleph_ipomdp
+        self.opponent = DoMOnePlayer(game_duration, softmax_temperature, discount_factor, aleph_ipomdp, delta)
+        self.beliefs = [prior_zero_beliefs]
         self.nested_nested_beliefs = [prior_zero_beliefs]
+        self.actions = self.opponent.observations = []
         self.opponent_policies = self.opponent_policy_helper_method(0, None)
+        self.dom_level = 2
 
     def opponent_policy_helper_method(self, iteration, observation: Optional[int] = None):
         if iteration > 0:
             dom_zero_beliefs = self.opponent.opponent.irl(self.nested_nested_beliefs[-1], observation, iteration)
+            self.nested_nested_beliefs.append(dom_zero_beliefs)
+            self.opponent.nested_beliefs = self.nested_nested_beliefs
         else:
             dom_zero_beliefs = self.nested_nested_beliefs[-1]
-        p_1 = self.opponent.act(dom_zero_beliefs, game_1, iteration)
-        p_2 = self.opponent.act(dom_zero_beliefs, game_2, iteration)
-        self.opponent_policies = np.array([p_1, p_2])
+        uninformed_payoff = np.array([1/2, 1/2])
+        p_1 = self.opponent.act(dom_zero_beliefs, game_1, iteration, False)
+        p_2 = self.opponent.act(dom_zero_beliefs, game_2, iteration, False, False)
+        self.opponent_policies = np.array([uninformed_payoff, p_1, p_2])
         return self.opponent_policies
 
     def irl(self, prior: np.array, observation: int, iteration: int):
