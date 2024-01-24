@@ -106,7 +106,7 @@ class DoMZeroAlephMechanism:
         adapted_observed_frequency = np.repeat(observed_frequency, number_of_appearance[np.argsort(location)])
         expected_frequency = likelihood[:, 1:(trial_number + 1)]
         distance = np.absolute(adapted_observed_frequency - expected_frequency)
-        adapted_delta = np.max([(12 - trial_number) / trial_number, 0.8])
+        adapted_delta = np.max([(self.duration - trial_number) / trial_number, self.delta])
         typical_set = distance <= adapted_delta * expected_frequency
         return np.all(typical_set, axis=1)
 

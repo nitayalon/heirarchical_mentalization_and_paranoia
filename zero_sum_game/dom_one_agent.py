@@ -4,13 +4,34 @@ import functools
 
 class DoMOnePlayer:
 
-    def __init__(self, game_duration: int, softmax_temperature: float, discount_factor: float) -> None:
+    def __init__(self, game_duration: int, softmax_temperature: float, discount_factor: float,
+                 aleph_ipomdp=False, delta=0.8) -> None:
         self.game_duration = game_duration
         self.softmax_temperature = softmax_temperature
         self.discount_factor = discount_factor
         self.opponent = DoMZeroPlayer(game_duration, softmax_temperature, discount_factor)
+        self.aleph_ipomdp = aleph_ipomdp
+        self.delta = delta
+        self.observations = []
+        self.likelihood = []
         self.planning_tree = []
         self.nested_beliefs = []
+
+    def aleph_mechanism(self, iteration, beliefs):
+        expected_dom_zero_policy = softmax_transformation(self.opponent.act(beliefs), self.softmax_temperature)
+        self.likelihood.append(expected_dom_zero_policy[self.observations[iteration]])
+        observations = [x.value for x in self.observations]
+        unique_observations, location, number_of_appearance = np.unique(observations, return_counts=True,
+                                                                        return_index=True)
+        observed_frequency = np.reshape(number_of_appearance[np.argsort(location)] / iteration,
+                                        (1, len(unique_observations)))
+        adapted_observed_frequency = np.repeat(observed_frequency, number_of_appearance[np.argsort(location)])
+        expected_frequency = self.likelihood[:, 1:(iteration + 1)]
+        distance = np.absolute(adapted_observed_frequency - expected_frequency)
+        adapted_delta = np.max([(self.game_duration - iteration) / iteration, self.delta])
+        typical_set = distance <= adapted_delta * expected_frequency
+        return np.all(typical_set, axis=1)
+
 
     def dom_1_expected_utility(self, action: int, beliefs: np.array, payout_matrix: np.array):
         dom_zero_policy = softmax_transformation(self.opponent.act(beliefs), self.softmax_temperature)

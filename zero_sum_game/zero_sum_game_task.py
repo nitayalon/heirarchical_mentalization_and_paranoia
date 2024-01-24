@@ -14,13 +14,13 @@ def simulate_row_column_task(payout_matrix, path_to_data_dir, duration, updated_
     column_player_beliefs = updated_beliefs
     for i in np.arange(0, duration):                
         column_player_policy = column_player.act(updated_beliefs)
-        row_player_policy = row_player.act(updated_beliefs, payout_matrix, 0)
+        row_player_policy = row_player.act(updated_beliefs, payout_matrix, i)
         prng = np.random.default_rng(seed + i)
         column_player_action = prng.choice(a=3, p=column_player_policy)
         row_player_action = prng.choice(a=2, p=row_player_policy)
         reward = payout_matrix[row_player_action,column_player_action]
         payoffs = np.vstack([payoffs, np.array([i, reward, -reward])])
-        updated_beliefs = column_player.irl(observation=row_player_action,prior=updated_beliefs, iteration=i)
+        updated_beliefs = column_player.irl(observation=row_player_action, prior=updated_beliefs, iteration=i)
         column_player_beliefs = np.vstack([column_player_beliefs, updated_beliefs])       
         actions = np.vstack([actions, np.array([i, column_player_action, row_player_action])])   
     if save_results == "True":
