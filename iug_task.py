@@ -32,6 +32,7 @@ class EAT:
                                                        receiver_threshold, agent_threshold, recursion_depth - 1)
             nested_beliefs[level] = belief_df
         unified_df = nested_beliefs['zero_order_belief'].merge(nested_beliefs['nested_beliefs'])
+        assert unified_df.shape[0] == self.n_trails
         return unified_df
 
     def export_type_beliefs(self, beliefs: Optional[np.array], columns_prefix: str,
@@ -95,8 +96,8 @@ class EAT:
             sender_belief = self.export_type_beliefs(sender.belief.belief_distribution, "p(-1)",
                                                      sender.belief.support,
                                                      sender.name, receiver_threshold, sender_threshold)
-        if self.config.env == "x_ipomdp":
-            receiver_mental_state = pd.DataFrame(receiver.get_mental_state(True), columns=['mental_state'])
+        if self.config.env == "aleph_ipomdp":
+            receiver_mental_state = pd.DataFrame(receiver.get_aleph_mechanism_status(True), columns=['mental_state'])
             receiver_mental_state['trial_number'] = np.arange(0, receiver_mental_state.shape[0], 1)
             receiver_mental_state['seed'] = self.seed
             receiver_mental_state['sender_threshold'] = sender.threshold

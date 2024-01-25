@@ -33,7 +33,7 @@ def simulate_iug_task(sender_agent, receiver_agent, senders_threshold, receivers
     print(f'Receiver parameters: gamma = {receiver_agent.threshold}', flush=True)
     experiment_results, q_values, receiver_belief, sender_belief, receiver_mental_state = \
         eat_task_simulator.simulate_task(sender_agent, receiver_agent, receiver_agent.threshold, sender_agent.threshold)
-    if sender_agent.name == "DoM(1)_sender":
+    if sender_agent.name == "DoM(1)_sender" and config.get_from_general("use_memoization"):
         sender_agent.memoization_table.save_data()
     sender_agent.reset(terminal=True)
     receiver_agent.reset(terminal=True)
@@ -60,9 +60,9 @@ if __name__ == "__main__":
     parser.add_argument('--softmax_temp', type=float, default='0.05', metavar='N',
                         help='set softmax temp (default: 0.05)')
     parser.add_argument('--senders_threshold', type=float, default='0.0', metavar='N',
-                        help='set softmax temp (default: 0.0)')
+                        help='set senders threshold (default: 0.0)')
     parser.add_argument('--receivers_threshold', type=float, default='0.0', metavar='N',
-                        help='set softmax temp (default: 0.0)')
+                        help='set receivers threshold (default: 0.0)')
     parser.add_argument('--save_results', type=str, default='True', metavar='N',
                         help='save simulation results (default: True)')
     args = parser.parse_args()

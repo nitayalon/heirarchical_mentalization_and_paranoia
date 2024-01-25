@@ -1,0 +1,484 @@
+---
+title: "First task analysis"
+author: "Nitay Alon"
+date: "2023-02-28"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+library(colorspace)
+library(caret)
+library(patchwork)
+library(plotly)
+library(ks)
+library(ggpubr)
+library(rstatix)
+library(corrr)
+library(emmeans)
+library(effsize)
+library(ARTool)
+library(car)        
+library(forcats) 
+library(RColorBrewer)
+library(wesanderson)
+library(grDevices)
+source("load_simulations_data.R")
+```
+
+```{r Plotting settings for aliasing on windows, include=FALSE}
+# Plotting settings for aliasing on windows
+# Enable anti-aliasing on Windows
+if(Sys.info()['sysname'] == "Windows"){
+  
+  trace(grDevices::png, quote({
+    if (missing(type) && missing(antialias)) {
+      type <- "cairo-png"
+      antialias <- "subpixel"
+    }
+  }), print = FALSE)
+  
+  
+  # Enable anti-aliasing on Windows
+  trace(grDevices:::png, quote({
+    if (missing(type) && missing(antialias)) {
+      type <- "cairo-png"
+      antialias <- "subpixel"
+    }
+  }), print = FALSE)
+  
+  
+}
+
+# Define general plot style and style
+base_size = 15
+theme_set(theme_classic(base_size = base_size))
+
+parse_experiment_file <- function(file_name)
+{
+  parameters_list <- strsplit(file_name, "_")[[1]]
+  alpha = parameters_list[4]
+  receiver_threshold = parameters_list[7]
+  sender_threshold = parameters_list[10]
+  return(c(alpha, receiver_threshold, sender_threshold))
+}
+```
+
+```{r set experiment path, include=FALSE}
+results_path = "~/Max_Planck/Hierarchical-modelling/data"
+dom_levels = list(
+               c("0","-1"),
+               c("0","1"))
+agents_beliefs <- c("receiver_beliefs", "sender_beliefs")
+nested_beliefs <- c("type_belief", "nested_beliefs")
+directory_pattern <- "DoM%s_receiver_DoM%s_sender_softmax_temp_0.01"
+path_to_game_results <- paste0(results_path, directory_pattern)
+```
+
+```{r load data, include=FALSE}
+first_task_data <- load_simulations_results(results_path, "first_task", "first_task/2_rational_agents/short_duration/new/", directory_pattern, dom_levels)
+```
+
+
+## Cumulative reward by DoM level
+
+```{r data for cumulative reward plots,  include=FALSE}
+cumulative_reward_results <- 
+  first_task_data$game_results %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, seed) %>% 
+  summarise(total_receiver_reward = sum(receiver_reward),
+            total_sender_reward = sum(sender_reward)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold) %>% 
+  summarise(total_receiver_reward = mean(total_receiver_reward),
+            total_sender_reward = mean(total_sender_reward))
+  
+```
+
+
+```{r set colour pallate ,include=FALSE}
+custom_colors <- list(
+  sender_tom = brewer.pal(5, "Greens")[c(1,3,5)],
+  receiver_tom = brewer.pal(5, "Blues")[c(3,5)]
+)
+labels <- levels(cumulative_reward_results$sender_threshold)
+```
+
+
+```{r cumulative reward by experiment setting ,include=FALSE}
+sender_reward_plot <- 
+  cumulative_reward_results %>% 
+  ggplot(aes(receiver_threshold, total_sender_reward, fill = sender_threshold)) + 
+  geom_col(position = "dodge2") + 
+  facet_grid(.~sender_dom_level) + 
+  ylab("Cumulative sender reward") + 
+  xlab(expression(paste("Receiver's ",theta))) + 
+  scale_y_continuous(
+      expand = c(0,0),
+      name = "Total sender reward",
+      limits = c(0,12),
+      breaks = seq(0,12,1)
+    ) +
+  scale_fill_manual(values = brewer.pal(5, "Blues")[c(3,5,7,9)],
+                      expression(paste("Sender's ",theta)), labels = labels) + 
+   facet_grid(.~sender_dom_level) + 
+  theme(axis.text = element_text(size = 20))
+
+receiver_reward_plot <-
+  cumulative_reward_results %>% 
+  ggplot(aes(receiver_threshold, total_receiver_reward, fill = sender_threshold)) + 
+  geom_col(position = "dodge2") + 
+  ylab("Cumulative receiver reward") + 
+  xlab(expression(paste("Receiver's ",theta))) + 
+  scale_fill_manual(values = brewer.pal(5, "Blues")[c(3,5,7,9)],
+                      name = expression(paste("Sender's ",theta)), labels = labels)+ 
+  scale_y_continuous(
+      expand = c(0,0),
+      name = "Total receiver reward",
+      limits = c(0,12),
+      breaks = seq(0,12,1)
+    ) +
+  facet_grid(.~sender_dom_level)  + 
+  theme(axis.text = element_text(size = 20))
+
+cumulative_reward <- sender_reward_plot + receiver_reward_plot
+cumulative_reward
+# ggsave("../figures/cumulative_reward_by_agent.png", width = 40, height = 20, units = "cm")
+```
+
+```{r cumulative reward, fig.height=10, fig.width=10}
+cumulative_reward <- sender_reward_plot + receiver_reward_plot
+cumulative_reward
+```   
+
+
+# Typical policy
+
+```{r typical sender behaviour, include=FALSE}
+typical_offer_sequence <- 
+  first_task_data$game_results %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(average_offer = mean(offer),
+            sd_offer = sd(offer),
+            low_offer = min(offer),
+            high_offer = max(offer))
+
+typical_response_sequence <- 
+  first_task_data$game_results %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(average_response = mean(response),
+            sd_response = sd(response),
+            low_response = min(response),
+            high_response = max(response))
+```
+
+## Sender average policy by game setting
+
+```{r}
+typical_offer_sequence %>% 
+  filter(sender_threshold != "Random") %>% 
+  ggplot(aes(x= trial_number, y = average_offer, color = sender_threshold, fill=sender_threshold)) + 
+  geom_line(size = 2.5) + 
+  geom_ribbon(aes(ymin=average_offer-sd_offer, ymax=average_offer+sd_offer), linetype=2, alpha=0.1) + 
+  scale_color_manual(name = expression(paste("Sender ",theta)), values=wes_palette(n=4, name="Darjeeling1")) + 
+  scale_fill_manual(name = expression(paste("Sender ",theta)), values=wes_palette(n=4, name="Darjeeling1")) + 
+  facet_grid(sender_dom_level~receiver_threshold) + 
+  ylab(expression(paste("P(",theta,")"))) + 
+  xlab("Trial")
+```
+
+## Receiver average response by game setting
+
+
+```{r}
+typical_response_sequence %>% 
+  filter(sender_threshold != "Random") %>% 
+  ggplot(aes(x= trial_number, y = average_response, color = sender_threshold, fill=sender_threshold)) + 
+  geom_line(size = 2.5) + 
+  geom_ribbon(aes(ymin=pmax(average_response-sd_response,0), 
+                  ymax=pmin(average_response+sd_response,1)), linetype=2, alpha=0.1) + 
+  scale_color_manual(name = expression(paste("Sender ",theta)), values=wes_palette(n=4, name="Darjeeling1")) + 
+  scale_fill_manual(name = expression(paste("Sender ",theta)), values=wes_palette(n=4, name="Darjeeling1")) + 
+  facet_grid(sender_dom_level~receiver_threshold) + 
+  scale_y_continuous(name="P(Accept)", breaks=seq(0, 1.0, 0.2), limits=c(0,1.0)) +
+  xlab("Trial")
+```
+
+# IRL verification
+
+```{r IRL verification, include=FALSE}
+average_beliefs <- 
+  first_task_data$receiver_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = mean(p_0_0),
+            p_low = mean(p_0_1),
+            p_high = mean(p_0_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Average")
+
+sd_beliefs <- 
+  first_task_data$receiver_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = sd(p_0_0),
+            p_low = sd(p_0_1),
+            p_high = sd(p_0_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "SD")
+
+min_beliefs <- 
+  first_task_data$receiver_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = min(p_0_0),
+            p_low = min(p_0_1),
+            p_high = min(p_0_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Min")
+
+max_beliefs <- 
+  first_task_data$receiver_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_random = max(p_0_0),
+            p_low = max(p_0_1),
+            p_high = max(p_0_2)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Max")
+
+agregated_beliefs <- 
+  average_beliefs %>% 
+  inner_join(sd_beliefs) %>% 
+  inner_join(min_beliefs) %>% 
+  inner_join(max_beliefs)
+```
+
+```{r, include=FALSE}
+corretct_beliefs <- 
+  agregated_beliefs %>% 
+  filter(sender_dom_level == "-1") %>% 
+  ggplot(aes(x= trial_number, y = Average, color = Type, fill=Type)) + 
+  geom_line(size = 2.5) + 
+  geom_ribbon(aes(ymin=Min, ymax=Max), linetype=2, alpha=0.1) + 
+  scale_color_manual(name = expression(paste("P(",theta,")")), values=wes_palette(n=4, name="Darjeeling1")) + 
+  scale_fill_manual(name = expression(paste("P(",theta,")")), values=wes_palette(n=4, name="Darjeeling1")) + 
+  facet_grid(vars(sender_threshold), vars(receiver_threshold)) + 
+  theme(axis.text = element_text(size = 20)) + 
+  ylab(expression(paste("P(",theta,")"))) + 
+  xlab("Trial")
+
+miscallibrated_beliefs <- 
+  agregated_beliefs %>% 
+  filter(sender_dom_level == "1") %>% 
+  ggplot(aes(x= trial_number, y = Average, color = Type, fill=Type)) + 
+  geom_line(size = 2.5) + 
+  geom_ribbon(aes(ymin=Min, ymax=Max), linetype=2, alpha=0.1) + 
+  scale_color_manual(name = expression(paste("P(",theta,")")), values=wes_palette(n=4, name="Darjeeling1")) + 
+  scale_fill_manual(name = expression(paste("P(",theta,")")), values=wes_palette(n=4, name="Darjeeling1")) + 
+  facet_grid(vars(sender_threshold), vars(receiver_threshold)) + 
+  theme(axis.text = element_text(size = 20)) + 
+  ylab(expression(paste("P(",theta,")"))) + 
+  xlab("Trial")
+```
+
+### DoM$(0)$ beliefs
+Left - against DoM$(-1)$, right - against DoM$(1)$
+
+```{r plot dom(0) irl, fig.height=10, fig.width=15}
+dom_0_beliefs <- corretct_beliefs + miscallibrated_beliefs
+dom_0_beliefs
+```
+
+```{r dom one IRL verification, include=FALSE}
+average_beliefs <- 
+  first_task_data$sender_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_low = mean(p_1_0),
+            p_high = mean(p_1_1)) %>% 
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Average")
+
+sd_beliefs <- 
+  first_task_data$sender_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_low = sd(p_1_0),
+            p_high = sd(p_1_1)) %>%  
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "SD")
+
+min_beliefs <- 
+  first_task_data$sender_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_low = min(p_1_0),
+            p_high = min(p_1_1)) %>%  
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Min")
+
+max_beliefs <- 
+  first_task_data$sender_beliefs %>% 
+  mutate(sender_threshold = ifelse(sender_threshold > 0, sender_threshold, "Random")) %>% 
+  mutate(sender_dom_level = factor(sender_dom_level),
+         sender_threshold = factor(sender_threshold),
+         receiver_dom_level = factor(receiver_dom_level),
+         receiver_threshold = factor(receiver_threshold)) %>% 
+  group_by(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number) %>% 
+  summarise(p_low = max(p_1_0),
+            p_high = max(p_1_1)) %>%  
+  pivot_longer(col=!c(sender_dom_level, receiver_dom_level,  receiver_threshold, sender_threshold, trial_number),
+               names_to="Type", values_to = "Max")
+
+agregated_beliefs <- 
+  average_beliefs %>% 
+  inner_join(sd_beliefs) %>% 
+  inner_join(min_beliefs) %>% 
+  inner_join(max_beliefs)
+```
+
+### DoM$(1)$ zero-order beliefs
+
+```{r dom one irl, fig.height=10, fig.width=15}
+corretct_beliefs <- 
+  agregated_beliefs %>% 
+  ggplot(aes(x= trial_number, y = Average, color = Type, fill=Type)) + 
+  geom_line(size = 2.5) + 
+  geom_ribbon(aes(ymin=Min, ymax=Max), linetype=2, alpha=0.1) + 
+  scale_color_manual(name = expression(paste("P(",theta,")")), values=wes_palette(n=4, name="Darjeeling1")) + 
+  scale_fill_manual(name = expression(paste("P(",theta,")")), values=wes_palette(n=4, name="Darjeeling1")) + 
+  facet_grid(vars(sender_threshold), vars(receiver_threshold)) + 
+  theme(axis.text = element_text(size = 20)) +
+  ylab(expression(paste("P(",theta,")"))) + 
+  xlab("Trial")
+
+corretct_beliefs
+```
+
+```{r plot games for illustration , fig.height=10, fig.width=15}
+sid = 160
+sender_dom_level_for_plot = 1
+receiver_dom_level_for_plot = 0
+
+game_plot <- 
+  first_task_data$game_results %>% 
+  filter(receiver_dom_level == receiver_dom_level_for_plot,
+         sender_dom_level == sender_dom_level_for_plot,
+         sender_threshold == 0.5,
+         receiver_threshold == 0.0,
+         seed == sid) %>% 
+  mutate(sender_threshold = factor(sender_threshold),
+         # response = factor(response, labels = c('reject','accept'))) %>%
+         response = factor(response, labels = c('accept'))) %>%
+  mutate(sender_threshold = factor(sender_threshold)) %>% 
+  ggplot(aes(x = trial_number, y = offer)) + 
+  geom_point(aes(shape = factor(response)), size = 1.5) + 
+  geom_line(aes(colour = sender_threshold), alpha=0.5, size = 1.5) + 
+  scale_color_viridis_d(name = expression(paste('Sender threshold')))+
+  scale_shape_manual(values=c(4, 15)) +
+  # scale_shape_manual(values=c(15, 4)) +
+  scale_x_continuous(name="Trial", breaks=seq(0, 20, 1)) +
+  labs(y = 'Offer', x= 'Trial', shape = "Receiver's response") + 
+   ggtitle('Game results')
+
+sender_belief_plot <- 
+  first_task_data$sender_beliefs %>%
+    filter(receiver_dom_level == receiver_dom_level_for_plot,
+         sender_dom_level == sender_dom_level_for_plot,
+         sender_threshold == 0.5,
+         receiver_threshold == 0.0,
+         seed == sid) %>%
+    mutate(`P(0.0)` = `p_1_0`,
+         `P(0.35)` = `p_1_1`) %>%
+  ggplot() +
+  geom_line(aes(x = trial_number, y = `P(0.0)`, colour='`P(0.0)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) +
+  geom_line(aes(x = trial_number, y = `P(0.35)`, colour='`P(0.35)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) +
+  scale_linetype_manual(values=c("solid", "dotted", "solid"))+
+  scale_color_manual(name = expression(paste("P(",theta,")")), values=wes_palette(n=4, name="Darjeeling1")) + 
+  facet_grid(receiver_threshold~sender_threshold) +
+  scale_x_continuous(name="Trial", breaks=seq(0, 20, 1)) +
+  labs(y = 'Posterior probability', x= 'Trial') +
+  ggtitle('Belief update')
+
+
+receiver_belief_plot <- 
+  first_task_data$receiver_beliefs %>%
+    filter(receiver_dom_level == receiver_dom_level_for_plot,
+         sender_dom_level == sender_dom_level_for_plot,
+         sender_threshold == 0.5,
+         receiver_threshold == 0.0,
+         seed == sid) %>%
+    mutate(`P(0.0)` = `p_0_0`,
+         `P(0.1)` = `p_0_1`,
+         `P(0.5)` = `p_0_2`) %>%
+  ggplot() +
+  geom_line(aes(x = trial_number, y = `P(0.0)`, colour='`P(0.0)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) +
+  geom_line(aes(x = trial_number, y = `P(0.1)`, colour='`P(0.1)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) +
+  geom_line(aes(x = trial_number, y = `P(0.5)`, colour='`P(0.5)`',
+                linetype = factor(sender_dom_level)),
+            size=1.0) +
+  scale_linetype_manual(values=c("solid", "dotted", "solid"))+
+  scale_color_manual(name = expression(paste("P(",theta,")")), values=wes_palette(n=4, name="Darjeeling1")) + 
+  facet_grid(receiver_threshold~sender_threshold) +
+  scale_x_continuous(name="Trial", breaks=seq(0, 20, 1)) +
+  labs(y = 'Posterior probability', x= 'Trial') +
+  ggtitle('Belief update')
+
+game_all = game_plot / (sender_belief_plot + receiver_belief_plot)
+game_all
+# ggsave(sprintf("../figures/simulation_illustration_sender_dom_level_%s_receiver_dom_level_%s.png", sen
+```
+

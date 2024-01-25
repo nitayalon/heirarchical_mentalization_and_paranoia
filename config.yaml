@@ -2,22 +2,25 @@ general:
   fee_discount: 0.99
   offers_step_size: 0.1
   results_folder: "data/"
-  report_ipocmp_statistics: False
+  report_ipomcp_statistics: False
   output_planning_tree: False
   include_random: True
-  skip_random: True
+  skip_random: False
   skip_rational: False
   number_of_rational_agents: 2
   sender_thresholds: [0.0,0.1,0.5]
-  receiver_thresholds: [0.0,0.35]
+  receiver_thresholds: [0.0]
+  aleph_ipomdp_awareness: True
+  strong_typicality_delta: 10.0
+  expected_reward_omega: 1.5
   state: debug
-  use_memoization: True
+  use_memoization: False
 
 environments:
   first_task:
     n_trials: 12
     planning_depth: 12
-    uct_exploration_bonus: 5.0
+    uct_exploration_bonus: 6.0
     rollout_rejecting_bonus: 0.5
     mcts_number_of_iterations: 25000
     discount_factor: 0.99
@@ -26,7 +29,7 @@ environments:
     active_detection_mechanism: False
     subintentional_type: softmax
     subintentional_weight: -0.95
-  x_ipomdp:
+  aleph_ipomdp:
     n_trials: 12
     planning_depth: 12
     uct_exploration_bonus: 5.0

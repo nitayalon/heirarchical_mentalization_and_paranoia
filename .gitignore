@@ -131,16 +131,19 @@ dmypy.json
 
 
 # directories
-data/
-logs/
-figures/	
+data/*
+logs/*
+figures/*
 *.err
 *.out
 *.Rdata
 *.xlsx
 *.png
 *.jpeg
+*.jpg
+*.pdf
 *.zip
 *.Rhistory
-
+zero_sum_game/.vscode/*
+zero_sum_game/data/*
 

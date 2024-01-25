@@ -1,3 +1,5 @@
+import numpy as np
+
 from agents_models.intentional_agents.tom_one_agents.tom_one_agents import *
 from agents_models.intentional_agents.tom_two_agents.dom_two_memoization import *
 from agents_models.subintentional_agents.subintentional_senders import *
@@ -114,6 +116,9 @@ class DoMTwoBelief(DoMOneBelief):
             [self.opponent_model.belief.belief_distribution['zero_order_belief'], average_zero_order_nested_beliefs])
         self.opponent_model.belief.belief_distribution['nested_beliefs'] = np.vstack(
             [self.opponent_model.belief.belief_distribution['nested_beliefs'], first_order_order_nested_beliefs])
+        # Update nested nested model beliefs
+        self.opponent_model.opponent_model.belief.belief_distribution = np.vstack(
+            [self.opponent_model.opponent_model.belief.belief_distribution, first_order_order_nested_beliefs])
         self.belief_distribution["nested_beliefs"] = self.opponent_model.belief.belief_distribution
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
@@ -166,7 +171,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
             counter_offer, observation_probability, q_values, opponent_policy = \
                 self._simulate_opponent_response(seed, observation, action, iteration_number)
             action_node.add_opponent_response(key, q_values, opponent_policy)
-        mental_model = self.opponent_model.get_mental_state()
+        mental_model = self.opponent_model.get_aleph_mechanism_status()
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
@@ -179,7 +184,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
                      iteration_number: int, *args):
         counter_offer, observation_probability, q_values, opponent_policy = \
             self._simulate_opponent_response(seed, observation, action, iteration_number)
-        mental_model = self.opponent_model.get_mental_state()
+        mental_model = self.opponent_model.get_aleph_mechanism_status()
         reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
         new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
@@ -230,7 +235,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         return new_observation, expected_reward, observation_probability
 
     def get_persona(self):
-        return Persona([self.opponent_model.threshold, False], self.opponent_model.get_mental_state())
+        return Persona([self.opponent_model.threshold, False], self.opponent_model.get_aleph_mechanism_status())
 
     def _simulate_opponent_response(self, seed, observation, action, iteration_number):
         # DoM(-1) random sender
@@ -241,7 +246,7 @@ class DoMTwoEnvironmentModel(DoMOneSenderEnvironmentModel):
         # DoM(1) threshold sender
         else:
             counter_offer, observation_probability, q_values, opponent_policy = \
-                self.opponent_model.act(seed, observation, action, iteration_number-1)
+                self.opponent_model.act(seed, observation, action, iteration_number)
         return counter_offer, observation_probability, q_values, opponent_policy
 
     @staticmethod
@@ -275,6 +280,10 @@ class DoMTwoReceiverExplorationPolicy(DoMZeroExplorationPolicy):
         reward_from_accept = self.reward_function(True, observation.value)
         reward_from_reject = self.exploration_bonus
         return np.array([reward_from_accept, reward_from_reject])
+
+    def compute_final_round_q_values(self, observation: float) -> np.array:
+        final_q_values = np.array([self.reward_function(True, observation), 0.0])
+        return final_q_values
 
     def sample(self, interactive_state: InteractiveState, last_action: bool, observation: float, iteration_number: int):
         # belief governed exploration
@@ -312,7 +321,7 @@ class DoMTwoReceiver(DoMZeroReceiver):
                                                                   self.belief.belief_distribution,
                                                                   self.belief.support)
         self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
-                             self.exploration_policy, self.utility_function, self._planning_parameters, seed, False)
+                             self.exploration_policy, self.utility_function, self._planning_parameters, seed, 2, False)
         self.name = "DoM(2)_receiver"
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):

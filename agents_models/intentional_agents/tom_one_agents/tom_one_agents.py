@@ -109,6 +109,7 @@ class DoMOneBelief(DoMZeroBelief):
         return dict(zip(keys, values))
 
     def update_distribution_from_particles(self, particles: dict, action, observation, iteration_number):
+        # Sample persona from particles
         persona = [x for x in particles.keys()]
         thresholds = [float(x.split("-")[0]) for x in persona]
         # Validate that we have representation of all the types
@@ -119,17 +120,21 @@ class DoMOneBelief(DoMZeroBelief):
         prior_distribution = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
         _, sorted_likelihood = zip(*sorted(zip(self.support, full_likelihood)))
         posterior_distribution = prior_distribution * sorted_likelihood / np.sum(prior_distribution * sorted_likelihood)
+        # Sample nested beliefs and running likelihood
         nested_beliefs = [x[0].get_nested_belief for x in interactive_states_per_persona]
+        nested_likelihood = [x[0].get_nested_likelihood for x in interactive_states_per_persona]
         # Update beliefs
         self.belief_distribution['zero_order_belief'] = np.vstack(
             [self.belief_distribution['zero_order_belief'], posterior_distribution])
         # Store nested belief
         # Note! since the nested belief is single - we average those
         average_nested_beliefs = np.mean(nested_beliefs, axis=0)
+        average_nested_likelihood = np.mean(nested_likelihood, axis=0)
         self.nested_belief = np.vstack([self.nested_belief, average_nested_beliefs])
         # Update nested model beliefs
         self.opponent_model.belief.belief_distribution = np.vstack(
             [self.opponent_model.belief.belief_distribution, average_nested_beliefs])
+        self.opponent_model.belief.likelihood = average_nested_likelihood
         self.belief_distribution["nested_beliefs"] = np.copy(self.opponent_model.belief.belief_distribution)
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 
@@ -180,22 +185,27 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
     def compute_future_values(self, observation, action, iteration_number, duration):
         current_reward = self.reward_function(action, observation)
         # We can expect to get this reward if the opponent isn't angry with us
-        reward = current_reward * (1 - self.opponent_model.get_mental_state())
+        reward = current_reward * (1 - self.opponent_model.get_aleph_mechanism_status())
         total_reward = reward * max(duration - iteration_number, 1)
         return total_reward
 
     def get_persona(self):
-        return Persona([self.opponent_model.threshold,False], self.opponent_model.get_mental_state())
+        return Persona([self.opponent_model.threshold,False], self.opponent_model.get_aleph_mechanism_status())
 
     def update_parameters(self):
         self.upper_bounds = self.opponent_model.opponent_model.upper_bounds
         self.lower_bounds = self.opponent_model.opponent_model.lower_bounds
 
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
-        nested_beliefs = nested_beliefs[:iteration_number + 1,]
+        nested_beliefs = nested_beliefs[:iteration_number + 1, ]
+        try:
+            nested_likelihood = self.opponent_model.belief.likelihood[:, :iteration_number + 1]
+        except IndexError:
+            nested_likelihood = self.opponent_model.belief.likelihood
         self.opponent_model.threshold = persona.persona[0]
         self.opponent_model.reset(self.high, self.low, observation_length, action_length, False)
         self.opponent_model.belief.belief_distribution = nested_beliefs
+        self.opponent_model.belief.likelihood = nested_likelihood
         iteration_number = action_length
         if iteration_number >= 1 and len(self.belief_distribution.history.observations) > 0:
             action = self.belief_distribution.history.actions[observation_length - 1]
@@ -210,13 +220,12 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             self.opponent_model.opponent_model.history.update_actions(action)
         # update distribution
         self.opponent_model.belief.update_distribution(observation, action, iteration_number)
-        # update persona
-        if self.opponent_model.solver.x_ipomdp_model:
-            mental_model = self.opponent_model.solver.detection_mechanism.nonrandom_sender_detection(iteration_number,
-                                                                                                     self.opponent_model.belief.belief_distribution)
-            self.opponent_model.solver.detection_mechanism.mental_state.append(mental_model)
         # sample previous Q-values
         q_values, opponent_policy = action_node.opponent_response[key]
+        # update persona
+        if self.opponent_model.solver.aleph_ipomdp_model:
+            _, _, _ = self.opponent_model.solver.execute_aleph_ipomdp(q_values, iteration_number, None, None)
+            mental_model = self.opponent_model.solver.aleph_mechanism.is_aleph_mechanism_on[-1]
         prng = np.random.default_rng(seed + iteration_number)
         best_action_idx = prng.choice(a=len(q_values), p=opponent_policy)
         counter_offer, observation_probability = Action(self.opponent_model.potential_actions[best_action_idx], False), \
@@ -224,15 +233,16 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.environment_model.update_persona(action, counter_offer, iteration_number)
         self.opponent_model.history.update_actions(counter_offer)
         self.opponent_model.environment_model.opponent_model.history.update_observations(counter_offer)
-        # In case we're in the XIPOMDP env:
+        # In case we're in the א-IPOMDP env:
         self.opponent_model.environment_model.update_parameters()
         return counter_offer, observation_probability, q_values, opponent_policy
 
-    def update_interactive_state(self, interactive_state, mental_model, updated_nested_beliefs, q_values):
+    def update_interactive_state(self, interactive_state, mental_model, updated_nested_beliefs, q_values,
+                                 updated_nested_likelihood=None):
         new_state_name = int(interactive_state.state.name) + 1
         new_state = State(str(new_state_name), new_state_name == 10)
-        new_persona = Persona(interactive_state.persona.persona, q_values)
-        new_interactive_state = InteractiveState(new_state, new_persona, updated_nested_beliefs)
+        new_persona = Persona([interactive_state.persona.persona[0], mental_model], q_values)
+        new_interactive_state = InteractiveState(new_state, new_persona, updated_nested_beliefs, updated_nested_likelihood)
         return new_interactive_state
 
     @staticmethod
@@ -258,6 +268,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         self.opponent_model.environment_model.opponent_model.history.update_observations(new_observation)
         self.opponent_model.belief.belief_distribution = np.vstack(
             [self.opponent_model.belief.belief_distribution, new_interactive_state.get_nested_belief])
+        self.opponent_model.belief.likelihood = new_interactive_state.get_nested_likelihood
         return new_observation, expected_reward, observation_probability
 
     def step(self, history_node: HistoryNode, action_node: ActionNode, interactive_state: InteractiveState,
@@ -267,7 +278,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
         # o_{t-1}
         observation = history_node.observation
         nested_beliefs = self._represent_nested_beliefs_as_table(interactive_state)
-        key = f'{nested_beliefs}-{interactive_state.persona}-{observation.value}-{action.value}-{iteration_number}'
+        key = f'{nested_beliefs}-{str(interactive_state)}-{observation.value}-{action.value}-{iteration_number}'
         # If we already visited this node
         if key in action_node.opponent_response.keys():
             counter_offer, observation_probability, q_values, opponent_policy = \
@@ -276,13 +287,14 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
             counter_offer, observation_probability, q_values, opponent_policy = \
                 self.opponent_model.act(seed, observation, action, iteration_number)
             action_node.add_opponent_response(key, q_values, opponent_policy)
-        mental_model = self.opponent_model.get_mental_state()
+        mental_model = self.opponent_model.get_aleph_mechanism_status()
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
+        updated_nested_likelihood = self.opponent_model.belief.get_current_likelihood()
         opponent_reward = counter_offer.value * action.value
         self.opponent_model.history.update_rewards(opponent_reward)
         expected_reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
         new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
-                                                              q_values)
+                                                              q_values, updated_nested_likelihood)
         return new_interactive_state, counter_offer, expected_reward, observation_probability
 
     def rollout_step(self, interactive_state: InteractiveState, action: Action, observation: Action, seed: int,
@@ -291,7 +303,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
                                                                                                     observation,
                                                                                                     action,
                                                                                                     iteration_number)
-        mental_model = self.opponent_model.get_mental_state()
+        mental_model = self.opponent_model.get_aleph_mechanism_status()
         reward = self.compute_expected_reward(action, observation, counter_offer, observation_probability)
         updated_nested_beliefs = self.opponent_model.belief.get_current_belief()
         new_interactive_state = self.update_interactive_state(interactive_state, mental_model, updated_nested_beliefs,
@@ -319,6 +331,10 @@ class DoMOneSenderExplorationPolicy(DoMZeroSenderExplorationPolicy):
         q_value = expected_reward_from_offer[optimal_action_idx]
         return Action(optimal_action, False), q_value
 
+    def compute_final_round_q_values(self, observation: Action) -> np.array:
+        final_q_values = self.init_q_values(observation)
+        return final_q_values
+
 
 class DoMOneSender(DoMZeroSender):
 
@@ -341,12 +357,12 @@ class DoMOneSender(DoMZeroSender):
                                                                 self.belief.support,
                                                                 self.opponent_model.belief.support)
         self.solver = IPOMCP(self.belief, self.environment_model, self.memoization_table,
-                             self.exploration_policy, self.utility_function, self._planning_parameters, seed,
+                             self.exploration_policy, self.utility_function, self._planning_parameters, seed, 1,
                              nested_model)
         self.name = "DoM(1)_sender"
     
     @staticmethod
-    def get_mental_state():
+    def get_aleph_mechanism_status():
         return False
 
     def update_nested_models(self, action=None, observation=None, iteration_number=None):
