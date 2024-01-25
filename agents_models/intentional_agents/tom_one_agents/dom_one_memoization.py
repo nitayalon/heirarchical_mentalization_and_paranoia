@@ -1,5 +1,5 @@
 from pandas.core.base import DataError
-from IPOMCP_solver.utils.memoization_table import *
+from Solver.utils.memoization_table import *
 import os
 from os.path import exists
 

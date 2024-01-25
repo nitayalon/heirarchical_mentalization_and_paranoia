@@ -1,4 +1,4 @@
-from IPOMCP_solver.Solver.ipomcp_solver import *
+from Solver.Solver.ipomcp_solver import *
 import os
 
 
