@@ -72,6 +72,18 @@ def simulate_row_column_task(path_to_data_dir, column_player_updated_beliefs, do
                                      column_player_dom_level)
 
 
+def zero_sum_game_agent_factory(agent_dom_level: str, prior_beliefs: np.array, delta:float):
+    if agent_dom_level == "-2":
+        return RandomPlayer(softmax_temp, 0.99)
+    if agent_dom_level == "-1":
+        return DoMM1Player(softmax_temp, 0.99)
+    if agent_dom_level == "0":
+        return DoMZeroPlayer(duration, softmax_temp, 0.99)
+    if agent_dom_level == "1":
+        return DoMOnePlayer(duration, softmax_temp, 0.99, is_aleph_ipomdp, delta)
+    return DoMTwoPlayer(duration, softmax_temp, 0.99, prior_beliefs, is_aleph_ipomdp, delta)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Cognitive hierarchy task')
     parser.add_argument('--payout_matrix', type=str, default='G1', metavar='N',
@@ -98,17 +110,13 @@ if __name__ == "__main__":
     strong_typicality_delta = args.strong_typicality_delta
     payout_game = game_1 if payout_matrix_name == 'G_1' else game_2
     task_setting = TaskSetting(duration, seed, payout_game, softmax_temp, save_results, is_aleph_ipomdp)
-    random_agent = RandomPlayer(softmax_temp, 0.99)
-    dom_m1_agent = DoMM1Player(softmax_temp, 0.99)
-    dom_zero_agent = DoMZeroPlayer(duration, softmax_temp, 0.99)
-    dom_one_agent = DoMOnePlayer(duration, softmax_temp, 0.99, is_aleph_ipomdp, strong_typicality_delta)
-    initial_beliefs = np.repeat(1 / 3, 3)
-    dom_two_agent = DoMTwoPlayer(duration, softmax_temp, 0.99, initial_beliefs, is_aleph_ipomdp,
-                                 strong_typicality_delta)
-    agents_dictionary = {"-2": random_agent, "0": dom_zero_agent, "1": dom_one_agent, "2": dom_two_agent}
     path_to_results_dir = f"data/aleph_ipomdp_{is_aleph_ipomdp}/{payout_matrix_name}"
     os.makedirs(path_to_results_dir, exist_ok=True)
+    initial_beliefs = np.repeat(1 / 3, 3)
     agents_list = [["1"], ["0", "2"]]
     for dyad in itertools.product(*agents_list):
-        simulate_row_column_task(path_to_results_dir, initial_beliefs, dyad, agents_dictionary[dyad[0]],
-                                 agents_dictionary[dyad[1]], task_setting)
+        row_agent = zero_sum_game_agent_factory([dyad[0]][0], initial_beliefs, strong_typicality_delta)
+        column_agent = zero_sum_game_agent_factory([dyad[1]][0], initial_beliefs, strong_typicality_delta)
+        dom_zero_agent = zero_sum_game_agent_factory("0", initial_beliefs, strong_typicality_delta)
+        simulate_row_column_task(path_to_results_dir, initial_beliefs, dyad, row_agent,
+                                 column_agent, task_setting)
