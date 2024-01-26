@@ -51,7 +51,7 @@ class DoMOnePlayer:
             self.aleph_mechanism_status.append(is_behaviour_typical)
             aleph_q_values = dom_m1_utility(payout_matrix)
             q_values = q_values if is_behaviour_typical else aleph_q_values
-        policy = softmax_transformation(q_values / np.min(q_values), self.softmax_temperature)
+        policy = softmax_transformation(q_values - np.min(q_values), self.softmax_temperature)
         return policy
 
     def recursive_tree_span(self, action, beliefs, payout_matrix, iteration, depth=12):

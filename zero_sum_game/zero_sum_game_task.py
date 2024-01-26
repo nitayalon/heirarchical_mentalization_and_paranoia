@@ -113,7 +113,7 @@ if __name__ == "__main__":
     path_to_results_dir = f"data/aleph_ipomdp_{is_aleph_ipomdp}/{payout_matrix_name}"
     os.makedirs(path_to_results_dir, exist_ok=True)
     initial_beliefs = np.repeat(1 / 3, 3)
-    agents_list = [["1"], ["0", "2"]]
+    agents_list = [["1"], ["2"]]
     for dyad in itertools.product(*agents_list):
         row_agent = zero_sum_game_agent_factory([dyad[0]][0], initial_beliefs, strong_typicality_delta)
         column_agent = zero_sum_game_agent_factory([dyad[1]][0], initial_beliefs, strong_typicality_delta)
