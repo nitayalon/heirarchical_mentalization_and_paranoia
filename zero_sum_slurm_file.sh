@@ -1,4 +1,4 @@
-_#!/bin/bash -l
+#!/bin/bash -l
 #SBATCH -o ./slurm_logs/%x_%j_tjob.out
 #SBATCH -e ./slurm_logs/%x_%j_tjob.err
 # Initial working directory:
@@ -28,9 +28,9 @@ export CONTAINER_PATH=/ptmp/containers/pytorch_1.10.0-cuda.11.3_latest-2021-12-0
 GAME=G_1
 SOFTMAX_TEMP=0.1
 DURATION=12
-Aleph_Ipomdp=False
+Aleph_Ipomdp=True
 DELTA = 1.1
 
 echo "Simulating with seed $SLURM_ARRAY_TASK_ID"
-time singularity exec ${CONTAINER_PATH} python zero_sum_game/zero_sum_game_task.py  --payout_matrix $GAME --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --duration $DURATION -aleph_ipomdp $Aleph_Ipomdp --strong_typicality_delta $DELTA 
+time singularity exec ${CONTAINER_PATH} python zero_sum_game/zero_sum_game_task.py  --payout_matrix $GAME --seed $SLURM_ARRAY_TASK_ID --softmax_temp $SOFTMAX_TEMP --duration $DURATION --aleph_ipomdp $Aleph_Ipomdp --strong_typicality_delta $DELTA 
 
