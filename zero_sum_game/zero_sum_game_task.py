@@ -108,8 +108,7 @@ if __name__ == "__main__":
     agents_dictionary = {"-2": random_agent, "0": dom_zero_agent, "1": dom_one_agent, "2": dom_two_agent}
     path_to_results_dir = f"data/{payout_matrix_name}"
     os.makedirs(path_to_results_dir, exist_ok=True)
-    # agents_list = [["1"], ["0", "2"]]
-    agents_list = [["1"], ["2"]]
+    agents_list = [["1"], ["0", "2"]]
     for dyad in itertools.product(*agents_list):
         simulate_row_column_task(path_to_results_dir, initial_beliefs, dyad, agents_dictionary[dyad[0]],
                                  agents_dictionary[dyad[1]], task_setting)
