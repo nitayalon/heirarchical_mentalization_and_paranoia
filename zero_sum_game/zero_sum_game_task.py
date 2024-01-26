@@ -106,7 +106,7 @@ if __name__ == "__main__":
     dom_two_agent = DoMTwoPlayer(duration, softmax_temp, 0.99, initial_beliefs, is_aleph_ipomdp,
                                  strong_typicality_delta)
     agents_dictionary = {"-2": random_agent, "0": dom_zero_agent, "1": dom_one_agent, "2": dom_two_agent}
-    path_to_results_dir = f"data/{payout_matrix_name}"
+    path_to_results_dir = f"data/aleph_ipomdp_{is_aleph_ipomdp}/{payout_matrix_name}"
     os.makedirs(path_to_results_dir, exist_ok=True)
     agents_list = [["1"], ["0", "2"]]
     for dyad in itertools.product(*agents_list):
