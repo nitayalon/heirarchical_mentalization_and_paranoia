@@ -10,9 +10,13 @@ class DomZeroReceiverBelief(DoMZeroBelief):
 
     def __init__(self, support, zero_level_belief, opponent_model, history: History):
         super().__init__(support, zero_level_belief, opponent_model, history)
-        self.likelihood = np.zeros_like(support)
+        self.likelihood = np.zeros((1, len(support)))
         self.softmax_distributions = np.empty((len(self.support), len(opponent_model.potential_actions),
                                                opponent_model.config.task_duration + 1))
+
+    def reset(self, size=1):
+        self.belief_distribution = self.belief_distribution[0:size, ]
+        self.likelihood = self.likelihood[0:size,]
 
     def get_current_belief(self):
         return self.belief_distribution[-1]
@@ -55,7 +59,7 @@ class DomZeroReceiverBelief(DoMZeroBelief):
             offer_likelihood[i] = observation_probability
         self.softmax_distributions[:, :, iteration_number] = softmax_distributions
         self.opponent_model.threshold = original_threshold
-        self.likelihood = np.c_[self.likelihood, offer_likelihood]
+        self.likelihood = np.vstack([self.likelihood, offer_likelihood])
         return offer_likelihood
 
 
@@ -104,11 +108,11 @@ class DoMZeroAlephMechanism:
         unique_observations, location, number_of_appearance = np.unique(observations, return_counts=True, return_index=True)
         observed_frequency = np.reshape(number_of_appearance[np.argsort(location)] / trial_number, (1, len(unique_observations)))
         adapted_observed_frequency = np.repeat(observed_frequency, number_of_appearance[np.argsort(location)])
-        expected_frequency = likelihood[:, 1:(trial_number + 1)]
-        distance = np.absolute(adapted_observed_frequency - expected_frequency)
+        expected_frequency = likelihood[1:(trial_number + 1), :]
+        distance = np.absolute(adapted_observed_frequency[:, np.newaxis] - expected_frequency)
         adapted_delta = np.max([(self.duration - trial_number) / trial_number, self.delta])
         typical_set = distance <= adapted_delta * expected_frequency
-        return np.all(typical_set, axis=1)
+        return np.all(typical_set, axis=0)
 
     def expected_reward_monitoring(self, trial_number, history, likelihood, utility_function,
                                    softmax_transformation) -> np.array:
