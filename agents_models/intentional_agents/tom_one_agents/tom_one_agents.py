@@ -199,7 +199,7 @@ class DoMOneSenderEnvironmentModel(DoMOneEnvironmentModel):
     def reset_persona(self, persona, action_length, observation_length, nested_beliefs, iteration_number):
         nested_beliefs = nested_beliefs[:iteration_number + 1, ]
         try:
-            nested_likelihood = self.opponent_model.belief.likelihood[:, :iteration_number + 1]
+            nested_likelihood = self.opponent_model.belief.likelihood[:iteration_number + 1, :]
         except IndexError:
             nested_likelihood = self.opponent_model.belief.likelihood
         self.opponent_model.threshold = persona.persona[0]

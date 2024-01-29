@@ -16,7 +16,7 @@ class DomZeroReceiverBelief(DoMZeroBelief):
 
     def reset(self, size=1):
         self.belief_distribution = self.belief_distribution[0:size, ]
-        self.likelihood = self.likelihood[0:size,]
+        self.likelihood = self.likelihood[0:size, ]
 
     def get_current_belief(self):
         return self.belief_distribution[-1]
