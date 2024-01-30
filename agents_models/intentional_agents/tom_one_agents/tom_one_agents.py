@@ -42,7 +42,6 @@ class DoMOneBelief(DoMZeroBelief):
         """
         if iteration_number < 1:
             return None
-        self.nested_mental_state = not self.opponent_model.detection_mechanism.verify_random_behaviour(iteration_number)
         prior = np.copy(self.belief_distribution["zero_order_belief"][-1, :])
         # Compute P_0(a_t|theta, h^{t-1})
         likelihood = self.compute_likelihood(action, observation, prior, iteration_number, nested)
@@ -55,6 +54,7 @@ class DoMOneBelief(DoMZeroBelief):
         self.nested_belief = self.opponent_model.belief.belief_distribution
         self.belief_distribution["nested_beliefs"] = self.nested_belief
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
+        self.nested_mental_state = self.opponent_model.get_aleph_mechanism_status()
 
     def compute_likelihood(self, action: Action, observation: Action, prior, iteration_number=None,
                            nested=False):
