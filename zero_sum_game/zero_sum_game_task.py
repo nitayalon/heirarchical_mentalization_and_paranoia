@@ -38,9 +38,10 @@ def export_zero_sum_game_results(path_to_data_dir, beliefs, actions, payoffs, vi
         index=False)
     if len(victim_mental_state) > 0:
         os.makedirs(f"{path_to_data_dir}/aleph_mechanism_status/", exist_ok=True)
-        victim_mental_state = np.array([victim_mental_state])
-        aleph_mechanism_status_df = pd.DataFrame(victim_mental_state, columns=["iteration", "aleph_mechanism_status"])
-        aleph_mechanism_status_df["iteration"] = np.arange(0, duration + 1)
+        print(victim_mental_state)
+        victim_mental_state = np.array(victim_mental_state)
+        aleph_mechanism_status_df = pd.DataFrame(victim_mental_state, columns=["aleph_mechanism_status"])
+        aleph_mechanism_status_df["iteration"] = np.arange(0, duration)
         aleph_mechanism_status_df["seed"] = seed
         aleph_mechanism_status_df["row_player_dom_level"] = row_player_dom_level
         aleph_mechanism_status_df["column_player_dom_level"] = column_player_dom_level
@@ -82,7 +83,7 @@ def simulate_row_column_task(path_to_data_dir, column_player_updated_beliefs, do
     if task_configuration.ExportResults == "True":
         victims_mental_status = row_player.aleph_mechanism_status
         export_zero_sum_game_results(path_to_data_dir, column_player_beliefs, actions, payoffs, victims_mental_status,
-                                     row_player_dom_level, column_player_dom_level, task_duration)
+                                     row_player_dom_level, column_player_dom_level)
 
 
 def zero_sum_game_agent_factory(agent_dom_level: str, prior_beliefs: np.array, delta:float):
