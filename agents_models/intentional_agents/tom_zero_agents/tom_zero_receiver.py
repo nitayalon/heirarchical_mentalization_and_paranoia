@@ -95,10 +95,10 @@ class DoMZeroAlephMechanism:
         self.omega = omega
 
     def reset(self, iteration_number: int, terminal=False):
-        if terminal:
+        if terminal or iteration_number < 1:
             self.is_aleph_mechanism_on = [False]
         else:
-            self.is_aleph_mechanism_on = self.is_aleph_mechanism_on[0:iteration_number + 1]
+            self.is_aleph_mechanism_on = self.is_aleph_mechanism_on[0:iteration_number]
 
     def update_aleph_mechanism(self, iteration_number, mental_state):
         self.is_aleph_mechanism_on.append(mental_state)

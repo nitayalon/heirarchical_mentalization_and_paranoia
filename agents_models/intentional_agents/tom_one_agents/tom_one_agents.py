@@ -126,7 +126,6 @@ class DoMOneBelief(DoMZeroBelief):
         # Update beliefs
         self.belief_distribution['zero_order_belief'] = np.vstack(
             [self.belief_distribution['zero_order_belief'], posterior_distribution])
-        # Store nested belief
         # Note! since the nested belief is single - we average those
         average_nested_beliefs = np.mean(nested_beliefs, axis=0)
         average_nested_likelihood = np.mean(nested_likelihood, axis=0)
@@ -135,6 +134,9 @@ class DoMOneBelief(DoMZeroBelief):
         self.opponent_model.belief.belief_distribution = np.vstack(
             [self.opponent_model.belief.belief_distribution, average_nested_beliefs])
         self.opponent_model.belief.likelihood = average_nested_likelihood
+        if self.opponent_model.detection_mechanism.activated:
+            mental_model = [x[0].get_persona[1] for x in interactive_states_per_persona][0]
+            self.opponent_model.detection_mechanism.is_aleph_mechanism_on.append(mental_model)
         self.belief_distribution["nested_beliefs"] = np.copy(self.opponent_model.belief.belief_distribution)
         self.opponent_model.opponent_model.update_bounds(action, observation, iteration_number)
 

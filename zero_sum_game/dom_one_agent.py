@@ -58,9 +58,7 @@ class DoMOnePlayer:
         reward = self.dom_1_expected_utility(action, beliefs, payout_matrix)
         updated_belief = np.round(self.opponent.irl(beliefs, action, iteration), 3)
         # halting condition
-        if iteration >= depth:
-            # self.planning_tree.append(np.array([action, reward, reward, iteration]))
-            # self.nested_beliefs.append(np.array([action, iteration, updated_belief[0], updated_belief[1],updated_belief[2]]))
+        if iteration >= depth:            
             return reward
         actions = np.array([0, 1])
         expectimax_tree = functools.partial(self.recursive_tree_span,
@@ -69,6 +67,4 @@ class DoMOnePlayer:
                                             iteration=iteration + 1)
         future_q_values = list(map(expectimax_tree, actions))
         q_value = reward + self.discount_factor * np.max(future_q_values)
-        # self.planning_tree.append(np.array([action, reward, reward, iteration]))
-        # self.nested_beliefs.append(np.array([action, iteration, updated_belief[0], updated_belief[1],updated_belief[2]]))        
         return q_value

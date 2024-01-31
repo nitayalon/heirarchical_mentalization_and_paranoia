@@ -103,6 +103,7 @@ load_simulations_results <- function(path_to_results_dir,
               mental_state=mental_state))
 }
 
+
 load_nested_beliefs <- function(updated_path)
 {
   path_to_nested_beliefs <- paste(updated_path, "nested_beliefs", sep="/")
@@ -114,3 +115,55 @@ load_nested_beliefs <- function(updated_path)
   all_files = list(nested_beliefs, zero_order_beliefs) 
   return(all_files)
 }
+
+
+
+load_zero_sum_game_results <- function(path_to_results_dir, 
+                                     task_name,
+                                     experiment_name, 
+                                     directory_pattern,
+                                     dom_levels,
+                                     include_mental_state = F)
+{
+  payoffs <- c()
+  path_to_game_results <- paste(path_to_results_dir, experiment_name, sep="/") 
+  path_to_dir <- paste(path_to_game_results, "payoffs" ,sep="/")
+  temp = list.files(path=path_to_dir, pattern="*.csv")
+  if (length(temp) == 0)
+  {
+    next
+  }
+  myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
+  interim_results <- bind_rows(myfiles)
+  payoffs <- rbind(payoffs, cbind(interim_results))
+  payoffs$task_name = task_name
+  
+  actions <- c()
+  path_to_dir <- paste(path_to_game_results, "actions" ,sep="/")
+  temp = list.files(path=path_to_dir, pattern="*.csv")
+  if (length(temp) == 0)
+  {
+    next
+  }
+  myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
+  interim_results <- bind_rows(myfiles)
+  actions <- rbind(actions, cbind(interim_results))
+  actions$task_name = task_name
+  
+  beliefs <- c()
+  path_to_dir <- paste(path_to_game_results, "beliefs" ,sep="/")
+  temp = list.files(path=path_to_dir, pattern="*.csv")
+  if (length(temp) == 0)
+  {
+    next
+  }
+  myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
+  interim_results <- bind_rows(myfiles)
+  beliefs <- rbind(beliefs, cbind(interim_results))
+  beliefs$task_name = task_name
+  
+  return(list(payoffs = payoffs, 
+              actions = actions, 
+              beliefs = beliefs))
+}
+

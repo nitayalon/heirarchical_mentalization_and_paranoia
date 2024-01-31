@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import itertools
 import os
@@ -8,8 +9,8 @@ from collections import namedtuple
 TaskSetting = namedtuple("TaskSetting", ["Task_duration", "Seed", "Game", "Temp", "ExportResults", "AlephIPOMDP"])
 
 
-def export_zero_sum_game_results(path_to_data_dir, beliefs, actions, payoffs, row_player_dom_level,
-                                 column_player_dom_level):
+def export_zero_sum_game_results(path_to_data_dir, beliefs, actions, payoffs, victim_mental_state,
+                                 row_player_dom_level, column_player_dom_level):
     os.makedirs(f"{path_to_data_dir}/payoffs/", exist_ok=True)
     os.makedirs(f"{path_to_data_dir}/actions/", exist_ok=True)
     os.makedirs(f"{path_to_data_dir}/beliefs/", exist_ok=True)
@@ -35,6 +36,17 @@ def export_zero_sum_game_results(path_to_data_dir, beliefs, actions, payoffs, ro
     actions_df.to_csv(
         f"{path_to_data_dir}/actions/dom_{row_player_dom_level}_vs_dom_{column_player_dom_level}_seed_{seed}.csv",
         index=False)
+    if len(victim_mental_state) > 0:
+        os.makedirs(f"{path_to_data_dir}/aleph_mechanism_status/", exist_ok=True)
+        victim_mental_state = np.array([victim_mental_state])
+        aleph_mechanism_status_df = pd.DataFrame(victim_mental_state, columns=["iteration", "aleph_mechanism_status"])
+        aleph_mechanism_status_df["iteration"] = np.arange(0, duration + 1)
+        aleph_mechanism_status_df["seed"] = seed
+        aleph_mechanism_status_df["row_player_dom_level"] = row_player_dom_level
+        aleph_mechanism_status_df["column_player_dom_level"] = column_player_dom_level
+        aleph_mechanism_status_df.to_csv(
+            f"{path_to_data_dir}/aleph_mechanism_status/dom_{row_player_dom_level}_vs_dom_{column_player_dom_level}_seed_{seed}.csv",
+            index=False)
 
 
 def simulate_row_column_task(path_to_data_dir, column_player_updated_beliefs, dom_levels,
@@ -68,8 +80,9 @@ def simulate_row_column_task(path_to_data_dir, column_player_updated_beliefs, do
         column_player_beliefs = np.vstack([column_player_beliefs, column_player_updated_beliefs])
         actions = np.vstack([actions, np.array([i, column_player_action, row_player_action])])
     if task_configuration.ExportResults == "True":
-        export_zero_sum_game_results(path_to_data_dir, column_player_beliefs, actions, payoffs, row_player_dom_level,
-                                     column_player_dom_level)
+        victims_mental_status = row_player.aleph_mechanism_status
+        export_zero_sum_game_results(path_to_data_dir, column_player_beliefs, actions, payoffs, victims_mental_status,
+                                     row_player_dom_level, column_player_dom_level, task_duration)
 
 
 def zero_sum_game_agent_factory(agent_dom_level: str, prior_beliefs: np.array, delta:float):
