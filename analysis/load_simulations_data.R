@@ -162,8 +162,24 @@ load_zero_sum_game_results <- function(path_to_results_dir,
   beliefs <- rbind(beliefs, cbind(interim_results))
   beliefs$task_name = task_name
   
+  aleph_mechanism_status <- c()
+  if(include_mental_state)
+  {
+    path_to_dir <- paste(path_to_game_results, "aleph_mechanism_status" ,sep="/")
+    temp = list.files(path=path_to_dir, pattern="*.csv")
+    if (length(temp) == 0)
+    {
+      next
+    }
+    myfiles = lapply(paste(path_to_dir, temp, sep="/"), read.csv)
+    interim_results <- bind_rows(myfiles)
+    aleph_mechanism_status <- rbind(aleph_mechanism_status, cbind(interim_results))
+    aleph_mechanism_status$task_name = task_name
+  }
+  
   return(list(payoffs = payoffs, 
               actions = actions, 
-              beliefs = beliefs))
+              beliefs = beliefs,
+              aleph_mechanism_status = aleph_mechanism_status))
 }
 
