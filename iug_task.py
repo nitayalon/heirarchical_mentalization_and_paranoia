@@ -2,7 +2,7 @@ from typing import Tuple
 from agents_models.abstract_agents import *
 
 
-class EAT:
+class IUG:
 
     def __init__(self, seed):
         self.config = get_config()

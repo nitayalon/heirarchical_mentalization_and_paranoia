@@ -39,7 +39,7 @@ def simulate_iug_task(sender_agent, receiver_agent, senders_threshold, receivers
     receiver_agent.reset(terminal=True)
     experiment_name = config.experiment_name
     if config.args.save_results == "True":
-        output_file_name = f'experiment_data_{experiment_name}_seed_{config.seed}.csv'
+        output_file_name = f'{experiment_name}_seed_{config.seed}.csv'
         experiment_results.to_csv(config.simulation_results_dir + "/" + output_file_name, index=False)
         q_values.to_csv(config.q_values_results_dir + "/" + output_file_name, index=False)
         export_beliefs_to_file(receiver_belief, 'receiver_beliefs', output_file_name)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     receiver_parameters = experiment_data["receiver_parameters"]
     i = 0
     np.random.seed(config.seed)
-    eat_task_simulator = EAT(config.seed)
+    eat_task_simulator = IUG(config.seed)
     if config.get_from_general("state") == 'debug':
         simulate_iug_task(rational_sender, rational_receiver, args.senders_threshold, args.receivers_threshold)
     else:
