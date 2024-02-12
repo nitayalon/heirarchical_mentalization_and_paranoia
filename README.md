@@ -40,12 +40,12 @@ To expedite search set `use_memoization: True`
 ## Citation
 
 If you refer to our work, please cite it as:
-<pre>
+```
 @article{alon2024overly,
   title={Overly deep hierarchical mentalizing produces paranoia: a new formal theory},
   author={Alon, Nitay and Schulz, Lion and Bell, Vaughan and Moutoussis, Michael and Dayan, Peter and Barnby, Joseph M},
   year={2024},
   publisher={OSF}
 }
-</pre>
+```
 
